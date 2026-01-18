@@ -29,3 +29,7 @@ build/
 
 # External projects
 *-prefix/
+
+# ---> Miscellaneous Files
+projects.json
+imgui.ini
