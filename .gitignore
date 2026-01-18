@@ -25,7 +25,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
-build/
+build/*
 
 # External projects
 *-prefix/
@@ -33,3 +33,6 @@ build/
 # ---> Miscellaneous Files
 project.json
 imgui.ini
+
+# ---> ClangD
+.cache/*
