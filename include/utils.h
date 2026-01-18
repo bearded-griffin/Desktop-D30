@@ -15,4 +15,6 @@ namespace Utils {
     Vector2 GetMouseDeltaWorld(Camera2D camera);
     void SaveProject(const std::string& filename, const Project& project);
     bool LoadProject(const std::string& filename, Project& outProject);
+
+    void DrawQRCode(const std::string& text, float x, float y, float size, Color color);
 }

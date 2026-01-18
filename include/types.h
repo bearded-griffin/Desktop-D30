@@ -1,42 +1,58 @@
 #pragma once
-//#include "raylib.h"
+#include "raylib.h"
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp> // Required for the JSON macros below
+#include <nlohmann/json.hpp>
 
-// Define your Object
-struct LabelObject {
-    // We break out X/Y specifically so they save cleanly to JSON
-    // (Raylib's Vector2 is nice, but harder to serialize automatically)
-    float x = 0.0f;
-    float y = 0.0f;
-    std::string text = "New Label";
-    float fontSize = 20.0f;
-    
-    // We'll store color as a hex integer for saving (e.g. 0xFFFFFFFF)
-    // You can convert to Raylib Color at runtime
-    unsigned int colorHex = 0xFF000000; // Default Black
+// Define the types of objects we can have
+enum class ObjectType {
+    Text,
+    QRCode,
+    Image,
+    Field // For CSV batch printing
 };
 
-// Define the Label Size
 struct LabelSize {
     std::string name;
     float width;
     float height;
 };
 
-// Define the Project Container
+struct LabelObject {
+    // Common Properties
+    ObjectType type = ObjectType::Text;
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;  // Used for Image/QR resizing
+    float height = 0.0f; // Used for Image/QR resizing
+    
+    // Content
+    // For Text: The text string
+    // For QRCode: The data to encode
+    // For Image: The file path
+    // For Field: The CSV column header name
+    std::string data = "New Object";
+    
+    // Style
+    float fontSize = 20.0f;
+    unsigned int colorHex = 0xFF000000;
+};
+
 struct Project {
     int version = 1;
-    bool darkTheme = false;
-    bool showGrid = true;
-    int selectedLabelIndex = 0;
+    bool darkTheme = false; // Checkbox state
+    bool showGrid = true;   // Checkbox state
+    int selectedLabelIndex = 0; 
     std::vector<LabelObject> objects;
 };
 
-// --- JSON MAGIC ---
-// These macros automatically generate to_json() and from_json() functions for you.
-// You never have to write parsing code for these fields.
+// JSON Serialization Macros
+NLOHMANN_JSON_SERIALIZE_ENUM( ObjectType, {
+    {ObjectType::Text, "text"},
+    {ObjectType::QRCode, "qrcode"},
+    {ObjectType::Image, "image"},
+    {ObjectType::Field, "field"}
+})
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, x, y, text, fontSize, colorHex)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, fontSize, colorHex)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects)
