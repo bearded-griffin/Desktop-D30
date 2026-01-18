@@ -31,5 +31,5 @@ build/
 *-prefix/
 
 # ---> Miscellaneous Files
-projects.json
+project.json
 imgui.ini
