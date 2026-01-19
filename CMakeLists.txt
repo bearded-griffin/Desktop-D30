@@ -1,14 +1,17 @@
 cmake_minimum_required(VERSION 3.14)
 project(LabelForge VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_VERBOSE_BUILD ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include(FetchContent)
+# --- DEBUG FLAGS ---
+set(CMAKE_VERBOSE_MAKEFILE ON)
 set(FETCHCONTENT_QUIET FALSE)
 
-# --- 1. Fetch Raylib ---
+include(FetchContent)
+
+# 1. Raylib
 message(STATUS "Fetching Raylib...")
 FetchContent_Declare(
     raylib
@@ -18,7 +21,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
-# --- 2. Fetch Dear ImGui ---
+# 2. Dear ImGui
 message(STATUS "Fetching Dear ImGui...")
 FetchContent_Declare(
     imgui
@@ -28,7 +31,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
-# --- 3. Fetch rlImGui ---
+# 3. rlImGui
 message(STATUS "Fetching rlImGui...")
 FetchContent_Declare(
     rlimgui
@@ -38,7 +41,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(rlimgui)
 
-# --- 4. Fetch nlohmann/json ---
+# 4. nlohmann/json
 message(STATUS "Fetching nlohmann/json...")
 FetchContent_Declare(
     json
@@ -48,49 +51,61 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 
-# =========================================================
-#  MANUAL LIBRARY GENERATION (The Fix for Linker Errors)
-# =========================================================
+# 5. Portable File Dialogs (Header Only - easy fetch)
+message(STATUS "Fetching Portable File Dialogs...")
+FetchContent_Declare(
+    pfd
+    GIT_REPOSITORY https://github.com/samhocevar/portable-file-dialogs.git
+    GIT_TAG main
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(pfd)
 
-# 1. Create the 'imgui' Library Target
-# We grab the core .cpp files from the fetched directory
+# 6. Fetch QR Code Generator (Nayuki)
+message(STATUS "Fetching QR Code Generator...")
+FetchContent_Declare(
+    qrcodegen
+    GIT_REPOSITORY https://github.com/nayuki/QR-Code-generator.git
+    GIT_TAG master
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(qrcodegen)
+
+# --- MANUAL LIBRARY GENERATION ---
 file(GLOB IMGUI_SOURCES "${imgui_SOURCE_DIR}/*.cpp")
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
 
-# 2. Create the 'rlImGui' Library Target
-# We compile the single bridge file and link it to ImGui + Raylib
+add_library(qrcodegen STATIC "${qrcodegen_SOURCE_DIR}/cpp/qrcodegen.cpp")
+target_include_directories(qrcodegen PUBLIC "${qrcodegen_SOURCE_DIR}/cpp")
+
 add_library(rlImGui STATIC "${rlimgui_SOURCE_DIR}/rlImGui.cpp")
 target_include_directories(rlImGui PUBLIC ${rlimgui_SOURCE_DIR})
-# This ensures rlImGui knows where to find ImGui headers
 target_link_libraries(rlImGui PUBLIC imgui raylib)
 
-# =========================================================
-
-# --- 5. Setup Executable ---
+# --- EXECUTABLE ---
 add_executable(LabelForge
     src/main.cpp
     src/utils.cpp
     src/ui.cpp
 )
 
-# --- 6. Include Paths ---
 target_include_directories(LabelForge PRIVATE 
     include/ 
     ${json_SOURCE_DIR}/include
-    # Note: We don't need to add imgui/rlimgui include paths here
-    # because we used 'PUBLIC' in the library definitions above.
+    ${pfd_SOURCE_DIR} # Include path for file dialogs
+    ${qrcodegen_SOURCE_DIR}/cpp
+    qrcodegen
 )
 
-# --- 7. Link Libraries ---
 target_link_libraries(LabelForge PRIVATE 
-    rlImGui  # Now this refers to our manual target, not a system lib
-    imgui    # Same here
+    rlImGui 
+    imgui 
     raylib 
     nlohmann_json::nlohmann_json
+    qrcodegen
 )
 
-# System specific linking
 if (WIN32)
     target_link_libraries(LabelForge PRIVATE winmm)
 elseif (UNIX AND NOT APPLE)
