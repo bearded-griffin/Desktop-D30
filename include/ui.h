@@ -11,7 +11,7 @@
 #include "types.h" 
 
 namespace UI {
-    void DrawSidebar(Project& project, int& selectedIndex);
-    
-    void DrawMainMenu(Project& project);
+void DrawSidebar(Project &project, int &selectedIndex);
+
+void DrawMainMenu(Project &project);
 }
