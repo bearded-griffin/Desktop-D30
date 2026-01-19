@@ -1,12 +1,17 @@
+/*!***************************************************
+ * @file     ui.h
+ * @brief    Handels all UI operations
+ * @details  draws the menus, and canvas.
+ * @note     
+ * @date     2026.01.19
+ * @author   bearded.griffin
+ ****************************************************/
+
 #pragma once
-#include "types.h" // We need this so 'Project' is defined
+#include "types.h" 
 
 namespace UI {
-    // OLD: void DrawSidebar(std::vector<LabelObject>& objects, int& selectedIndex);
-    // NEW: Accepts the whole Project struct
     void DrawSidebar(Project& project, int& selectedIndex);
     
-    // OLD: void DrawMainMenu();
-    // NEW: Accepts Project so we can call Save/Load
     void DrawMainMenu(Project& project);
 }

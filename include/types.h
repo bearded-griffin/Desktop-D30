@@ -1,3 +1,12 @@
+/*!***************************************************
+ * @file     types.h
+ * @brief    The various types of objects used by LabelForge
+ * @details  All the things...objects atleast.
+ * @note     
+ * @date     2026.01.19
+ * @author   bearded.griffin
+ ****************************************************/
+
 #pragma once
 #include "raylib.h"
 #include <string>

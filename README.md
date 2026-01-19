@@ -27,8 +27,8 @@ make re
 ## Features
 
 - [ ] Create labels
-  - [ ] Generate QR Codes
+  - [x] Generate QR Codes
   - [ ] Put custom images on the label
-  - [ ] Put custom text on the label
+  - [x] Put custom text on the label
   - [ ] Import a .csv to batch create labels.
 - [ ] Prints Directly to the Phenomemo D30 printer
