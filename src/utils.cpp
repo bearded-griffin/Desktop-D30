@@ -76,22 +76,21 @@ namespace Utils {
    * @param    defaultName const std::string&
    * @param    project const Project&
    * @return   void
-   * @note     TODO: change from .json to something like
-   * .lf or something. 
+   * @note     
    * @date     2026.01.19
    * @author   bearded.griffin
    ****************************************************/
   void SaveProject(const std::string &defaultName, const Project &project) {
     // Native Save Dialog
     auto dest =
-        pfd::save_file("Save Project", defaultName, {"JSON Files", "*.json"},
+        pfd::save_file("Save Project", defaultName, {"ForgeLabel Files", "*.flbl"},
                        pfd::opt::force_overwrite)
             .result();
 
     if (!dest.empty()) {
       // Ensure extension
-      if (dest.find(".json") == std::string::npos)
-        dest += ".json";
+      if (dest.find(".flbl") == std::string::npos)
+        dest += ".flbl";
 
       nlohmann::json j = project;
       std::ofstream file(dest);
@@ -116,7 +115,7 @@ namespace Utils {
   bool LoadProject(const std::string &defaultName, Project &outProject) {
     // Native Open Dialog
     auto dest =
-        pfd::open_file("Open Project", defaultName, {"JSON Files", "*.json"})
+        pfd::open_file("Open Project", defaultName, {"ForgeLabel Files", "*.flbl"})
             .result();
 
     if (!dest.empty()) {

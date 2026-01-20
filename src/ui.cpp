@@ -29,7 +29,7 @@ void DrawMainMenu(Project &project) {
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Save Project"))
-        Utils::SaveProject("project.json", project);
+        Utils::SaveProject("project.flbl", project);
       if (ImGui::MenuItem("Load Project"))
         Utils::LoadProject("", project);
       
