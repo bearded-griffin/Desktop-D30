@@ -25,7 +25,7 @@ Rectangle GetObjectBounds(const LabelObject &obj);
 Vector2 GetMouseDeltaWorld(Camera2D camera);
 void SaveProject(const std::string &filename, const Project &project);
 bool LoadProject(const std::string &filename, Project &outProject);
-
+void ExportProjectToPNG(const std::string& filename, const Project& project);
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
 }

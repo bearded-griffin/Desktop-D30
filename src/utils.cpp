@@ -181,4 +181,83 @@ namespace Utils {
       }
     }
   }
+
+  /*!***************************************************
+   * @brief    Creates the image of the label
+   * @details  Takes the label and how it is laid out on the
+   * canvas, then makes it so it can be sent to the printer.
+   * @param    filename const std::string& 
+   * @param    project const Project& 
+   * @return   void 
+   * @note     
+   * @date     2026.01.20
+   * @author   bearded.griffin
+   ****************************************************/
+  void ExportProjectToPNG(const std::string &filename, const Project &project) {
+    // 1. Get Canvas Dimensions
+    LabelSize currentSize = LabelSizes[project.selectedLabelIndex];
+    int width = (int)currentSize.width;
+    int height = (int)currentSize.height;
+
+    // 2. Create a Blank White Image (The Paper)
+    Image canvas = GenImageColor(width, height, WHITE);
+
+    // 3. Draw Objects onto the Image
+    for (const auto &obj : project.objects) {
+      Color col = GetColor(obj.colorHex);
+
+      if (obj.type == ObjectType::Text) {
+        // Raylib's ImageDrawTextEx requires a C-style string
+        ImageDrawTextEx(&canvas, GetFontDefault(), obj.data.c_str(),
+                        {obj.x, obj.y}, obj.fontSize, 2.0f, col);
+      } else if (obj.type == ObjectType::Field) {
+        // Fields are blue on screen, but BLACK on the actual label
+        ImageDrawTextEx(&canvas, GetFontDefault(), obj.data.c_str(),
+                        {obj.x, obj.y}, obj.fontSize, 2.0f, BLACK);
+      } else if (obj.type == ObjectType::QRCode) {
+        // For QRs, we need to manually draw the pixels again because
+        // we don't have an "ImageDrawQRCode" helper.
+        // We'll reimplement the QR logic but targeting the image.
+
+        if (obj.data.empty())
+          continue;
+        QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
+        int gridSize = qr.getSize();
+        if (gridSize > 0) {
+          float moduleSize = obj.width / (float)gridSize;
+
+          for (int yModule = 0; yModule < gridSize; yModule++) {
+            for (int xModule = 0; xModule < gridSize; xModule++) {
+              if (qr.getModule(xModule, yModule)) {
+                // Calculate pixel rect
+                int px = (int)(obj.x + (xModule * moduleSize));
+                int py = (int)(obj.y + (yModule * moduleSize));
+                int pSize = (int)(moduleSize + 1);
+
+                // Draw rect onto image
+                ImageDrawRectangle(&canvas, px, py, pSize, pSize, col);
+              }
+            }
+          }
+        }
+      } else if (obj.type == ObjectType::Image) {
+        // Placeholder for actual Image loading (Phase 3)
+        ImageDrawRectangleLines(&canvas, {obj.x, obj.y, obj.width, obj.height},
+                                2, BLACK);
+        ImageDrawText(&canvas, "IMG", (int)obj.x + 5, (int)obj.y + 5, 10,
+                      BLACK);
+      }
+    }
+
+    // 4. Save to Disk
+    // We ensure it has .png extension
+    std::string finalPath = filename;
+    if (finalPath.find(".png") == std::string::npos)
+      finalPath += ".png";
+
+    ExportImage(canvas, finalPath.c_str());
+    UnloadImage(canvas); // Cleanup RAM
+
+    std::cout << "Exported Label to: " << finalPath << std::endl;
+  }
 }
