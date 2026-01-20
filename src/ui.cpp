@@ -32,9 +32,17 @@ void DrawMainMenu(Project &project) {
         Utils::SaveProject("project.json", project);
       if (ImGui::MenuItem("Load Project"))
         Utils::LoadProject("", project);
+      
       ImGui::Separator();
-      if (ImGui::MenuItem("Exit")) { /* TODO: flag to close */
+      
+      
+      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
+          // Hardcoding filename for the test, or you could add pfd::save_file here too
+          Utils::ExportProjectToPNG("test_label.png", project);
       }
+
+      ImGui::Separator();
+      if (ImGui::MenuItem("Exit")) { /* TODO: flag to close */ }
       ImGui::EndMenu();
     }
     ImGui::EndMainMenuBar();
