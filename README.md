@@ -31,4 +31,4 @@ make re
   - [ ] Put custom images on the label
   - [x] Put custom text on the label
   - [ ] Import a .csv to batch create labels.
-- [ ] Prints Directly to the Phenomemo D30 printer
+- [x] Prints Directly to the Phenomemo D30 printer
