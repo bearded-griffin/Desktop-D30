@@ -298,6 +298,12 @@ void DrawSidebar(Project &project, int &selectedIndex) {
         {ObjectType::Field, 50, 50, 0, 0, "{ColumnName}", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
+  ImGui::SameLine();
+  if (ImGui::Button("Add Image")) {
+    // Default 100x100 placeholder
+    project.objects.push_back({ObjectType::Image, 50, 50, 100, 100, "", 0, 0xFFFFFFFF});
+    selectedIndex = project.objects.size() - 1;
+  }
 
   ImGui::End();
 }
