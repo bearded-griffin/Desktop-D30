@@ -12,6 +12,8 @@
 #include "utils.h"
 #include <string>
 #include <cstring>
+#include "printer.h"
+#include "protocol.h"
 
 namespace UI {
 
@@ -26,27 +28,106 @@ namespace UI {
  * @author   bearded.griffin
  ****************************************************/
 void DrawMainMenu(Project &project) {
-  if (ImGui::BeginMainMenuBar()) {
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save Project"))
-        Utils::SaveProject("project.flbl", project);
-      if (ImGui::MenuItem("Load Project"))
-        Utils::LoadProject("", project);
-      
-      ImGui::Separator();
-      
-      
-      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
-          // Hardcoding filename for the test, or you could add pfd::save_file here too
-          Utils::ExportProjectToPNG("test_label.png", project);
+// 1. Declare a flag to track if we need to open the popup
+static bool triggerScanPopup = false;
+
+if (ImGui::BeginMainMenuBar()) {
+  if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("Save Project"))
+      Utils::SaveProject("project.flbl", project);
+    if (ImGui::MenuItem("Load Project"))
+      Utils::LoadProject("", project);
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Export to PNG (Test Print)")) {
+      Utils::ExportProjectToPNG("test_label.png", project);
+    }
+
+    // Printer Menu
+    if (ImGui::BeginMenu("Printer")) {
+      if (Printer::Get().IsConnected()) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
+                           Printer::Get().GetConnectedName().c_str());
+        if (ImGui::MenuItem("Disconnect")) {
+          Printer::Get().Disconnect();
+        }
+      } else {
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
       }
 
       ImGui::Separator();
-      if (ImGui::MenuItem("Exit")) { /* TODO: flag to close */ }
+
+      if (ImGui::MenuItem("Scan for Devices")) {
+        Printer::Get().StartScan();
+        // FIX: Don't call OpenPopup here. Just set the flag.
+        triggerScanPopup = true;
+      }
       ImGui::EndMenu();
     }
-    ImGui::EndMainMenuBar();
+
+    if (ImGui::MenuItem("Print Label")) {
+          Protocol::PrintLabel(project);
+      }
+
+    ImGui::Separator();
+    if (ImGui::MenuItem("Exit")) { /* TODO: flag to close */
+    }
+    ImGui::EndMenu();
   }
+  ImGui::EndMainMenuBar();
+}
+
+// --- POPUP LOGIC ---
+
+// 2. Handle the flag in the ROOT scope (matching BeginPopupModal)
+if (triggerScanPopup) {
+  ImGui::OpenPopup("DeviceScanPopup");
+  triggerScanPopup = false;
+}
+
+static std::vector<BluetoothDevice> foundDevices;
+
+// Now this ID matches the one opened above
+if (ImGui::BeginPopupModal("DeviceScanPopup", NULL,
+                           ImGuiWindowFlags_AlwaysAutoResize)) {
+
+  if (Printer::Get().IsScanning()) {
+    ImGui::Text("Scanning Bluetooth...");
+    ImGui::Text("Please wait approx 10 seconds.");
+
+    const char *spinner = "|/-\\";
+    int frame = (int)(ImGui::GetTime() / 0.1f) % 4;
+    ImGui::Text(" %c ", spinner[frame]);
+  } else if (Printer::Get().HasScanResults()) {
+    foundDevices = Printer::Get().GetScanResults();
+  }
+
+  if (!Printer::Get().IsScanning()) {
+    ImGui::Text("Found Devices: %zu", foundDevices.size());
+    ImGui::Separator();
+
+    if (foundDevices.empty()) {
+      ImGui::TextDisabled("No devices found.");
+      ImGui::TextDisabled("(Check permissions: sudo setcap ...)");
+    }
+
+    for (const auto &dev : foundDevices) {
+      std::string label = dev.name + " (" + dev.address + ")";
+      if (ImGui::Button(label.c_str())) {
+        Printer::Get().Connect(dev.address);
+        ImGui::CloseCurrentPopup();
+      }
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Close")) {
+      ImGui::CloseCurrentPopup();
+    }
+  }
+
+  ImGui::EndPopup();
+}
 }
 
 /*!***************************************************
@@ -83,7 +164,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     ImGui::EndCombo();
   }
 
-  // The Checkboxes you requested
+  // The Checkboxes
   ImGui::Checkbox("Show Grid", &project.showGrid);
   ImGui::SameLine();
   ImGui::Checkbox("Dark Mode", &project.darkTheme);
@@ -141,7 +222,6 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
     } else if (obj.type == ObjectType::QRCode) {
       // QR Codes must be square -> Single "Size" control
-      // We use &obj.width to drive the value, then copy it to height
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
         obj.height = obj.width; // Force square aspect ratio
       }
@@ -169,21 +249,18 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   // --- 4. Add Buttons ---
   if (ImGui::Button("Add Text")) {
-    // FIX: Changed 0xFF000000 to 0x000000FF (Solid Black)
     project.objects.push_back(
         {ObjectType::Text, 50, 50, 0, 0, "New Text", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add QR")) {
-    // FIX: Changed 0xFF000000 to 0x000000FF
     project.objects.push_back({ObjectType::QRCode, 50, 50, 100, 100,
                                "www.example.com", 0, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field")) {
-    // FIX: Changed 0xFF000000 to 0x000000FF
     project.objects.push_back(
         {ObjectType::Field, 50, 50, 0, 0, "{ColumnName}", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
@@ -191,4 +268,5 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   ImGui::End();
 }
+
 }

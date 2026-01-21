@@ -71,6 +71,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(qrcodegen)
 
+# --- FIND SYSTEM BLUETOOTH LIBRARY ---
+find_library(BLUETOOTH_LIB bluetooth REQUIRED)
+
 # --- MANUAL LIBRARY GENERATION ---
 file(GLOB IMGUI_SOURCES "${imgui_SOURCE_DIR}/*.cpp")
 add_library(imgui STATIC ${IMGUI_SOURCES})
@@ -88,6 +91,8 @@ add_executable(LabelForge
     src/main.cpp
     src/utils.cpp
     src/ui.cpp
+    src/printer.cpp
+    src/protocol.cpp
 )
 
 target_include_directories(LabelForge PRIVATE 
@@ -104,6 +109,7 @@ target_link_libraries(LabelForge PRIVATE
     raylib 
     nlohmann_json::nlohmann_json
     qrcodegen
+    ${BLUETOOTH_LIB}
 )
 
 if (WIN32)
