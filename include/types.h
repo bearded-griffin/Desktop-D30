@@ -45,6 +45,9 @@ struct LabelObject {
   // Style
   float fontSize = 20.0f;
   unsigned int colorHex = 0xFF000000;
+
+  // --- Runtime Texture Resource ---
+  Texture2D texture = { 0 };
 };
 
 struct Project {

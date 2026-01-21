@@ -14,6 +14,7 @@
 #include <cstring>
 #include "printer.h"
 #include "protocol.h"
+#include "portable-file-dialogs.h"
 
 namespace UI {
 
@@ -60,7 +61,6 @@ if (ImGui::BeginMainMenuBar()) {
 
       if (ImGui::MenuItem("Scan for Devices")) {
         Printer::Get().StartScan();
-        // FIX: Don't call OpenPopup here. Just set the flag.
         triggerScanPopup = true;
       }
       ImGui::EndMenu();
@@ -164,6 +164,8 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     ImGui::EndCombo();
   }
 
+  
+
   // The Checkboxes
   ImGui::Checkbox("Show Grid", &project.showGrid);
   ImGui::SameLine();
@@ -229,6 +231,37 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       // Images can be rectangular -> Separate Width/Height controls
       ImGui::DragFloat("Width", &obj.width);
       ImGui::DragFloat("Height", &obj.height);
+
+      // --- NEW: Image File Picker ---
+      ImGui::Spacing();
+      if (ImGui::Button("Browse Image...")) {
+        auto selection =
+            pfd::open_file("Select Image", ".",
+                           {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
+                .result();
+        if (!selection.empty()) {
+          // 1. Update Path
+          obj.data = selection[0];
+
+          // 2. Unload old texture if exists
+          if (obj.texture.id != 0)
+            UnloadTexture(obj.texture);
+
+          // 3. Load new texture
+          // We load as Image first to resize it to a reasonable default if
+          // needed
+          Image img = LoadImage(obj.data.c_str());
+          if (img.data != NULL) {
+            // Auto-set width/height for new images
+            if (obj.width == 0 || obj.height == 0) {
+              obj.width = (float)img.width;
+              obj.height = (float)img.height;
+            }
+            obj.texture = LoadTextureFromImage(img);
+            UnloadImage(img);
+          }
+        }
+      }
     }
 
     static char buffer[256];
@@ -263,6 +296,12 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   if (ImGui::Button("Add Field")) {
     project.objects.push_back(
         {ObjectType::Field, 50, 50, 0, 0, "{ColumnName}", 20.0f, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Add Image")) {
+    // Default 100x100 placeholder
+    project.objects.push_back({ObjectType::Image, 50, 50, 100, 100, "", 0, 0xFFFFFFFF});
     selectedIndex = project.objects.size() - 1;
   }
 

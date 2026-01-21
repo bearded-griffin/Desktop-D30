@@ -16,8 +16,69 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 namespace Protocol {
+
+
+/*!***************************************************
+ * @brief    Converts grayscale image to black and white.
+ * @details  Uses the Floyd-Steinberg algorithm to 
+ * convert a grayscale image to strict black & white (1-bit).
+ * @param    image Image&
+ * @return   void
+ * @note     
+ * @date     2026.01.21
+ * @author   bearded.griffin
+ ****************************************************/
+void ApplyDithering(Image &image) {
+  int w = image.width;
+  int h = image.height;
+
+  // We need float precision for error accumulation
+  // Copy image data to a float buffer
+  std::vector<float> pixels(w * h);
+  uint8_t *rawData = (uint8_t *)image.data;
+  for (int i = 0; i < w * h; i++)
+    pixels[i] = (float)rawData[i];
+
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      float oldPixel = pixels[y * w + x];
+
+      // Threshold: If < 128, it's Black (0). Else White (255).
+      float newPixel = (oldPixel < 128) ? 0.0f : 255.0f;
+
+      // Calculate Error (How much "Gray" did we lose?)
+      float error = oldPixel - newPixel;
+
+      pixels[y * w + x] = newPixel; // Commit the strict B/W value
+
+      // Distribute error to neighbors (Floyd-Steinberg weights)
+      // Right (7/16)
+      if (x + 1 < w)
+        pixels[y * w + (x + 1)] += error * 7.0f / 16.0f;
+
+      // Bottom-Left (3/16)
+      if (x - 1 >= 0 && y + 1 < h)
+        pixels[(y + 1) * w + (x - 1)] += error * 3.0f / 16.0f;
+
+      // Bottom (5/16)
+      if (y + 1 < h)
+        pixels[(y + 1) * w + x] += error * 5.0f / 16.0f;
+
+      // Bottom-Right (1/16)
+      if (x + 1 < w && y + 1 < h)
+        pixels[(y + 1) * w + (x + 1)] += error * 1.0f / 16.0f;
+    }
+  }
+
+  // Copy back to the Raylib image
+  for (int i = 0; i < w * h; i++) {
+    // Clamp to ensure safety, though math usually holds up
+    rawData[i] = (uint8_t)std::clamp(pixels[i], 0.0f, 255.0f);
+  }
+}
 
 /*!***************************************************
  * @brief    Prints the label...
@@ -29,66 +90,58 @@ namespace Protocol {
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
-void PrintLabel(const Project &project) {
+void PrintLabel(const Project& project) {
   if (!Printer::Get().IsConnected()) {
     std::cout << "[Protocol] Cannot print: Printer not connected." << std::endl;
     return;
   }
 
   std::cout << "[Protocol] Generating Label Data..." << std::endl;
-  
 
-  // 1. Get the Source Image (Landscape, e.g., 320x96)
+  // 1. Get Source Image
   Image source = Utils::RenderProjectToImage(project);
+
+  // 2. Convert to Grayscale
   ImageFormat(&source, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
 
-  // 2. Calculate Dimensions for ROTATION
-  // The D30 prints vertically. We must rotate 90 degrees.
-  // Source Width becomes Print Height (Lines)
-  // Source Height becomes Print Width (Dots)
+  // 3. APPLY DITHERING (The Fix)
+  // This turns "Orange" (Gray) into "Dots" (Black/White Pattern)
+  ApplyDithering(source);
 
-  int sourceW = source.width;  // e.g. 320
-  int sourceH = source.height; // e.g. 96
+  // 4. Calculate Dimensions for ROTATION (Zig Logic)
+  int sourceW = source.width;
+  int sourceH = source.height;
 
-  // 3. Calculate Dimensions for BITMAP
   int bytesPerRow = (sourceH + 7) / 8;
 
-  
   int paddingLines = 6;
-  int safetyBuffer = 20; 
-        
+  int safetyBuffer = 20;
   int totalPrintLines = sourceW + paddingLines + safetyBuffer;
 
   std::vector<uint8_t> pixelData;
   pixelData.reserve(bytesPerRow * totalPrintLines);
 
   // --- STEP A: PADDING ---
-  // Write 6 lines of empty bytes
   for (int p = 0; p < paddingLines; p++) {
-    for (int b = 0; b < bytesPerRow; b++) {
+    for (int b = 0; b < bytesPerRow; b++)
       pixelData.push_back(0x00);
-    }
   }
 
-  // --- STEP B: BITMAP ROTATION  ---
-  // Outer Loop: Iterate Source X from Right -> Left (Rotates the image)
+  // --- STEP B: BITMAP ROTATION ---
   uint8_t *srcPixels = (uint8_t *)source.data;
 
   for (int i = 0; i < sourceW; i++) {
-    
     int srcX = (sourceW - 1) - i;
 
     for (int byteIdx = 0; byteIdx < bytesPerRow; byteIdx++) {
       uint8_t currentByte = 0;
 
       for (int bit = 0; bit < 8; bit++) {
-        
         int srcY = (byteIdx * 8) + bit;
 
         if (srcY < sourceH) {
-          // Get Pixel at (srcX, srcY)
-          // Raylib Grayscale: < 128 is Dark
-          // < 380 (Sum of RGB), which is roughly < 128 grayscale
+          // Because we ran Dithering, pixels are now strictly 0 or 255.
+          // 0 (Black) < 128 -> True.
           if (srcPixels[srcY * sourceW + srcX] < 128) {
             currentByte |= (1 << (7 - bit));
           }
@@ -98,43 +151,35 @@ void PrintLabel(const Project &project) {
     }
   }
 
-  // --- STEP C: TRAILING BUFFER ---
-  // Fill the rest of the safety buffer with white space
-  for (int p = 0; p < safetyBuffer; p++) {
-    for (int b = 0; b < bytesPerRow; b++) {
-      pixelData.push_back(0x00);
-    }
-  }
-
   UnloadImage(source);
+
+  // --- STEP C: TRAILING BUFFER ---
+  for (int p = 0; p < safetyBuffer; p++) {
+    for (int b = 0; b < bytesPerRow; b++)
+      pixelData.push_back(0x00);
+  }
 
   // --- CONSTRUCT PACKET ---
   std::vector<uint8_t> cmd;
 
-  // 1. Phomemo Magic Header
+  // Phomemo Magic Header
   cmd.push_back(0x1F);
   cmd.push_back(0x11);
   cmd.push_back(0x24);
   cmd.push_back(0x00);
-
-  // 2. ESC/POS Init
+  // ESC/POS Init
   cmd.push_back(0x1B);
   cmd.push_back(0x40);
-
-  // 3. Raster Command (GS v 0)
+  // Raster Command (GS v 0)
   cmd.push_back(0x1D);
   cmd.push_back(0x76);
   cmd.push_back(0x30);
   cmd.push_back(0x00);
-
-  // Width (Bytes)
+  // Width & Height
   cmd.push_back(bytesPerRow & 0xFF);
   cmd.push_back((bytesPerRow >> 8) & 0xFF);
-
-  // Height (Total Lines)
   cmd.push_back(totalPrintLines & 0xFF);
   cmd.push_back((totalPrintLines >> 8) & 0xFF);
-
   // Data
   cmd.insert(cmd.end(), pixelData.begin(), pixelData.end());
 
