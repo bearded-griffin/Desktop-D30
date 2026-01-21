@@ -186,8 +186,34 @@ int main() {
         DrawRectangleLines(obj.x, obj.y, obj.width, obj.width,
                            Fade(GRAY, 0.3f));
       } else if (obj.type == ObjectType::Image) {
+        // 1. Lazy Load: If path exists but texture doesn't, load it.
+        if (obj.texture.id == 0 && !obj.data.empty() &&
+            FileExists(obj.data.c_str())) {
+          Image img = LoadImage(obj.data.c_str());
+          obj.texture = LoadTextureFromImage(img);
+          UnloadImage(img);
+          // Auto-size if new
+          if (obj.width == 0)
+            obj.width = (float)obj.texture.width;
+          if (obj.height == 0)
+            obj.height = (float)obj.texture.height;
+        }
+
+        // 2. Draw
+        if (obj.texture.id != 0) {
+          // DrawTexturePro allows sizing
+          Rectangle src = {0, 0, (float)obj.texture.width,
+                           (float)obj.texture.height};
+          Rectangle dst = {obj.x, obj.y, obj.width, obj.height};
+          DrawTexturePro(obj.texture, src, dst, {0, 0}, 0.0f, WHITE);
+        } else {
+          // Placeholder
+          DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, BLACK);
+          DrawText("IMG", obj.x + 5, obj.y + 5, 10, BLACK);
+        }
+
+        // Draw Border
         DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, BLACK);
-        DrawText("IMG", obj.x + 5, obj.y + 5, 10, BLACK);
       }
 
       // Selection Box
