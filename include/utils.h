@@ -30,5 +30,7 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
 
 Image RenderProjectToImage(const Project& project);
+
+bool LoadCSV(const std::string& filename, Project& project);
                 
 }

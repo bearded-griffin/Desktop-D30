@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 using namespace qrcodegen;
 
@@ -285,6 +286,55 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
   // Step 3: Cleanup
   UnloadImage(img);
   std::cout << "Exported Label to: " << finalPath << std::endl;
+}
+
+/*!***************************************************
+ * @brief    Load the CSV file
+ * @details  parses the provided .csv file so that it 
+ * can be used to display the data on Label Objects.
+ * @param    filename const std::string&
+ * @param    project Project&
+ * @return   bool If it loaded or not
+ * @note     
+ * @date     2026.01.22
+ * @author   bearded.griffin
+ ****************************************************/
+bool LoadCSV(const std::string &filename, Project &project) {
+  std::ifstream file(filename);
+  if (!file.is_open())
+    return false;
+
+  project.csvHeaders.clear();
+  project.csvRows.clear();
+  project.csvFilePath = filename;
+
+  std::string line;
+  bool isHeader = true;
+
+  while (std::getline(file, line)) {
+    // Super simple CSV parser (does not handle quoted commas correctly, but
+    // fine for basic usage)
+    std::vector<std::string> row;
+    std::stringstream ss(line);
+    std::string cell;
+
+    while (std::getline(ss, cell, ',')) {
+      // Remove carriage returns if any (Windows formatting)
+      if (!cell.empty() && cell.back() == '\r')
+        cell.pop_back();
+      row.push_back(cell);
+    }
+
+    if (isHeader) {
+      project.csvHeaders = row;
+      isHeader = false;
+    } else {
+      if (row.size() == project.csvHeaders.size()) {
+        project.csvRows.push_back(row);
+      }
+    }
+  }
+  return true;
 }
 
 } // namespace Utils
