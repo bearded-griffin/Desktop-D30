@@ -1,20 +1,24 @@
 /*!***************************************************
  * @file     ui.cpp
  * @brief    Handels all UI operations
- * @details  draws the menus, and canvas.
- * @note     
- * @date     2026.01.19
+ * @details  Draws the menus, sidebar, and popups.
+ * @date     2026.01.23
  * @author   bearded.griffin
  ****************************************************/
 
 #include "ui.h"
 #include "imgui.h"
-#include "utils.h"
-#include <string>
-#include <cstring>
+#include "portable-file-dialogs.h"
 #include "printer.h"
 #include "protocol.h"
-#include "portable-file-dialogs.h"
+#include "utils.h"
+
+#include <chrono>
+#include <cstring>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace UI {
 
@@ -24,34 +28,75 @@ namespace UI {
  * contains all the options for the program.
  * @param    project Project&
  * @return   void
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
 void DrawMainMenu(Project &project) {
-// 1. Declare a flag to track if we need to open the popup
-static bool triggerScanPopup = false;
 
-if (ImGui::BeginMainMenuBar()) {
-  if (ImGui::BeginMenu("File")) {
-    if (ImGui::MenuItem("Save Project"))
-      Utils::SaveProject("project.flbl", project);
-    if (ImGui::MenuItem("Load Project"))
-      Utils::LoadProject("", project);
+  // Flags to trigger popups from the main menu scope
+  static bool triggerScanPopup = false;
+  static bool triggerBatchPopup = false;
 
-    ImGui::Separator();
+  if (ImGui::BeginMainMenuBar()) {
 
-    if (ImGui::MenuItem("Export to PNG (Test Print)")) {
-      Utils::ExportProjectToPNG("test_label.png", project);
+    // --- FILE MENU ---
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("Save Project"))
+        Utils::SaveProject("project.flbl", project);
+      if (ImGui::MenuItem("Load Project"))
+        Utils::LoadProject("", project);
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
+        Utils::ExportProjectToPNG("test_label.png", project);
+      }
+
+      ImGui::Separator();
+
+      // --- CSV / BATCH PRINTING ---
+      if (ImGui::MenuItem("Load CSV Data...")) {
+        auto selection =
+            pfd::open_file("Select CSV", ".", {"CSV Files", "*.csv"}).result();
+        if (!selection.empty()) {
+          Utils::LoadCSV(selection[0], project);
+
+          project.currentCSVRow = 0;
+          Utils::ApplyCSVDataToObjects(project);
+        }
+      }
+
+      if (ImGui::MenuItem("Batch Print (CSV)")) {
+        if (project.csvRows.empty()) {
+          // Could add a toast/error here, but for now we just don't open
+          std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
+        } else {
+          triggerBatchPopup = true;
+        }
+      }
+
+      ImGui::Separator();
+      if (ImGui::MenuItem("Exit")) { /* TODO: Close Window Flag */
+      }
+      ImGui::EndMenu();
     }
 
-    // Printer Menu
+    // --- PRINTER MENU ---
     if (ImGui::BeginMenu("Printer")) {
+      // Status Indicator
       if (Printer::Get().IsConnected()) {
         ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
                            Printer::Get().GetConnectedName().c_str());
         if (ImGui::MenuItem("Disconnect")) {
           Printer::Get().Disconnect();
+        }
+
+        ImGui::Separator();
+
+        // Direct Print Action
+        if (ImGui::MenuItem("Print Single Label")) {
+          Protocol::PrintLabel(project);
         }
       } else {
         ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
@@ -66,77 +111,140 @@ if (ImGui::BeginMainMenuBar()) {
       ImGui::EndMenu();
     }
 
-    if (ImGui::MenuItem("Print Label")) {
-          Protocol::PrintLabel(project);
+    ImGui::EndMainMenuBar();
+  }
+
+  // =========================================================
+  // POPUP HANDLERS (Must be outside Menu Bar Scope)
+  // =========================================================
+
+  // --- 1. DEVICE SCAN POPUP ---
+  if (triggerScanPopup) {
+    ImGui::OpenPopup("DeviceScanPopup");
+    triggerScanPopup = false;
+  }
+
+  static std::vector<BluetoothDevice> foundDevices;
+  if (ImGui::BeginPopupModal("DeviceScanPopup", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+
+    if (Printer::Get().IsScanning()) {
+      ImGui::Text("Scanning Bluetooth...");
+      ImGui::Text("Please wait approx 10 seconds.");
+
+      // Simple Spinner
+      const char *spinner = "|/-\\";
+      int frame = (int)(ImGui::GetTime() / 0.1f) % 4;
+      ImGui::Text(" %c ", spinner[frame]);
+    } else if (Printer::Get().HasScanResults()) {
+      foundDevices = Printer::Get().GetScanResults();
+    }
+
+    if (!Printer::Get().IsScanning()) {
+      ImGui::Text("Found Devices: %zu", foundDevices.size());
+      ImGui::Separator();
+
+      if (foundDevices.empty()) {
+        ImGui::TextDisabled("No devices found.");
+        ImGui::TextDisabled("(Check permissions: sudo setcap ...)");
       }
 
-    ImGui::Separator();
-    if (ImGui::MenuItem("Exit")) { /* TODO: flag to close */
-    }
-    ImGui::EndMenu();
-  }
-  ImGui::EndMainMenuBar();
-}
+      for (const auto &dev : foundDevices) {
+        std::string label = dev.name + " (" + dev.address + ")";
+        if (ImGui::Button(label.c_str())) {
+          Printer::Get().Connect(dev.address);
+          ImGui::CloseCurrentPopup();
+        }
+      }
 
-// --- POPUP LOGIC ---
-
-// 2. Handle the flag in the ROOT scope (matching BeginPopupModal)
-if (triggerScanPopup) {
-  ImGui::OpenPopup("DeviceScanPopup");
-  triggerScanPopup = false;
-}
-
-static std::vector<BluetoothDevice> foundDevices;
-
-// Now this ID matches the one opened above
-if (ImGui::BeginPopupModal("DeviceScanPopup", NULL,
-                           ImGuiWindowFlags_AlwaysAutoResize)) {
-
-  if (Printer::Get().IsScanning()) {
-    ImGui::Text("Scanning Bluetooth...");
-    ImGui::Text("Please wait approx 10 seconds.");
-
-    const char *spinner = "|/-\\";
-    int frame = (int)(ImGui::GetTime() / 0.1f) % 4;
-    ImGui::Text(" %c ", spinner[frame]);
-  } else if (Printer::Get().HasScanResults()) {
-    foundDevices = Printer::Get().GetScanResults();
-  }
-
-  if (!Printer::Get().IsScanning()) {
-    ImGui::Text("Found Devices: %zu", foundDevices.size());
-    ImGui::Separator();
-
-    if (foundDevices.empty()) {
-      ImGui::TextDisabled("No devices found.");
-      ImGui::TextDisabled("(Check permissions: sudo setcap ...)");
-    }
-
-    for (const auto &dev : foundDevices) {
-      std::string label = dev.name + " (" + dev.address + ")";
-      if (ImGui::Button(label.c_str())) {
-        Printer::Get().Connect(dev.address);
+      ImGui::Separator();
+      if (ImGui::Button("Close")) {
         ImGui::CloseCurrentPopup();
       }
     }
-
-    ImGui::Separator();
-    if (ImGui::Button("Close")) {
-      ImGui::CloseCurrentPopup();
-    }
+    ImGui::EndPopup();
   }
 
-  ImGui::EndPopup();
-}
+  // --- 2. BATCH PRINT POPUP ---
+  if (triggerBatchPopup) {
+    ImGui::OpenPopup("BatchPrintPopup");
+    triggerBatchPopup = false;
+  }
+
+  if (ImGui::BeginPopupModal("BatchPrintPopup", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    static int startRow = 1;
+    static int endRow = 0;
+
+    // Initialize endRow once when opening
+    if (endRow == 0 && !project.csvRows.empty())
+      endRow = (int)project.csvRows.size();
+
+    ImGui::Text("CSV File: %s", project.csvFilePath.c_str());
+    ImGui::Text("Total Rows: %zu", project.csvRows.size());
+
+    ImGui::Separator();
+    ImGui::InputInt("Start Row", &startRow);
+    ImGui::InputInt("End Row", &endRow);
+
+    // Safety Clamps
+    if (startRow < 1)
+      startRow = 1;
+    if (endRow > (int)project.csvRows.size())
+      endRow = (int)project.csvRows.size();
+    if (endRow < startRow)
+      endRow = startRow;
+
+    ImGui::Separator();
+
+    if (ImGui::Button("PRINT BATCH")) {
+      // --- THE BATCH LOOP ---
+      for (int i = startRow - 1; i < endRow; i++) {
+        // 1. Get Data
+        std::vector<std::string> &rowData = project.csvRows[i];
+
+        // 2. Create Temp Project
+        Project tempProject = project;
+
+        // 3. Inject Data
+        for (auto &obj : tempProject.objects) {
+          if (!obj.linkedColumn.empty()) {
+            for (size_t c = 0; c < project.csvHeaders.size(); c++) {
+              if (project.csvHeaders[c] == obj.linkedColumn) {
+                if (c < rowData.size()) {
+                  obj.data = rowData[c];
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        // 4. Print
+        std::cout << "[Batch] Printing Row " << (i + 1) << "..." << std::endl;
+        Protocol::PrintLabel(tempProject);
+
+        // 5. Delay (Prevent buffer overflow)
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel"))
+      ImGui::CloseCurrentPopup();
+
+    ImGui::EndPopup();
+  }
 }
 
 /*!***************************************************
  * @brief    Draws the side bar
  * @details  It draws the side "Inspector" bar on the left side.
  * @param    project Project&
- * @param    selectedIndex int& 
+ * @param    selectedIndex int&
  * @return   void
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
@@ -164,12 +272,48 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     ImGui::EndCombo();
   }
 
-  
-
-  // The Checkboxes
   ImGui::Checkbox("Show Grid", &project.showGrid);
   ImGui::SameLine();
   ImGui::Checkbox("Dark Mode", &project.darkTheme);
+
+  if (!project.csvRows.empty()) {
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0, 1, 1, 1), "Data Source");
+
+    // File Name (Shortened)
+    std::string filename = project.csvFilePath;
+    size_t lastSlash = filename.find_last_of("/\\");
+    if (lastSlash != std::string::npos)
+      filename = filename.substr(lastSlash + 1);
+    ImGui::Text("File: %s", filename.c_str());
+
+    // Navigation Controls
+    ImGui::Spacing();
+    if (ImGui::Button("<<")) {
+      project.currentCSVRow--;
+      Utils::ApplyCSVDataToObjects(project);
+    }
+
+    ImGui::SameLine();
+    // Display "Row 1 of 50" (Human readable 1-based index)
+    ImGui::Text(" Row %d of %zu ", project.currentCSVRow + 1,
+                project.csvRows.size());
+
+    ImGui::SameLine();
+    if (ImGui::Button(">>")) {
+      project.currentCSVRow++;
+      Utils::ApplyCSVDataToObjects(project);
+    }
+
+    // Manual Entry (Jump to Row)
+    int tempRow = project.currentCSVRow + 1;
+    if (ImGui::SliderInt("##RowSlider", &tempRow, 1,
+                         (int)project.csvRows.size())) {
+      project.currentCSVRow = tempRow - 1;
+      Utils::ApplyCSVDataToObjects(project);
+    }
+  }
 
   ImGui::Spacing();
   ImGui::Text("Objects Tree");
@@ -179,7 +323,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   for (int i = 0; i < project.objects.size(); i++) {
     LabelObject &obj = project.objects[i];
 
-    // Generate a nice name like "QR: www.google.com"
+    // Generate display name
     std::string typePrefix;
     switch (obj.type) {
     case ObjectType::Text:
@@ -197,11 +341,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     }
 
     std::string displayName = typePrefix + obj.data;
-    // Clamp long names for the UI
     if (displayName.length() > 25)
       displayName = displayName.substr(0, 22) + "...";
 
-    // Unique ID for ImGui
     std::string id = displayName + "##" + std::to_string(i);
 
     if (ImGui::Selectable(id.c_str(), selectedIndex == i)) {
@@ -216,23 +358,21 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   if (selectedIndex >= 0 && selectedIndex < project.objects.size()) {
     LabelObject &obj = project.objects[selectedIndex];
     ImGui::Text("Properties");
+
     ImGui::DragFloat("X", &obj.x);
     ImGui::DragFloat("Y", &obj.y);
 
+    // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-      // Text objects use Font Size
       ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
     } else if (obj.type == ObjectType::QRCode) {
-      // QR Codes must be square -> Single "Size" control
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
-        obj.height = obj.width; // Force square aspect ratio
+        obj.height = obj.width; // Keep Square
       }
     } else if (obj.type == ObjectType::Image) {
-      // Images can be rectangular -> Separate Width/Height controls
       ImGui::DragFloat("Width", &obj.width);
       ImGui::DragFloat("Height", &obj.height);
 
-      // --- NEW: Image File Picker ---
       ImGui::Spacing();
       if (ImGui::Button("Browse Image...")) {
         auto selection =
@@ -240,19 +380,15 @@ void DrawSidebar(Project &project, int &selectedIndex) {
                            {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
                 .result();
         if (!selection.empty()) {
-          // 1. Update Path
           obj.data = selection[0];
 
-          // 2. Unload old texture if exists
+          // Unload old
           if (obj.texture.id != 0)
             UnloadTexture(obj.texture);
 
-          // 3. Load new texture
-          // We load as Image first to resize it to a reasonable default if
-          // needed
+          // Load new
           Image img = LoadImage(obj.data.c_str());
           if (img.data != NULL) {
-            // Auto-set width/height for new images
             if (obj.width == 0 || obj.height == 0) {
               obj.width = (float)img.width;
               obj.height = (float)img.height;
@@ -264,11 +400,52 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       }
     }
 
+    // --- DATA BINDING (CSV) ---
+    // Allow binding for Text, Field, and QR Codes
+    if (!project.csvHeaders.empty() &&
+        (obj.type == ObjectType::Text || obj.type == ObjectType::Field ||
+         obj.type == ObjectType::QRCode)) {
+
+      ImGui::Spacing();
+      ImGui::Separator();
+      ImGui::Text("Data Binding (Batch)");
+
+      std::string currentLink =
+          obj.linkedColumn.empty() ? "[None]" : obj.linkedColumn;
+
+      if (ImGui::BeginCombo("Link Column", currentLink.c_str())) {
+        if (ImGui::Selectable("[None]", obj.linkedColumn.empty())) {
+          obj.linkedColumn = "";
+        }
+
+        for (const auto &header : project.csvHeaders) {
+          bool isSelected = (obj.linkedColumn == header);
+          if (ImGui::Selectable(header.c_str(), isSelected)) {
+            obj.linkedColumn = header;
+            // Preview first row immediately
+            if (!project.csvRows.empty()) {
+              for (size_t i = 0; i < project.csvHeaders.size(); i++) {
+                if (project.csvHeaders[i] == header) {
+                  obj.data = project.csvRows[0][i];
+                  break;
+                }
+              }
+            }
+          }
+          if (isSelected)
+            ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    ImGui::Separator();
+
+    // Manual Data Entry
     static char buffer[256];
     if (!ImGui::IsItemActive())
       strncpy(buffer, obj.data.c_str(), sizeof(buffer));
 
-    // Label changes based on type
     const char *label = (obj.type == ObjectType::QRCode)  ? "Data"
                         : (obj.type == ObjectType::Image) ? "File Path"
                                                           : "Text";
@@ -283,29 +460,32 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   // --- 4. Add Buttons ---
   if (ImGui::Button("Add Text")) {
     project.objects.push_back(
-        {ObjectType::Text, 50, 50, 0, 0, "New Text", 20.0f, 0x000000FF});
+        {ObjectType::Text, 50, 50, 0, 0, "New Text", "", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add QR")) {
     project.objects.push_back({ObjectType::QRCode, 50, 50, 100, 100,
-                               "www.example.com", 0, 0x000000FF});
+                               "www.example.com", "", 0, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
+  ImGui::SameLine();
+
+  // IMAGE BUTTON
+  if (ImGui::Button("Add Image")) {
+    project.objects.push_back(
+        {ObjectType::Image, 50, 50, 100, 100, "", "", 0, 0xFFFFFFFF});
+    selectedIndex = project.objects.size() - 1;
+  }
+
   ImGui::SameLine();
   if (ImGui::Button("Add Field")) {
     project.objects.push_back(
-        {ObjectType::Field, 50, 50, 0, 0, "{ColumnName}", 20.0f, 0x000000FF});
-    selectedIndex = project.objects.size() - 1;
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Add Image")) {
-    // Default 100x100 placeholder
-    project.objects.push_back({ObjectType::Image, 50, 50, 100, 100, "", 0, 0xFFFFFFFF});
+        {ObjectType::Field, 50, 50, 0, 0, "{Column}", "", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
 
   ImGui::End();
 }
 
-}
+} // namespace UI

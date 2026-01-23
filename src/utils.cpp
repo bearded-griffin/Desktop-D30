@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 
 using namespace qrcodegen;
 
@@ -101,15 +102,15 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  * @details  Opens a previously saved project file and
  * applies all the settings and places the objects back
  * on the canvas where they were at the time of saving.
+ * If a csv file path is saved, it will be loaded again.
  * @param    defaultName const std::string&
  * @param    outProject Project&
  * @return   bool if the load was successful
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
-  // Native Open Dialog
   auto dest = pfd::open_file("Open Project", defaultName,
                              {"ForgeLabel Files", "*.flbl"})
                   .result();
@@ -122,6 +123,26 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
       nlohmann::json j;
       file >> j;
       outProject = j.get<Project>();
+
+      // --- RELOAD CSV DATA ---
+      if (!outProject.csvFilePath.empty()) {
+        // Check if file still exists
+        if (FileExists(outProject.csvFilePath.c_str())) {
+          LoadCSV(outProject.csvFilePath, outProject);
+
+          // Re-apply the data for the saved 'currentCSVRow'
+          ApplyCSVDataToObjects(outProject);
+
+          std::cout << "[Utils] Auto-reloaded CSV: " << outProject.csvFilePath
+                    << std::endl;
+        } else {
+          std::cout << "[Utils] Warning: Saved CSV file not found: "
+                    << outProject.csvFilePath << std::endl;
+          // Optional: Clear the path so we don't keep trying
+          outProject.csvFilePath = "";
+        }
+      }
+
       return true;
     } catch (...) {
       return false;
@@ -182,9 +203,9 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
  * @details  Takes the entire project and converts it
  * to a black and white image so that it can be sent
  * to the printer.
- * @param    project const Project& 
- * @return   Image 
- * @note     
+ * @param    project const Project&
+ * @return   Image
+ * @note
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
@@ -285,6 +306,116 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
   // Step 3: Cleanup
   UnloadImage(img);
   std::cout << "Exported Label to: " << finalPath << std::endl;
+}
+
+/*!***************************************************
+ * @brief    Load the CSV file
+ * @details  parses the provided .csv file so that it
+ * can be used to display the data on Label Objects.
+ * @param    filename const std::string&
+ * @param    project Project&
+ * @return   bool If it loaded or not
+ * @note
+ * @date     2026.01.22
+ * @author   bearded.griffin
+ ****************************************************/
+bool LoadCSV(const std::string &filename, Project &project) {
+  std::ifstream file(filename);
+  if (!file.is_open())
+    return false;
+
+  project.csvHeaders.clear();
+  project.csvRows.clear();
+  project.csvFilePath = filename;
+
+  std::string line;
+  bool isHeader = true;
+
+  while (std::getline(file, line)) {
+    // Super simple CSV parser (does not handle quoted commas correctly, but
+    // fine for basic usage)
+    std::vector<std::string> row;
+    std::stringstream ss(line);
+    std::string cell;
+
+    while (std::getline(ss, cell, ',')) {
+      // Remove carriage returns if any (Windows formatting)
+      if (!cell.empty() && cell.back() == '\r')
+        cell.pop_back();
+      row.push_back(cell);
+    }
+
+    if (isHeader) {
+      project.csvHeaders = row;
+      isHeader = false;
+    } else {
+      if (row.size() == project.csvHeaders.size()) {
+        project.csvRows.push_back(row);
+      }
+    }
+  }
+  return true;
+}
+
+/*!***************************************************
+ * @brief    Applies the current row to the label.
+ * @details  It takes the data from the current row that
+ * the navigator is currently on and maps it to the fields.
+ * @param    project Project&
+ * @return   void
+ * @note
+ * @date     2026.01.23
+ * @author   bearded.griffin
+ ****************************************************/
+void ApplyCSVDataToObjects(Project &project) {
+  if (project.csvRows.empty())
+    return;
+
+  // Safety Clamp
+  if (project.currentCSVRow < 0)
+    project.currentCSVRow = 0;
+  if (project.currentCSVRow >= project.csvRows.size())
+    project.currentCSVRow = (int)project.csvRows.size() - 1;
+
+  // Get the data for the current row
+  const std::vector<std::string> &rowData =
+      project.csvRows[project.currentCSVRow];
+
+  for (auto &obj : project.objects) {
+    // Only update if this object is linked to a column
+    if (!obj.linkedColumn.empty()) {
+
+      // Find which column index matches the header name
+      for (size_t colIdx = 0; colIdx < project.csvHeaders.size(); colIdx++) {
+        if (project.csvHeaders[colIdx] == obj.linkedColumn) {
+
+          // If we have data for this column, update the object
+          if (colIdx < rowData.size()) {
+            obj.data = rowData[colIdx];
+
+            // Special Case: If it's an Image, we need to reload the texture!
+            if (obj.type == ObjectType::Image) {
+              if (obj.texture.id != 0)
+                UnloadTexture(obj.texture);
+
+              if (FileExists(obj.data.c_str())) {
+                Image img = LoadImage(obj.data.c_str());
+                // Auto-size if zero
+                if (obj.width == 0)
+                  obj.width = (float)img.width;
+                if (obj.height == 0)
+                  obj.height = (float)img.height;
+
+                obj.texture = LoadTextureFromImage(img);
+                UnloadImage(img);
+              }
+            }
+          }
+          break; // Stop searching headers
+        }
+      }
+    }
+  }
 }
 
 } // namespace Utils

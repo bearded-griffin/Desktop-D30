@@ -42,6 +42,9 @@ struct LabelObject {
   // For Field: The CSV column header name
   std::string data = "New Object";
 
+  // Data Binding for CSV data
+  std::string linkedColumn = "";
+
   // Style
   float fontSize = 20.0f;
   unsigned int colorHex = 0xFF000000;
@@ -56,6 +59,17 @@ struct Project {
   bool showGrid = true;   // Checkbox state
   int selectedLabelIndex = 0;
   std::vector<LabelObject> objects;
+
+  // --- CSV Data ---
+    // Headers: ["Name", "Price", "SKU"]
+    std::vector<std::string> csvHeaders;
+    // Rows: [ ["Widget", "$10", "123"], ["Gadget", "$5", "456"] ]
+    std::vector<std::vector<std::string>> csvRows;
+    std::string csvFilePath = "";
+
+    // Used for Data Navigation
+    int currentCSVRow = 0;
+
 };
 
 // JSON Serialization Macros
@@ -64,5 +78,5 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::Image, "image"},
                                           {ObjectType::Field, "field"}})
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, fontSize, colorHex)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects, csvFilePath, currentCSVRow)
