@@ -26,9 +26,10 @@ make re
 
 ## Features
 
-- [ ] Create labels
+- [x] Create labels
   - [x] Generate QR Codes
-  - [ ] Put custom images on the label
+  - [x] Put custom images on the label
   - [x] Put custom text on the label
-  - [ ] Import a .csv to batch create labels.
+  - [x] Import a .csv to batch create labels.
 - [x] Prints Directly to the Phenomemo D30 printer
+- [ ] Folder based Icon Store.
