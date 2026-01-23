@@ -337,4 +337,65 @@ bool LoadCSV(const std::string &filename, Project &project) {
   return true;
 }
 
+/*!***************************************************
+ * @brief    Applies the current row to the label.
+ * @details  It takes the data from the current row that
+ * the navigator is currently on and maps it to the fields.
+ * @param    project Project&
+ * @return   void 
+ * @note     
+ * @date     2026.01.23
+ * @author   bearded.griffin
+ ****************************************************/
+void ApplyCSVDataToObjects(Project &project) {
+  if (project.csvRows.empty())
+    return;
+
+  // Safety Clamp
+  if (project.currentCSVRow < 0)
+    project.currentCSVRow = 0;
+  if (project.currentCSVRow >= project.csvRows.size())
+    project.currentCSVRow = (int)project.csvRows.size() - 1;
+
+  // Get the data for the current row
+  const std::vector<std::string> &rowData =
+      project.csvRows[project.currentCSVRow];
+
+  for (auto &obj : project.objects) {
+    // Only update if this object is linked to a column
+    if (!obj.linkedColumn.empty()) {
+
+      // Find which column index matches the header name
+      for (size_t colIdx = 0; colIdx < project.csvHeaders.size(); colIdx++) {
+        if (project.csvHeaders[colIdx] == obj.linkedColumn) {
+
+          // If we have data for this column, update the object
+          if (colIdx < rowData.size()) {
+            obj.data = rowData[colIdx];
+
+            // Special Case: If it's an Image, we need to reload the texture!
+            if (obj.type == ObjectType::Image) {
+              if (obj.texture.id != 0)
+                UnloadTexture(obj.texture);
+
+              if (FileExists(obj.data.c_str())) {
+                Image img = LoadImage(obj.data.c_str());
+                // Auto-size if zero
+                if (obj.width == 0)
+                  obj.width = (float)img.width;
+                if (obj.height == 0)
+                  obj.height = (float)img.height;
+
+                obj.texture = LoadTextureFromImage(img);
+                UnloadImage(img);
+              }
+            }
+          }
+          break; // Stop searching headers
+        }
+      }
+    }
+  }
+}
+
 } // namespace Utils
