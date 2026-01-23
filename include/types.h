@@ -67,6 +67,9 @@ struct Project {
     std::vector<std::vector<std::string>> csvRows;
     std::string csvFilePath = "";
 
+    // Used for Data Navigation
+    int currentCSVRow = 0;
+
 };
 
 // JSON Serialization Macros
@@ -76,4 +79,4 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::Field, "field"}})
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects, currentCSVRow)

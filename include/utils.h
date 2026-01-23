@@ -32,5 +32,8 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
 Image RenderProjectToImage(const Project& project);
 
 bool LoadCSV(const std::string& filename, Project& project);
+
+// Apply the data from project.currentCSVRow to all linked objects
+void ApplyCSVDataToObjects(Project& project);
                 
 }
