@@ -27,7 +27,7 @@ int main() {
 
   Project currentProject;
   currentProject.objects.push_back(
-      {ObjectType::Text, 20, 40, 0, 0, "LabelForge", 30.0f, 0x000000FF});
+        {ObjectType::Text, 20, 40, 0, 0, "LabelForge", "", 30.0f, 0x000000FF});
 
   // --- FIX 1: CENTER CAMERA INITIALLY ---
   // We want the camera to look at the center of the label, not (0,0)
