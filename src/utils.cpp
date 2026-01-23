@@ -102,15 +102,15 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  * @details  Opens a previously saved project file and
  * applies all the settings and places the objects back
  * on the canvas where they were at the time of saving.
+ * If a csv file path is saved, it will be loaded again.
  * @param    defaultName const std::string&
  * @param    outProject Project&
  * @return   bool if the load was successful
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
-  // Native Open Dialog
   auto dest = pfd::open_file("Open Project", defaultName,
                              {"ForgeLabel Files", "*.flbl"})
                   .result();
@@ -123,6 +123,26 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
       nlohmann::json j;
       file >> j;
       outProject = j.get<Project>();
+
+      // --- RELOAD CSV DATA ---
+      if (!outProject.csvFilePath.empty()) {
+        // Check if file still exists
+        if (FileExists(outProject.csvFilePath.c_str())) {
+          LoadCSV(outProject.csvFilePath, outProject);
+
+          // Re-apply the data for the saved 'currentCSVRow'
+          ApplyCSVDataToObjects(outProject);
+
+          std::cout << "[Utils] Auto-reloaded CSV: " << outProject.csvFilePath
+                    << std::endl;
+        } else {
+          std::cout << "[Utils] Warning: Saved CSV file not found: "
+                    << outProject.csvFilePath << std::endl;
+          // Optional: Clear the path so we don't keep trying
+          outProject.csvFilePath = "";
+        }
+      }
+
       return true;
     } catch (...) {
       return false;
@@ -183,9 +203,9 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
  * @details  Takes the entire project and converts it
  * to a black and white image so that it can be sent
  * to the printer.
- * @param    project const Project& 
- * @return   Image 
- * @note     
+ * @param    project const Project&
+ * @return   Image
+ * @note
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
@@ -290,12 +310,12 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
 
 /*!***************************************************
  * @brief    Load the CSV file
- * @details  parses the provided .csv file so that it 
+ * @details  parses the provided .csv file so that it
  * can be used to display the data on Label Objects.
  * @param    filename const std::string&
  * @param    project Project&
  * @return   bool If it loaded or not
- * @note     
+ * @note
  * @date     2026.01.22
  * @author   bearded.griffin
  ****************************************************/
@@ -342,8 +362,8 @@ bool LoadCSV(const std::string &filename, Project &project) {
  * @details  It takes the data from the current row that
  * the navigator is currently on and maps it to the fields.
  * @param    project Project&
- * @return   void 
- * @note     
+ * @return   void
+ * @note
  * @date     2026.01.23
  * @author   bearded.griffin
  ****************************************************/
