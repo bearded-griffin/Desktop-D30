@@ -18,7 +18,10 @@ enum class ObjectType {
   Text,
   QRCode,
   Image,
-  Field // For CSV batch printing
+  Field, // For CSV batch printing
+  Line,
+  ShapeRect,
+  ShapeCircle
 };
 
 struct LabelSize {
