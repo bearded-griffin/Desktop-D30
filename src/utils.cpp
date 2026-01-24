@@ -112,7 +112,7 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
   auto dest = pfd::open_file("Open Project", defaultName,
-                             {"ForgeLabel Files", "*.flbl"})
+                             {"LabelForge Files", "*.flbl"})
                   .result();
 
   if (!dest.empty()) {

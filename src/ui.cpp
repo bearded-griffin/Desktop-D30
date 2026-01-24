@@ -7,6 +7,7 @@
  ****************************************************/
 
 #include "ui.h"
+#include "assets.h"
 #include "imgui.h"
 #include "portable-file-dialogs.h"
 #include "printer.h"
@@ -21,6 +22,9 @@
 #include <vector>
 
 namespace UI {
+
+// Gloabal var for icon library popup
+static bool triggerIconPopup = false;
 
 /*!***************************************************
  * @brief    Draw the main menu
@@ -37,6 +41,7 @@ void DrawMainMenu(Project &project) {
   // Flags to trigger popups from the main menu scope
   static bool triggerScanPopup = false;
   static bool triggerBatchPopup = false;
+  // static bool triggerIconPopup = false;
 
   if (ImGui::BeginMainMenuBar()) {
 
@@ -232,6 +237,86 @@ void DrawMainMenu(Project &project) {
 
     ImGui::SameLine();
     if (ImGui::Button("Cancel"))
+      ImGui::CloseCurrentPopup();
+
+    ImGui::EndPopup();
+  }
+
+  // --- 3. ICON LIBRARY POPUP ---
+  if (triggerIconPopup) {
+    ImGui::OpenPopup("IconLibraryPopup");
+    triggerIconPopup = false;
+    // Refresh purely to be safe, though constructor handles it
+    // AssetManager::Get().RefreshLibrary();
+  }
+
+  // Set a nice big size for the library window
+  ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+
+  if (ImGui::BeginPopupModal("IconLibraryPopup", NULL, ImGuiWindowFlags_None)) {
+    static int selectedCategory = 0;
+    auto &categories = AssetManager::Get().GetCategories();
+
+    if (categories.empty()) {
+      ImGui::Text("No icons found in 'assets/icons'.");
+      ImGui::Text("Please create folders and add PNG files.");
+      if (ImGui::Button("Close"))
+        ImGui::CloseCurrentPopup();
+    } else {
+      // --- LEFT COLUMN: Categories ---
+      ImGui::BeginChild("Categories", ImVec2(150, 0), true);
+      for (int i = 0; i < categories.size(); i++) {
+        if (ImGui::Selectable(categories[i].name.c_str(),
+                              selectedCategory == i)) {
+          selectedCategory = i;
+        }
+      }
+      ImGui::EndChild();
+
+      ImGui::SameLine();
+
+      // --- RIGHT COLUMN: Icons Grid ---
+      ImGui::BeginChild("Icons", ImVec2(0, 0), true);
+
+      // Load thumbnails for this category if needed
+      AssetManager::Get().LoadCategoryTextures(selectedCategory);
+      auto &currentCat = categories[selectedCategory];
+
+      ImGuiStyle &style = ImGui::GetStyle();
+      float windowVisibleX2 =
+          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+
+      for (int i = 0; i < currentCat.icons.size(); i++) {
+        Icon &icon = currentCat.icons[i];
+
+        // Draw Image Button
+        ImGui::PushID(i);
+        // We use the thumbnail texture ID (void*)
+        if (ImGui::ImageButton("icon_btn",
+                               (ImTextureID)(intptr_t)icon.thumbnail.id,
+                               ImVec2(48, 48))) {
+          // ACTION: Add the icon as an ObjectType::Image
+          // We load the FULL image from disk for the canvas, not the thumbnail
+          project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
+                                     icon.path, // Store the full path
+                                     "", 0, 0xFFFFFFFF});
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopID();
+
+        // Simple wrapping logic for the grid
+        float lastButtonX2 = ImGui::GetItemRectMax().x;
+        float nextButtonX2 =
+            lastButtonX2 + style.ItemSpacing.x + 48; // Next button width
+        if (i + 1 < currentCat.icons.size() && nextButtonX2 < windowVisibleX2)
+          ImGui::SameLine();
+      }
+      ImGui::EndChild();
+    }
+
+    // Close button at bottom? Or just click outside/top-right X (if enabled)
+    // For Modal, we usually need a manual Close if we didn't pick anything
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
       ImGui::CloseCurrentPopup();
 
     ImGui::EndPopup();
@@ -457,32 +542,62 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   ImGui::Spacing();
   ImGui::Separator();
 
-  // --- 4. Add Buttons ---
-  if (ImGui::Button("Add Text")) {
+  // --- 4. Add Buttons (Grid Layout) ---
+  ImGui::Spacing();
+  ImGui::Separator();
+  ImGui::Text("Tools");
+
+  // We use a specific width (e.g. 110) to make buttons consistent
+  ImVec2 btnSize(110, 0);
+
+  // --- Row 1: Basics ---
+  if (ImGui::Button("Add Text", btnSize)) {
     project.objects.push_back(
         {ObjectType::Text, 50, 50, 0, 0, "New Text", "", 20.0f, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
-  if (ImGui::Button("Add QR")) {
+  if (ImGui::Button("Add Field", btnSize)) {
+    project.objects.push_back(
+        {ObjectType::Field, 50, 50, 0, 0, "{Column}", "", 20.0f, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
+  }
+
+  // --- Row 2: Media ---
+  if (ImGui::Button("Add QR", btnSize)) {
     project.objects.push_back({ObjectType::QRCode, 50, 50, 100, 100,
                                "www.example.com", "", 0, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
+  // Placeholder for Barcode (Coming soon)
+  if (ImGui::Button("Add Barcode", btnSize)) {
+    // TODO: Add Barcode Logic
+  }
 
-  // IMAGE BUTTON
-  if (ImGui::Button("Add Image")) {
+  // --- Row 3: Graphics ---
+  if (ImGui::Button("Add Image", btnSize)) {
     project.objects.push_back(
         {ObjectType::Image, 50, 50, 100, 100, "", "", 0, 0xFFFFFFFF});
     selectedIndex = project.objects.size() - 1;
   }
-
   ImGui::SameLine();
-  if (ImGui::Button("Add Field")) {
-    project.objects.push_back(
-        {ObjectType::Field, 50, 50, 0, 0, "{Column}", "", 20.0f, 0x000000FF});
-    selectedIndex = project.objects.size() - 1;
+  if (ImGui::Button("Add Icon", btnSize)) {
+    triggerIconPopup = true; // Make sure this flag is accessible here!
+  }
+
+  // --- Row 4: Shapes (Placeholders) ---
+  if (ImGui::Button("Add Line", btnSize)) {
+    // TODO
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Add Shape", btnSize)) {
+    // TODO
+  }
+
+  // --- Row 5: Decor ---
+  if (ImGui::Button("Add Border", btnSize)) {
+    // TODO
   }
 
   ImGui::End();
