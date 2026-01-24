@@ -276,6 +276,32 @@ Image RenderProjectToImage(const Project &project) {
         ImageDrawText(&canvas, "FILE NOT FOUND", (int)obj.x + 5, (int)obj.y + 5,
                       10, BLACK);
       }
+    // Render Basic Shapes
+    } else if (obj.type == ObjectType::Line) {
+      // Draw a line from (x,y) to (x+width, y+height)
+      // We use 'fontSize' as the Line Thickness
+      Vector2 start = {obj.x, obj.y};
+      Vector2 end = {obj.x + obj.width, obj.y + obj.height};
+      ImageDrawLineEx(&canvas, start, end, (int)obj.fontSize, BLACK);
+    } else if (obj.type == ObjectType::ShapeRect) {
+      // Draw a hollow rectangle
+      Rectangle rec = {obj.x, obj.y, obj.width, obj.height};
+      ImageDrawRectangleLines(&canvas, rec, (int)obj.fontSize, BLACK);
+    } else if (obj.type == ObjectType::ShapeCircle) {
+      // Raylib doesn't have ImageDrawCircleLines with thickness easily.
+      // We can simulate it or just use a filled circle for now,
+      // but let's stick to Rectangle and Line for v1 as they are most useful
+      // for labels. If you really want circles, we can use ImageDrawCircle but
+      // it's filled.
+
+      // Workaround: Draw Circle (filled black) then smaller Circle (filled
+      // white)
+      int radius = (int)(obj.width / 2.0f);
+      int centerX = (int)(obj.x + radius);
+      int centerY = (int)(obj.y + radius);
+      ImageDrawCircle(&canvas, centerX, centerY, radius, BLACK);
+      ImageDrawCircle(&canvas, centerX, centerY, radius - (int)obj.fontSize,
+                      WHITE);
     }
   }
   return canvas;
