@@ -93,6 +93,7 @@ add_executable(LabelForge
     src/ui.cpp
     src/printer.cpp
     src/protocol.cpp
+    src/assets.cpp
 )
 
 target_include_directories(LabelForge PRIVATE 
