@@ -424,6 +424,20 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     case ObjectType::Field:
       typePrefix = " [FLD] ";
       break;
+    case ObjectType::Barcode:
+      typePrefix = " [BRC] ";
+      break;
+    case ObjectType::Line:
+      typePrefix = " [LN] ";
+      break;
+    case ObjectType::ShapeCircle:
+      typePrefix = " [CIR] ";
+      break;
+    case ObjectType::ShapeRect:
+      typePrefix = " [REC] ";
+      break;
+    default:
+      break;
     }
 
     std::string displayName = typePrefix + obj.data;
