@@ -7,13 +7,13 @@
  * @author   bearded.griffin
  ****************************************************/
 
+#include "barcode.h"
 #include "imgui.h"
 #include "raylib.h"
 #include "rlImGui.h"
 #include "types.h"
 #include "ui.h"
 #include "utils.h"
-#include "barcode.h"
 #include <algorithm> // For std::max/min clamps
 
 int main() {
@@ -175,12 +175,19 @@ int main() {
       auto &obj = currentProject.objects[i];
       Color col = GetColor(obj.colorHex);
 
-      if (obj.type == ObjectType::Text) {
-        DrawTextEx(GetFontDefault(), obj.data.c_str(), {obj.x, obj.y},
-                   obj.fontSize, 2.0f, col);
-      } else if (obj.type == ObjectType::Field) {
-        DrawTextEx(GetFontDefault(), obj.data.c_str(), {obj.x, obj.y},
-                   obj.fontSize, 2.0f, BLUE);
+      if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+
+        // Use our shared helper for consistent rendering
+        // nullptr = Draw to Screen
+        Utils::DrawTextBox(nullptr, GetFontDefault(), obj.data.c_str(), obj.x,
+                           obj.y, obj.fontSize, 2.0f, col, obj.width);
+
+        // Visualize the wrapping box if selected
+        if (i == selectedIndex && obj.width > 0) {
+          DrawRectangleLines(obj.x, obj.y, obj.width,
+                             obj.height > 0 ? obj.height : obj.fontSize * 2,
+                             Fade(SKYBLUE, 0.5f));
+        }
       } else if (obj.type == ObjectType::QRCode) {
         Utils::DrawQRCode(obj.data, obj.x, obj.y, obj.width, col);
         // Draw faint border if not selected so we can find it if white

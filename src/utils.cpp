@@ -31,6 +31,95 @@ const std::vector<LabelSize> LabelSizes = {
     {"14mm x 50mm", 400, 112}, {"15mm x 50mm", 400, 120}};
 
 /*!***************************************************
+ * @brief    Handles word wrapping
+ * @details  Draws text inside a specific width. If width <= 0, draws normally
+ * (one line). Returns the total height used (so we can auto-size the box if
+ * needed).
+ * @param    target Image*
+ * @param    font Font
+ * @param    text const char*
+ * @param    x float
+ * @param    y float
+ * @param    fontsize float
+ * @param    spacing float
+ * @param    tint Color
+ * @param    maxWidth float
+ * @return   float
+ * @note
+ * @date     2026.01.24
+ * @author   bearded.griffin
+ ****************************************************/
+float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
+                  float fontSize, float spacing, Color tint, float maxWidth) {
+  if (maxWidth <= 0) {
+    // Legacy Mode: No wrapping
+    if (target)
+      ImageDrawTextEx(target, font, text, {x, y}, fontSize, spacing, tint);
+    else
+      DrawTextEx(font, text, {x, y}, fontSize, spacing,
+                 tint); // <--- Screen Draw
+    return fontSize;
+  }
+
+  // Wrapping Logic
+  std::string textStr = text;
+  std::vector<std::string> words;
+  std::string currentWord;
+
+  // 1. Split into words
+  for (char c : textStr) {
+    if (c == ' ' || c == '\n') {
+      if (!currentWord.empty())
+        words.push_back(currentWord);
+      if (c == '\n')
+        words.push_back("\n");
+      currentWord = "";
+    } else {
+      currentWord += c;
+    }
+  }
+  if (!currentWord.empty())
+    words.push_back(currentWord);
+
+  // 2. Build Lines
+  float currentX = 0;
+  float currentY = 0;
+  float spaceWidth = MeasureTextEx(font, " ", fontSize, spacing).x;
+
+  for (const auto &word : words) {
+    if (word == "\n") {
+      currentY += fontSize;
+      currentX = 0;
+      continue;
+    }
+
+    Vector2 wordSize = MeasureTextEx(font, word.c_str(), fontSize, spacing);
+
+    // Check if word fits
+    if (currentX + wordSize.x > maxWidth && currentX > 0) {
+      // New Line
+      currentY += fontSize;
+      currentX = 0;
+    }
+
+    // Draw
+    if (target) {
+      // Draw to Image (Printer)
+      ImageDrawTextEx(target, font, word.c_str(), {x + currentX, y + currentY},
+                      fontSize, spacing, tint);
+    } else {
+      // Draw to Screen (Editor)
+      DrawTextEx(font, word.c_str(), {x + currentX, y + currentY}, fontSize,
+                 spacing, tint);
+    }
+
+    currentX += wordSize.x + spaceWidth;
+  }
+
+  return currentY + fontSize;
+}
+
+/*!***************************************************
  * @brief    Get the object bounds
  * @details  Takes the object passed in and returns
  * it's boundaries.
@@ -45,7 +134,8 @@ Rectangle GetObjectBounds(const LabelObject &obj) {
     Vector2 size =
         MeasureTextEx(GetFontDefault(), obj.data.c_str(), obj.fontSize, 2.0f);
     return {obj.x, obj.y, size.x, size.y};
-  } else if (obj.type == ObjectType::QRCode || obj.type == ObjectType::Barcode) {
+  } else if (obj.type == ObjectType::QRCode ||
+             obj.type == ObjectType::Barcode) {
     return {obj.x, obj.y, obj.width, obj.height};
   } else if (obj.type == ObjectType::Image) {
     return {obj.x, obj.y, obj.width, obj.height};
@@ -244,13 +334,9 @@ Image RenderProjectToImage(const Project &project) {
   for (const auto &obj : project.objects) {
     Color col = GetColor(obj.colorHex);
 
-    if (obj.type == ObjectType::Text) {
-      ImageDrawTextEx(&canvas, GetFontDefault(), obj.data.c_str(),
-                      {obj.x, obj.y}, obj.fontSize, 2.0f, col);
-    } else if (obj.type == ObjectType::Field) {
-      // Fields are black when printed
-      ImageDrawTextEx(&canvas, GetFontDefault(), obj.data.c_str(),
-                      {obj.x, obj.y}, obj.fontSize, 2.0f, BLACK);
+    if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+      DrawTextBox(&canvas, GetFontDefault(), obj.data.c_str(), obj.x, obj.y,
+                  obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
       if (obj.data.empty())
         continue;
