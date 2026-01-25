@@ -12,6 +12,7 @@
 #include "portable-file-dialogs.h"
 #include "printer.h"
 #include "protocol.h"
+#include "types.h"
 #include "utils.h"
 
 #include <chrono>
@@ -450,6 +451,13 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
+    } else if (obj.type == ObjectType::Line ||
+               obj.type == ObjectType::ShapeRect ||
+               obj.type == ObjectType::ShapeCircle) {
+      ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f);
+
+      ImGui::DragFloat("Width", &obj.width);
+      ImGui::DragFloat("Height", &obj.height);
     } else if (obj.type == ObjectType::QRCode) {
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
         obj.height = obj.width; // Keep Square
@@ -586,16 +594,28 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     triggerIconPopup = true; // Make sure this flag is accessible here!
   }
 
-  // --- Row 4: Shapes (Placeholders) ---
+  // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
-    // TODO
+    // Default horizontal line
+    project.objects.push_back(
+        {ObjectType::Line, 50, 50, 100, 0, "", "", 4.0f, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
-  if (ImGui::Button("Add Shape", btnSize)) {
-    // TODO
+  if (ImGui::Button("Add Rect", btnSize)) {
+    project.objects.push_back(
+        {ObjectType::ShapeRect, 50, 50, 100, 100, "", "", 4.0f, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
+  }
+
+  if (ImGui::Button("Add Circle", btnSize)) {
+    project.objects.push_back(
+        {ObjectType::ShapeCircle, 50, 50, 100, 100, "", "", 4.0f, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 5: Decor ---
+  ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
     // TODO
   }

@@ -41,14 +41,33 @@ Rectangle GetObjectBounds(const LabelObject &obj) {
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
     Vector2 size =
         MeasureTextEx(GetFontDefault(), obj.data.c_str(), obj.fontSize, 2.0f);
-    return Rectangle{obj.x, obj.y, size.x, size.y};
-  } else {
-    // QR Codes and Images use explicit width/height
-    // If width is 0 (new object), give it a default
-    float w = (obj.width > 0) ? obj.width : 50.0f;
-    float h = (obj.height > 0) ? obj.height : 50.0f;
-    return Rectangle{obj.x, obj.y, w, h};
+    return {obj.x, obj.y, size.x, size.y};
+  } else if (obj.type == ObjectType::QRCode) {
+    return {obj.x, obj.y, obj.width, obj.height};
+  } else if (obj.type == ObjectType::Image) {
+    return {obj.x, obj.y, obj.width, obj.height};
   }
+  // HANDLE SHAPES & LINES ---
+  else if (obj.type == ObjectType::Line) {
+    // For logic, we treat the bounding box as positive width/height
+    float w = std::abs(obj.width);
+    float h = std::abs(obj.height);
+
+    // If Horizontal Line (h=0), the "Height" is just the thickness
+    if (h < obj.fontSize)
+      h = obj.fontSize;
+
+    // If Vertical Line (w=0), the "Width" is just the thickness
+    if (w < obj.fontSize)
+      w = obj.fontSize;
+
+    return {obj.x, obj.y, w, h};
+  } else if (obj.type == ObjectType::ShapeRect ||
+             obj.type == ObjectType::ShapeCircle) {
+    return {obj.x, obj.y, std::abs(obj.width), std::abs(obj.height)};
+  }
+
+  return {obj.x, obj.y, 50, 50};
 }
 
 /*!***************************************************
@@ -276,7 +295,7 @@ Image RenderProjectToImage(const Project &project) {
         ImageDrawText(&canvas, "FILE NOT FOUND", (int)obj.x + 5, (int)obj.y + 5,
                       10, BLACK);
       }
-    // Render Basic Shapes
+      // Render Basic Shapes
     } else if (obj.type == ObjectType::Line) {
       // Draw a line from (x,y) to (x+width, y+height)
       // We use 'fontSize' as the Line Thickness
