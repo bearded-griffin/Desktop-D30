@@ -13,6 +13,7 @@
 #include "types.h"
 #include "ui.h"
 #include "utils.h"
+#include "barcode.h"
 #include <algorithm> // For std::max/min clamps
 
 int main() {
@@ -235,6 +236,19 @@ int main() {
         // DrawRing allows thickness: center, innerRadius, outerRadius,
         // startAngle, endAngle, segments, color
         DrawRing(center, radius - obj.fontSize, radius, 0, 360, 0, col);
+      } else if (obj.type == ObjectType::Barcode) {
+        std::string code = Barcode::Encode128(obj.data);
+        float moduleWidth = obj.width / (float)code.length();
+
+        for (int i = 0; i < code.length(); i++) {
+          if (code[i] == '1') {
+            DrawRectangle((int)(obj.x + (i * moduleWidth)), (int)obj.y,
+                          (int)(moduleWidth + 1.0f), // +1 for screen crispness
+                          (int)obj.height, col);
+          }
+        }
+        DrawRectangleLines(obj.x, obj.y, obj.width, obj.height,
+                           Fade(GRAY, 0.5f));
       }
 
       // Selection Box (Skip for Line as it has its own handles)
