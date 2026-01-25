@@ -9,8 +9,11 @@
  ****************************************************/
 
 #include "utils.h"
+#include "barcode.h"
+
 #include "portable-file-dialogs.h" // Native dialogs
 #include "qrcodegen.hpp"
+#include "types.h"
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -42,7 +45,7 @@ Rectangle GetObjectBounds(const LabelObject &obj) {
     Vector2 size =
         MeasureTextEx(GetFontDefault(), obj.data.c_str(), obj.fontSize, 2.0f);
     return {obj.x, obj.y, size.x, size.y};
-  } else if (obj.type == ObjectType::QRCode) {
+  } else if (obj.type == ObjectType::QRCode || obj.type == ObjectType::Barcode) {
     return {obj.x, obj.y, obj.width, obj.height};
   } else if (obj.type == ObjectType::Image) {
     return {obj.x, obj.y, obj.width, obj.height};
@@ -321,6 +324,28 @@ Image RenderProjectToImage(const Project &project) {
       ImageDrawCircle(&canvas, centerX, centerY, radius, BLACK);
       ImageDrawCircle(&canvas, centerX, centerY, radius - (int)obj.fontSize,
                       WHITE);
+    } else if (obj.type == ObjectType::Barcode) {
+      std::string code = Barcode::Encode128(obj.data);
+
+      // Calculate bar width based on object width
+      // Total modules = code.length()
+      // We scale the bars to fit the user's box
+      float moduleWidth = obj.width / (float)code.length();
+
+      for (int i = 0; i < code.length(); i++) {
+        if (code[i] == '1') {
+          Rectangle bar = {obj.x + (i * moduleWidth), obj.y,
+                           moduleWidth +
+                               0.5f, // +0.5 to fix floating point gaps
+                           obj.height};
+          ImageDrawRectangle(&canvas, (int)bar.x, (int)bar.y, (int)bar.width,
+                             (int)bar.height, BLACK);
+        }
+      }
+
+      // Optional: Draw text below it?
+      // Usually we just draw the bars, user can add a Text object below if they
+      // want.
     }
   }
   return canvas;

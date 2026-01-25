@@ -491,6 +491,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
           }
         }
       }
+    } else if (obj.type == ObjectType::Barcode) {
+      ImGui::DragFloat("Width", &obj.width);
+      ImGui::DragFloat("Height", &obj.height);
     }
 
     // --- DATA BINDING (CSV) ---
@@ -578,9 +581,12 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
-  // Placeholder for Barcode (Coming soon)
   if (ImGui::Button("Add Barcode", btnSize)) {
-    // TODO: Add Barcode Logic
+    project.objects.push_back({ObjectType::Barcode, 50, 50, 200,
+                               60,         // Default: Wider than it is tall
+                               "12345678", // Default data
+                               "", 0, 0x000000FF});
+    selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 3: Graphics ---

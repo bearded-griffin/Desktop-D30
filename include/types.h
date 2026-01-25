@@ -21,7 +21,8 @@ enum class ObjectType {
   Field, // For CSV batch printing
   Line,
   ShapeRect,
-  ShapeCircle
+  ShapeCircle,
+  Barcode
 };
 
 struct LabelSize {
@@ -79,7 +80,11 @@ struct Project {
 NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::QRCode, "qrcode"},
                                           {ObjectType::Image, "image"},
-                                          {ObjectType::Field, "field"}})
+                                          {ObjectType::Field, "field"},
+                                          {ObjectType::Line, "line"},
+                                          {ObjectType::ShapeRect, "rectangle"},
+                                          {ObjectType::ShapeCircle, "circle"},
+                                          {ObjectType::Barcode, "barcode"}})
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects, csvFilePath, currentCSVRow)
