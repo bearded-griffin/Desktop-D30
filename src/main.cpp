@@ -27,7 +27,7 @@ int main() {
 
   Project currentProject;
   currentProject.objects.push_back(
-        {ObjectType::Text, 20, 40, 0, 0, "LabelForge", "", 30.0f, 0x000000FF});
+      {ObjectType::Text, 20, 40, 0, 0, "LabelForge", "", 30.0f, 0x000000FF});
 
   // --- FIX 1: CENTER CAMERA INITIALLY ---
   // We want the camera to look at the center of the label, not (0,0)
@@ -214,10 +214,31 @@ int main() {
 
         // Draw Border
         DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, BLACK);
+      } else if (obj.type == ObjectType::Line) {
+        Vector2 start = {obj.x, obj.y};
+        // In editor, Width/Height control the endpoint relative to X/Y
+        Vector2 end = {obj.x + obj.width, obj.y + obj.height};
+
+        DrawLineEx(start, end, obj.fontSize, col);
+
+        // Draw selection handles for line endpoints if selected
+        if (i == selectedIndex) {
+          DrawCircleV(start, 4, SKYBLUE);
+          DrawCircleV(end, 4, SKYBLUE);
+        }
+      } else if (obj.type == ObjectType::ShapeRect) {
+        Rectangle rec = {obj.x, obj.y, obj.width, obj.height};
+        DrawRectangleLinesEx(rec, obj.fontSize, col);
+      } else if (obj.type == ObjectType::ShapeCircle) {
+        float radius = obj.width / 2.0f;
+        Vector2 center = {obj.x + radius, obj.y + radius};
+        // DrawRing allows thickness: center, innerRadius, outerRadius,
+        // startAngle, endAngle, segments, color
+        DrawRing(center, radius - obj.fontSize, radius, 0, 360, 0, col);
       }
 
-      // Selection Box
-      if (i == selectedIndex) {
+      // Selection Box (Skip for Line as it has its own handles)
+      if (i == selectedIndex && obj.type != ObjectType::Line) {
         Rectangle bounds = Utils::GetObjectBounds(obj);
         DrawRectangleLinesEx(
             {bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10},
