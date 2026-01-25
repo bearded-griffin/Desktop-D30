@@ -451,6 +451,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
+      ImGui::DragFloat("Box Width", &obj.width, 1.0f, 0.0f, 1000.0f, "%.1f");
+            // Tooltip to explain
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Set > 0 to enable text wrapping");
     } else if (obj.type == ObjectType::Line ||
                obj.type == ObjectType::ShapeRect ||
                obj.type == ObjectType::ShapeCircle) {
