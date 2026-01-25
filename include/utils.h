@@ -28,6 +28,7 @@ bool LoadProject(const std::string &filename, Project &outProject);
 void ExportProjectToPNG(const std::string& filename, const Project& project);
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
+float DrawTextBox(Image* target, Font font, const char* text, float x, float y, float fontSize, float spacing, Color tint, float maxWidth);
 
 Image RenderProjectToImage(const Project& project);
 

@@ -30,12 +30,12 @@ const std::vector<LabelSize> LabelSizes = {
     {"14mm x 30mm", 240, 112}, {"14mm x 40mm", 320, 112},
     {"14mm x 50mm", 400, 112}, {"15mm x 50mm", 400, 120}};
 
-
 /*!***************************************************
  * @brief    Handles word wrapping
- * @details  Draws text inside a specific width. If width <= 0, draws normally (one line).
- * Returns the total height used (so we can auto-size the box if needed).
- * @param    target Image* 
+ * @details  Draws text inside a specific width. If width <= 0, draws normally
+ * (one line). Returns the total height used (so we can auto-size the box if
+ * needed).
+ * @param    target Image*
  * @param    font Font
  * @param    text const char*
  * @param    x float
@@ -45,7 +45,7 @@ const std::vector<LabelSize> LabelSizes = {
  * @param    tint Color
  * @param    maxWidth float
  * @return   float
- * @note     
+ * @note
  * @date     2026.01.24
  * @author   bearded.griffin
  ****************************************************/
@@ -55,6 +55,9 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
     // Legacy Mode: No wrapping
     if (target)
       ImageDrawTextEx(target, font, text, {x, y}, fontSize, spacing, tint);
+    else
+      DrawTextEx(font, text, {x, y}, fontSize, spacing,
+                 tint); // <--- Screen Draw
     return fontSize;
   }
 
@@ -101,14 +104,19 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
 
     // Draw
     if (target) {
+      // Draw to Image (Printer)
       ImageDrawTextEx(target, font, word.c_str(), {x + currentX, y + currentY},
                       fontSize, spacing, tint);
+    } else {
+      // Draw to Screen (Editor)
+      DrawTextEx(font, word.c_str(), {x + currentX, y + currentY}, fontSize,
+                 spacing, tint);
     }
 
     currentX += wordSize.x + spaceWidth;
   }
 
-  return currentY + fontSize; // Total Height
+  return currentY + fontSize;
 }
 
 /*!***************************************************
@@ -327,8 +335,8 @@ Image RenderProjectToImage(const Project &project) {
     Color col = GetColor(obj.colorHex);
 
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-      DrawTextBox(&canvas, GetFontDefault(), obj.data.c_str(), 
-                         obj.x, obj.y, obj.fontSize, 2.0f, BLACK, obj.width);
+      DrawTextBox(&canvas, GetFontDefault(), obj.data.c_str(), obj.x, obj.y,
+                  obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
       if (obj.data.empty())
         continue;
