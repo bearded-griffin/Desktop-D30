@@ -28,7 +28,7 @@ make re
 
 - [x] Create labels
   - [x] Generate QR Codes
-  - [ ] Generate Barcodes
+  - [x] Generate Barcodes
   - [x] Put custom images on the label
   - [x] Put custom text on the label
   - [x] Add basic shapes to the label
