@@ -9,12 +9,12 @@
 #include "ui.h"
 #include "assets.h"
 #include "imgui.h"
-#include "portable-file-dialogs.h"
 #include "printer.h"
 #include "protocol.h"
 #include "types.h"
 #include "utils.h"
 
+#include "portable-file-dialogs.h"
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -24,8 +24,10 @@
 
 namespace UI {
 
-// Gloabal var for icon library popup
+// Gloabal var for popup dialogs
 static bool triggerIconPopup = false;
+static bool triggerScanPopup = false;
+static bool triggerBatchPopup = false;
 
 /*!***************************************************
  * @brief    Draw the main menu
@@ -38,11 +40,6 @@ static bool triggerIconPopup = false;
  * @author   bearded.griffin
  ****************************************************/
 void DrawMainMenu(Project &project) {
-
-  // Flags to trigger popups from the main menu scope
-  static bool triggerScanPopup = false;
-  static bool triggerBatchPopup = false;
-  // static bool triggerIconPopup = false;
 
   if (ImGui::BeginMainMenuBar()) {
 
@@ -299,8 +296,8 @@ void DrawMainMenu(Project &project) {
           // ACTION: Add the icon as an ObjectType::Image
           // We load the FULL image from disk for the canvas, not the thumbnail
           project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
-                                     icon.path, // Store the full path
-                                     "", 0, 0xFFFFFFFF});
+                                     currentCat.icons[i].path, "", "", 0,
+                                     0xFFFFFFFF});
           ImGui::CloseCurrentPopup();
         }
         ImGui::PopID();
@@ -464,10 +461,55 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+      // Import Font Button
+      if (ImGui::Button("Import Font...")) {
+        auto selection =
+            pfd::open_file("Select Font", ".", {"Font Files", "*.ttf *.otf"})
+                .result();
+        if (!selection.empty())
+          AssetManager::Get().ImportFont(selection[0]);
+      }
       ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
       ImGui::DragFloat("Box Width", &obj.width, 1.0f, 0.0f, 1000.0f, "%.1f");
-            // Tooltip to explain
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Set > 0 to enable text wrapping");
+      // Tooltip to explain
+      if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Set > 0 to enable text wrapping");
+
+      // Font Selector
+      const auto &fontList = AssetManager::Get().GetFontList();
+      std::string currentFont = obj.fontName.empty() ? "Default" : obj.fontName;
+      if (ImGui::BeginCombo("Font", currentFont.c_str(),
+                            ImGuiComboFlags_HeightLarge)) {
+        if (ImGui::Selectable("Default", obj.fontName.empty()))
+          obj.fontName = "";
+
+        bool hasUser = false;
+        for (const auto &f : fontList) {
+          if (f.type == LabelFontType::User) {
+            if (!hasUser) {
+              ImGui::Separator();
+              ImGui::TextDisabled("--- User Fonts ---");
+              hasUser = true;
+            }
+            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name))
+              obj.fontName = f.name;
+          }
+        }
+        bool hasSystem = false;
+        for (const auto &f : fontList) {
+          if (f.type == LabelFontType::System) {
+            if (!hasSystem) {
+              ImGui::Separator();
+              ImGui::TextDisabled("--- System Fonts ---");
+              hasSystem = true;
+            }
+            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name))
+              obj.fontName = f.name;
+          }
+        }
+        ImGui::EndCombo();
+      }
+
     } else if (obj.type == ObjectType::Line ||
                obj.type == ObjectType::ShapeRect ||
                obj.type == ObjectType::ShapeCircle) {
@@ -581,13 +623,13 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
     project.objects.push_back(
-        {ObjectType::Text, 50, 50, 0, 0, "New Text", "", 20.0f, 0x000000FF});
+        {ObjectType::Text, 50, 50, 0, 0, "Text", "", "", 20, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
     project.objects.push_back(
-        {ObjectType::Field, 50, 50, 0, 0, "{Column}", "", 20.0f, 0x000000FF});
+        {ObjectType::Field, 50, 50, 0, 0, "{Col}", "", "", 20, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
 
@@ -609,7 +651,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
     project.objects.push_back(
-        {ObjectType::Image, 50, 50, 100, 100, "", "", 0, 0xFFFFFFFF});
+        {ObjectType::Image, 50, 50, 100, 100, "", "", "", 0, 0xFFFFFFFF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
@@ -621,19 +663,19 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   if (ImGui::Button("Add Line", btnSize)) {
     // Default horizontal line
     project.objects.push_back(
-        {ObjectType::Line, 50, 50, 100, 0, "", "", 4.0f, 0x000000FF});
+        {ObjectType::Line, 50, 50, 100, 0, "", "", "", 4, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
     project.objects.push_back(
-        {ObjectType::ShapeRect, 50, 50, 100, 100, "", "", 4.0f, 0x000000FF});
+        {ObjectType::ShapeRect, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
     project.objects.push_back(
-        {ObjectType::ShapeCircle, 50, 50, 100, 100, "", "", 4.0f, 0x000000FF});
+        {ObjectType::ShapeCircle, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
     selectedIndex = project.objects.size() - 1;
   }
 

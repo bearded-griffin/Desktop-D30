@@ -7,6 +7,7 @@
  * @author   bearded.griffin
  ****************************************************/
 
+#include "assets.h"
 #include "barcode.h"
 #include "imgui.h"
 #include "raylib.h"
@@ -14,6 +15,7 @@
 #include "types.h"
 #include "ui.h"
 #include "utils.h"
+
 #include <algorithm> // For std::max/min clamps
 
 int main() {
@@ -27,8 +29,8 @@ int main() {
   rlImGuiSetup(true);
 
   Project currentProject;
-  currentProject.objects.push_back(
-      {ObjectType::Text, 20, 40, 0, 0, "LabelForge", "", 30.0f, 0x000000FF});
+  currentProject.objects.push_back({ObjectType::Text, 20, 40, 0, 0,
+                                    "LabelForge", "", "", 30.0f, 0x000000FF});
 
   // --- FIX 1: CENTER CAMERA INITIALLY ---
   // We want the camera to look at the center of the label, not (0,0)
@@ -176,18 +178,22 @@ int main() {
       Color col = GetColor(obj.colorHex);
 
       if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-
-        // Use our shared helper for consistent rendering
-        // nullptr = Draw to Screen
-        Utils::DrawTextBox(nullptr, GetFontDefault(), obj.data.c_str(), obj.x,
-                           obj.y, obj.fontSize, 2.0f, col, obj.width);
-
-        // Visualize the wrapping box if selected
-        if (i == selectedIndex && obj.width > 0) {
+        // LOOKUP FONT
+        Font displayFont = AssetManager::Get().GetFont(obj.fontName);
+        Utils::DrawTextBox(nullptr, displayFont, obj.data.c_str(), obj.x, obj.y,
+                           obj.fontSize, 2.0f, col, obj.width);
+        // Visualize word wrap box
+        if (i == selectedIndex && obj.width > 0){
           DrawRectangleLines(obj.x, obj.y, obj.width,
                              obj.height > 0 ? obj.height : obj.fontSize * 2,
                              Fade(SKYBLUE, 0.5f));
         }
+        // Use our shared helper for consistent rendering
+        // nullptr = Draw to Screen
+        Utils::DrawTextBox(nullptr, displayFont, obj.data.c_str(),
+                           obj.x, obj.y, obj.fontSize, 2.0f, col,
+                           obj.width);
+
       } else if (obj.type == ObjectType::QRCode) {
         Utils::DrawQRCode(obj.data, obj.x, obj.y, obj.width, col);
         // Draw faint border if not selected so we can find it if white
@@ -274,6 +280,13 @@ int main() {
     rlImGuiEnd();
 
     EndDrawing();
+  }
+
+  // Cleanup Textures
+  for(auto& obj : currentProject.objects){ 
+    if (obj.texture.id != 0){
+      UnloadTexture(obj.texture);
+    }  
   }
 
   rlImGuiShutdown();

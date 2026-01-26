@@ -9,15 +9,16 @@
  ****************************************************/
 
 #include "utils.h"
+#include "types.h"
+#include "assets.h"
 #include "barcode.h"
 
-#include "portable-file-dialogs.h" // Native dialogs
-#include "qrcodegen.hpp"
-#include "types.h"
 #include <fstream>
-#include <iostream>
-#include <nlohmann/json.hpp>
 #include <sstream>
+#include <iostream>
+#include "qrcodegen.hpp"
+#include <nlohmann/json.hpp>
+#include "portable-file-dialogs.h" // Native dialogs
 
 using namespace qrcodegen;
 
@@ -169,9 +170,18 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
  ****************************************************/
 Rectangle GetObjectBounds(const LabelObject &obj) {
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-    Vector2 size =
-        MeasureTextEx(GetFontDefault(), obj.data.c_str(), obj.fontSize, 2.0f);
+    // We use Default Font here for bounds estimation if exact font isn't critical for simple selection
+    // Or better: Use actual font
+    Font f = AssetManager::Get().GetFont(obj.fontName);
+    
+    if (obj.width > 0){
+       return {obj.x, obj.y, obj.width, obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+    }
+
+    Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
+    
     return {obj.x, obj.y, size.x, size.y};
+    
   } else if (obj.type == ObjectType::QRCode ||
              obj.type == ObjectType::Barcode) {
     return {obj.x, obj.y, obj.width, obj.height};
@@ -373,7 +383,8 @@ Image RenderProjectToImage(const Project &project) {
     Color col = GetColor(obj.colorHex);
 
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-      DrawTextBox(&canvas, GetFontDefault(), obj.data.c_str(), obj.x, obj.y,
+      Font printFont = AssetManager::Get().GetFont(obj.fontName);
+      DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
       if (obj.data.empty())
