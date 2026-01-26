@@ -433,6 +433,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     case ObjectType::ShapeRect:
       typePrefix = " [REC] ";
       break;
+    case ObjectType::Border:
+      typePrefix = " [BRD] ";
+      break;
     default:
       break;
     }
