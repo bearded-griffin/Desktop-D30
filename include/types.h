@@ -22,7 +22,8 @@ enum class ObjectType {
   Line,
   ShapeRect,
   ShapeCircle,
-  Barcode
+  Barcode,
+  Border
 };
 
 struct LabelSize {
@@ -52,6 +53,8 @@ struct LabelObject {
   // Style
   float fontSize = 20.0f;
   unsigned int colorHex = 0xFF000000;
+
+  float cornerRadius = 0.0f;  // 0.0 = Sharp corners
 
   // --- Runtime Texture Resource ---
   Texture2D texture = { 0 };
@@ -86,5 +89,5 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::ShapeCircle, "circle"},
                                           {ObjectType::Barcode, "barcode"}})
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex, cornerRadius)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects, csvFilePath, currentCSVRow)
