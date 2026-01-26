@@ -120,6 +120,44 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
 }
 
 /*!***************************************************
+ * @brief    Draws a basic border
+ * @details  Draws a basic border that can have the 
+ * corners rounded. 
+ * @param    dst Image*
+ * @param    x float
+ * @param    y float
+ * @param    w float
+ * @param    h float
+ * @param    radius float
+ * @param    col Color
+ * @return   void
+ * @note     
+ * @date     2026.01.26
+ * @author   bearded.griffin
+ ****************************************************/
+void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
+                                float radius, Color col) {
+  if (radius <= 0) {
+    ImageDrawRectangle(dst, (int)x, (int)y, (int)w, (int)h, col);
+    return;
+  }
+
+  // 1. Draw 4 Corner Circles
+  int r = (int)radius;
+  ImageDrawCircle(dst, (int)(x + r), (int)(y + r), r, col);     // Top-Left
+  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + r), r, col); // Top-Right
+  ImageDrawCircle(dst, (int)(x + r), (int)(y + h - r), r, col); // Bottom-Left
+  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + h - r), r,
+                  col); // Bottom-Right
+
+  // 2. Draw 2 Crossing Rectangles
+  // Horizontal bar (covers left to right, inset by radius height)
+  ImageDrawRectangle(dst, (int)x, (int)(y + r), (int)w, (int)(h - 2 * r), col);
+  // Vertical bar (covers top to bottom, inset by radius width)
+  ImageDrawRectangle(dst, (int)(x + r), (int)y, (int)(w - 2 * r), (int)h, col);
+}
+
+/*!***************************************************
  * @brief    Get the object bounds
  * @details  Takes the object passed in and returns
  * it's boundaries.
