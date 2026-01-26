@@ -87,7 +87,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::Line, "line"},
                                           {ObjectType::ShapeRect, "rectangle"},
                                           {ObjectType::ShapeCircle, "circle"},
-                                          {ObjectType::Barcode, "barcode"}})
+                                          {ObjectType::Barcode, "barcode"},
+                                          {ObjectType::Border, "border"}})
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex, cornerRadius)
