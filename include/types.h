@@ -2,16 +2,16 @@
  * @file     types.h
  * @brief    The various types of objects used by LabelForge
  * @details  All the things...objects atleast.
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
 #include "raylib.h"
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp>
 
 // Define the types of objects we can have
 enum class ObjectType {
@@ -50,11 +50,12 @@ struct LabelObject {
   std::string linkedColumn = "";
 
   // Style
+  std::string fontName = "";
   float fontSize = 20.0f;
-  unsigned int colorHex = 0xFF000000;
+  unsigned int colorHex = 0x000000FF;
 
   // --- Runtime Texture Resource ---
-  Texture2D texture = { 0 };
+  Texture2D texture = {0};
 };
 
 struct Project {
@@ -65,15 +66,14 @@ struct Project {
   std::vector<LabelObject> objects;
 
   // --- CSV Data ---
-    // Headers: ["Name", "Price", "SKU"]
-    std::vector<std::string> csvHeaders;
-    // Rows: [ ["Widget", "$10", "123"], ["Gadget", "$5", "456"] ]
-    std::vector<std::vector<std::string>> csvRows;
-    std::string csvFilePath = "";
+  // Headers: ["Name", "Price", "SKU"]
+  std::vector<std::string> csvHeaders;
+  // Rows: [ ["Widget", "$10", "123"], ["Gadget", "$5", "456"] ]
+  std::vector<std::vector<std::string>> csvRows;
+  std::string csvFilePath = "";
 
-    // Used for Data Navigation
-    int currentCSVRow = 0;
-
+  // Used for Data Navigation
+  int currentCSVRow = 0;
 };
 
 // JSON Serialization Macros
@@ -86,5 +86,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::ShapeCircle, "circle"},
                                           {ObjectType::Barcode, "barcode"}})
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data, linkedColumn, fontSize, colorHex)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid, selectedLabelIndex, objects, csvFilePath, currentCSVRow)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
+                                   linkedColumn, fontName, fontSize, colorHex)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid,
+                                   selectedLabelIndex, objects, csvFilePath,
+                                   currentCSVRow)
