@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LabelForge
+Comment=Custom Label Printer Suite
+Exec=/usr/local/bin/labelforge
+Icon=/opt/LabelForge/assets/app_icon.png
+Terminal=false
+Categories=Utility;Printing;
