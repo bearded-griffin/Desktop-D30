@@ -3,7 +3,7 @@
  * @brief    Supporting functions for icons
  * @details  Creates the Icon Library from the file
  * system.
- * @note     
+ * @note
  * @date     2026.01.23
  * @author   bearded.griffin
  ****************************************************/
@@ -33,11 +33,11 @@ struct IconCategory {
 enum class LabelFontType { System, User };
 
 struct FontAsset {
-    std::string name;
-    std::string path;
-    LabelFontType type;
-    Font font = { 0 };
-    bool isLoaded = false;
+  std::string name;
+  std::string path;
+  LabelFontType type;
+  Font font = {0};
+  bool isLoaded = false;
 };
 
 // --- MANAGER ---
@@ -50,24 +50,29 @@ public:
 
   // Scans assets/icons and builds the category list
   void RefreshLibrary();
+  void RefreshBorders();
   void RefreshFonts();
 
   // Returns the list of categories found
   std::vector<IconCategory> &GetCategories() { return categories; }
-  const std::vector<FontAsset>& GetFontList() { return fonts; }
+  std::vector<IconCategory> &GetBorders() { return borderCategories; }
+  const std::vector<FontAsset> &GetFontList() { return fonts; }
 
   // Loads textures for a specific category (Lazy Loading)
   void LoadCategoryTextures(int categoryIndex);
-  Font GetFont(const std::string& name);
+  void LoadBorderTextures(int categoryIndex);
+  Font GetFont(const std::string &name);
 
   // Actions
-  bool ImportFont(const std::string& sourcePath);
+  bool ImportFont(const std::string &sourcePath);
 
 private:
-  AssetManager() { 
+  AssetManager() {
     RefreshLibrary();
-    RefreshFonts(); 
+    RefreshBorders();
+    RefreshFonts();
   }
   std::vector<IconCategory> categories;
+  std::vector<IconCategory> borderCategories;
   std::vector<FontAsset> fonts;
 };

@@ -9,16 +9,16 @@
  ****************************************************/
 
 #include "utils.h"
-#include "types.h"
 #include "assets.h"
 #include "barcode.h"
+#include "types.h"
 
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include "qrcodegen.hpp"
-#include <nlohmann/json.hpp>
 #include "portable-file-dialogs.h" // Native dialogs
+#include "qrcodegen.hpp"
+#include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include <sstream>
 
 using namespace qrcodegen;
 
@@ -122,8 +122,8 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
 
 /*!***************************************************
  * @brief    Draws a basic border
- * @details  Draws a basic border that can have the 
- * corners rounded. 
+ * @details  Draws a basic border that can have the
+ * corners rounded.
  * @param    dst Image*
  * @param    x float
  * @param    y float
@@ -132,7 +132,7 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
  * @param    radius float
  * @param    col Color
  * @return   void
- * @note     
+ * @note
  * @date     2026.01.26
  * @author   bearded.griffin
  ****************************************************/
@@ -170,18 +170,19 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
  ****************************************************/
 Rectangle GetObjectBounds(const LabelObject &obj) {
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-    // We use Default Font here for bounds estimation if exact font isn't critical for simple selection
-    // Or better: Use actual font
+    // We use Default Font here for bounds estimation if exact font isn't
+    // critical for simple selection Or better: Use actual font
     Font f = AssetManager::Get().GetFont(obj.fontName);
-    
-    if (obj.width > 0){
-       return {obj.x, obj.y, obj.width, obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+
+    if (obj.width > 0) {
+      return {obj.x, obj.y, obj.width,
+              obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
     }
 
     Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
-    
+
     return {obj.x, obj.y, size.x, size.y};
-    
+
   } else if (obj.type == ObjectType::QRCode ||
              obj.type == ObjectType::Barcode) {
     return {obj.x, obj.y, obj.width, obj.height};
@@ -440,10 +441,22 @@ Image RenderProjectToImage(const Project &project) {
       Vector2 start = {obj.x, obj.y};
       Vector2 end = {obj.x + obj.width, obj.y + obj.height};
       ImageDrawLineEx(&canvas, start, end, (int)obj.fontSize, BLACK);
-    } else if (obj.type == ObjectType::ShapeRect) {
-      // Draw a hollow rectangle
-      Rectangle rec = {obj.x, obj.y, obj.width, obj.height};
-      ImageDrawRectangleLines(&canvas, rec, (int)obj.fontSize, BLACK);
+    } else if (obj.type == ObjectType::ShapeRect ||
+               obj.type == ObjectType::Border) {
+      // 1. Draw the Outer Box (Black)
+      ImageDrawRoundedRectFilled(&canvas, obj.x, obj.y, obj.width, obj.height,
+                                 obj.cornerRadius, BLACK);
+
+      // 2. Calculate thickness
+      float thick = obj.fontSize;
+
+      // 3. Draw the Inner Box (White) to create the "Hollow" effect
+      if (thick * 2 < obj.width && thick * 2 < obj.height) {
+        ImageDrawRoundedRectFilled(
+            &canvas, obj.x + thick, obj.y + thick, obj.width - (thick * 2),
+            obj.height - (thick * 2),
+            obj.cornerRadius > thick ? obj.cornerRadius - thick : 0, WHITE);
+      }
     } else if (obj.type == ObjectType::ShapeCircle) {
       // Raylib doesn't have ImageDrawCircleLines with thickness easily.
       // We can simulate it or just use a filled circle for now,

@@ -107,7 +107,7 @@ void AssetManager::LoadCategoryTextures(int categoryIndex) {
  * @details  It refreshes the fonts that are availible
  * from the System and from the assets/fonts folder.
  * @return   void
- * @note     
+ * @note
  * @date     2026.01.26
  * @author   bearded.griffin
  ****************************************************/
@@ -187,7 +187,7 @@ void AssetManager::RefreshFonts() {
  * default font.
  * @param    name const::string&
  * @return   Font
- * @note     
+ * @note
  * @date     2026.01.26
  * @author   bearded.griffin
  ****************************************************/
@@ -212,9 +212,9 @@ Font AssetManager::GetFont(const std::string &name) {
  * @brief    Puts font in user folder
  * @details  It takes the font and puts it in the assets/fonts
  * folder.
- * @param    sourcePath const std::string& 
- * @return   bool 
- * @note     
+ * @param    sourcePath const std::string&
+ * @return   bool
+ * @note
  * @date     2026.01.26
  * @author   bearded.griffin
  ****************************************************/
@@ -233,4 +233,74 @@ bool AssetManager::ImportFont(const std::string &sourcePath) {
   } catch (...) {
     return false;
   }
+}
+
+/*!***************************************************
+ * @brief    Rebuilds the border library
+ * @details  Reads the file system to see if there are
+ * any borders that are available for use.
+ * @param
+ * @return   void
+ * @note
+ * @date     2026.01.27
+ * @author   bearded.griffin
+ ****************************************************/
+void AssetManager::RefreshBorders() {
+  borderCategories.clear();
+  std::string basePath = "assets/borders";
+  if (!fs::exists(basePath)) {
+    fs::create_directories(basePath);
+    return;
+  }
+
+  for (const auto &entry : fs::directory_iterator(basePath)) {
+    if (entry.is_directory()) {
+      IconCategory cat;
+      cat.name = entry.path().filename().string();
+      for (const auto &file : fs::directory_iterator(entry.path())) {
+        std::string ext = file.path().extension().string();
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
+          Icon icon;
+          icon.name = file.path().stem().string();
+          icon.path = file.path().string();
+          cat.icons.push_back(icon);
+        }
+      }
+      if (!cat.icons.empty())
+        borderCategories.push_back(cat);
+    }
+  }
+  std::sort(borderCategories.begin(), borderCategories.end(),
+            [](const IconCategory &a, const IconCategory &b) {
+              return a.name < b.name;
+            });
+}
+
+/*!***************************************************
+ * @brief    Loads Thumbnail of border
+ * @details  Reads the file system to load thumbnails for borders that are
+ * available for use.
+ * @param    categoryIndex int
+ * @return   void
+ * @note
+ * @date     2026.01.27
+ * @author   bearded.griffin
+ ****************************************************/
+void AssetManager::LoadBorderTextures(int categoryIndex) {
+  if (categoryIndex < 0 || categoryIndex >= borderCategories.size())
+    return;
+  IconCategory &cat = borderCategories[categoryIndex];
+  if (cat.isLoaded)
+    return;
+
+  for (auto &icon : cat.icons) {
+    if (icon.thumbnail.id == 0) {
+      Image img = LoadImage(icon.path.c_str());
+      if (img.width > 64 || img.height > 64)
+        ImageResize(&img, 64, 64);
+      icon.thumbnail = LoadTextureFromImage(img);
+      UnloadImage(img);
+    }
+  }
+  cat.isLoaded = true;
 }

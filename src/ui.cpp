@@ -26,6 +26,7 @@ namespace UI {
 
 // Gloabal var for popup dialogs
 static bool triggerIconPopup = false;
+static bool triggerBorderPopup = false;
 static bool triggerScanPopup = false;
 static bool triggerBatchPopup = false;
 
@@ -311,13 +312,61 @@ void DrawMainMenu(Project &project) {
       }
       ImGui::EndChild();
     }
+    // 4. BORDER LIBRARY
+    if (triggerBorderPopup) {
+      ImGui::OpenPopup("BorderLibraryPopup");
+      triggerBorderPopup = false;
+    }
+    ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+    if (ImGui::BeginPopupModal("BorderLibraryPopup", NULL,
+                               ImGuiWindowFlags_None)) {
+      static int selectedBCat = 0;
+      auto &categories = AssetManager::Get().GetBorders();
+      if (categories.empty()) {
+        ImGui::Text("No borders found in assets/borders");
+        if (ImGui::Button("Close"))
+          ImGui::CloseCurrentPopup();
+      } else {
+        ImGui::BeginChild("BCats", ImVec2(150, 0), true);
+        for (int i = 0; i < categories.size(); i++) {
+          if (ImGui::Selectable(categories[i].name.c_str(), selectedBCat == i))
+            selectedBCat = i;
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        ImGui::BeginChild("BIcons", ImVec2(0, 0), true);
+        AssetManager::Get().LoadBorderTextures(selectedBCat);
+        auto &currentCat = categories[selectedBCat];
+        float windowX2 =
+            ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+        LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
+        for (int i = 0; i < currentCat.icons.size(); i++) {
+          ImGui::PushID(i);
+          if (ImGui::ImageButton(
+                  "border",
+                  (ImTextureID)(intptr_t)currentCat.icons[i].thumbnail.id,
+                  ImVec2(48, 48))) {
+            project.objects.push_back(
+                {ObjectType::Image, 0, 0, (float)sz.width, (float)sz.height,
+                 currentCat.icons[i].path, "", "", 0, 0xFFFFFFFF});
+            ImGui::CloseCurrentPopup();
+          }
+          ImGui::PopID();
+          float nextX2 =
+              ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + 48;
+          if (i + 1 < currentCat.icons.size() && nextX2 < windowX2)
+            ImGui::SameLine();
+        }
+        ImGui::EndChild();
+      }
 
-    // Close button at bottom? Or just click outside/top-right X (if enabled)
-    // For Modal, we usually need a manual Close if we didn't pick anything
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
-      ImGui::CloseCurrentPopup();
+      // Close button at bottom? Or just click outside/top-right X (if enabled)
+      // For Modal, we usually need a manual Close if we didn't pick anything
+      if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+        ImGui::CloseCurrentPopup();
 
-    ImGui::EndPopup();
+      ImGui::EndPopup();
+    }
   }
 }
 
@@ -483,8 +532,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       std::string currentFont = obj.fontName.empty() ? "Default" : obj.fontName;
       if (ImGui::BeginCombo("Font", currentFont.c_str(),
                             ImGuiComboFlags_HeightLarge)) {
-        if (ImGui::Selectable("Default", obj.fontName.empty()))
+        if (ImGui::Selectable("Default", obj.fontName.empty())) {
           obj.fontName = "";
+        }
 
         bool hasUser = false;
         for (const auto &f : fontList) {
@@ -513,11 +563,16 @@ void DrawSidebar(Project &project, int &selectedIndex) {
         ImGui::EndCombo();
       }
 
-    } else if (obj.type == ObjectType::Line ||
-               obj.type == ObjectType::ShapeRect ||
-               obj.type == ObjectType::ShapeCircle) {
-      ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f);
+    } else if (obj.type == ObjectType::Border ||
+               obj.type == ObjectType::ShapeRect) {
+      ImGui::SliderFloat("Thickness", &obj.fontSize, 1, 20);
+      ImGui::SliderFloat("Radius", &obj.cornerRadius, 0, 50);
+      ImGui::DragFloat("W", &obj.width);
+      ImGui::DragFloat("H", &obj.height);
 
+    } else if (obj.type == ObjectType::ShapeCircle ||
+               obj.type == ObjectType::Line) {
+      ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f);
       ImGui::DragFloat("Width", &obj.width);
       ImGui::DragFloat("Height", &obj.height);
     } else if (obj.type == ObjectType::QRCode) {
@@ -601,8 +656,9 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
     // Manual Data Entry
     static char buffer[256];
-    if (!ImGui::IsItemActive())
+    if (!ImGui::IsItemActive()) {
       strncpy(buffer, obj.data.c_str(), sizeof(buffer));
+    }
 
     const char *label = (obj.type == ObjectType::QRCode)  ? "Data"
                         : (obj.type == ObjectType::Image) ? "File Path"
@@ -685,10 +741,20 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   // --- Row 5: Decor ---
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
-    // TODO
+    LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
+    project.objects.insert(project.objects.begin(),
+                           {ObjectType::Border, 4, 4, (float)sz.width - 8,
+                            (float)sz.height - 8, "", "", "", 4, 0x000000FF,
+                            10});
+
+    // Select the new object (which is now at index 0)
+    selectedIndex = 0;
+  }
+
+  if (ImGui::Button("Deco Border", btnSize)) {
+    triggerBorderPopup = true;
   }
 
   ImGui::End();
 }
-
 } // namespace UI

@@ -1,9 +1,9 @@
 /*!***************************************************
  * @file     protocol.cpp
  * @brief    Defines the communication to the printer.
- * @details  Contains the small details for how to 
+ * @details  Contains the small details for how to
  * actually talk to the D30 printer.
- * @note     
+ * @note
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
@@ -12,22 +12,21 @@
 #include "printer.h"
 #include "raylib.h"
 #include "utils.h"
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <algorithm>
 
 namespace Protocol {
 
-
 /*!***************************************************
  * @brief    Converts grayscale image to black and white.
- * @details  Uses the Floyd-Steinberg algorithm to 
+ * @details  Uses the Floyd-Steinberg algorithm to
  * convert a grayscale image to strict black & white (1-bit).
  * @param    image Image&
  * @return   void
- * @note     
+ * @note
  * @date     2026.01.21
  * @author   bearded.griffin
  ****************************************************/
@@ -84,13 +83,13 @@ void ApplyDithering(Image &image) {
  * @brief    Prints the label...
  * @details  Pulls all the details together to be able
  * to send the label to the printer.
- * @param    project const Project& 
- * @return   void 
- * @note     
+ * @param    project const Project&
+ * @return   void
+ * @note
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
-void PrintLabel(const Project& project) {
+void PrintLabel(const Project &project) {
   if (!Printer::Get().IsConnected()) {
     std::cout << "[Protocol] Cannot print: Printer not connected." << std::endl;
     return;
