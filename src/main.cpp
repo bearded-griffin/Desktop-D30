@@ -183,16 +183,15 @@ int main() {
         Utils::DrawTextBox(nullptr, displayFont, obj.data.c_str(), obj.x, obj.y,
                            obj.fontSize, 2.0f, col, obj.width);
         // Visualize word wrap box
-        if (i == selectedIndex && obj.width > 0){
+        if (i == selectedIndex && obj.width > 0) {
           DrawRectangleLines(obj.x, obj.y, obj.width,
                              obj.height > 0 ? obj.height : obj.fontSize * 2,
                              Fade(SKYBLUE, 0.5f));
         }
         // Use our shared helper for consistent rendering
         // nullptr = Draw to Screen
-        Utils::DrawTextBox(nullptr, displayFont, obj.data.c_str(),
-                           obj.x, obj.y, obj.fontSize, 2.0f, col,
-                           obj.width);
+        Utils::DrawTextBox(nullptr, displayFont, obj.data.c_str(), obj.x, obj.y,
+                           obj.fontSize, 2.0f, col, obj.width);
 
       } else if (obj.type == ObjectType::QRCode) {
         Utils::DrawQRCode(obj.data, obj.x, obj.y, obj.width, col);
@@ -240,9 +239,44 @@ int main() {
           DrawCircleV(start, 4, SKYBLUE);
           DrawCircleV(end, 4, SKYBLUE);
         }
-      } else if (obj.type == ObjectType::ShapeRect) {
+      } else if (obj.type == ObjectType::ShapeRect ||
+                 obj.type == ObjectType::Border) {
         Rectangle rec = {obj.x, obj.y, obj.width, obj.height};
-        DrawRectangleLinesEx(rec, obj.fontSize, col);
+
+        // 1. Calculate Roundness
+        float minDim = (rec.width < rec.height) ? rec.width : rec.height;
+        float roundness = 0.0f;
+        if (minDim > 0)
+          roundness = obj.cornerRadius / (minDim / 2.0f);
+        if (roundness > 1.0f)
+          roundness = 1.0f;
+        if (roundness < 0.0f)
+          roundness = 0.0f;
+
+        // 2. Draw Outer Box (The Color/Black)
+        // We use DrawRectangleRounded (Filled) which exists in ALL Raylib
+        // versions
+        DrawRectangleRounded(rec, roundness, 10, col);
+
+        // 3. Draw Inner Box (The White "Hole") to simulate thickness
+        float thick = obj.fontSize;
+
+        // Only draw the hole if the border isn't thicker than the object itself
+        if (thick * 2 < rec.width && thick * 2 < rec.height) {
+          Rectangle inner = {rec.x + thick, rec.y + thick,
+                             rec.width - (thick * 2), rec.height - (thick * 2)};
+
+          // Recalculate inner roundness so corners look concentric
+          float innerRadius =
+              (obj.cornerRadius > thick) ? obj.cornerRadius - thick : 0;
+          float innerMin =
+              (inner.width < inner.height) ? inner.width : inner.height;
+          float innerRoundness =
+              (innerMin > 0) ? innerRadius / (innerMin / 2.0f) : 0;
+
+          // Draw the white center (Matches the label background)
+          DrawRectangleRounded(inner, innerRoundness, 10, WHITE);
+        }
       } else if (obj.type == ObjectType::ShapeCircle) {
         float radius = obj.width / 2.0f;
         Vector2 center = {obj.x + radius, obj.y + radius};
@@ -283,10 +317,10 @@ int main() {
   }
 
   // Cleanup Textures
-  for(auto& obj : currentProject.objects){ 
-    if (obj.texture.id != 0){
+  for (auto &obj : currentProject.objects) {
+    if (obj.texture.id != 0) {
       UnloadTexture(obj.texture);
-    }  
+    }
   }
 
   rlImGuiShutdown();

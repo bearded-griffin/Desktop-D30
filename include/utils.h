@@ -3,7 +3,7 @@
  * @brief    Uitity functions used in LabelForge
  * @details  Utility functions that allow for saving,
  *  loading, and other general functions.
- * @note     
+ * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
@@ -25,16 +25,17 @@ Rectangle GetObjectBounds(const LabelObject &obj);
 Vector2 GetMouseDeltaWorld(Camera2D camera);
 void SaveProject(const std::string &filename, const Project &project);
 bool LoadProject(const std::string &filename, Project &outProject);
-void ExportProjectToPNG(const std::string& filename, const Project& project);
+void ExportProjectToPNG(const std::string &filename, const Project &project);
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
-float DrawTextBox(Image* target, Font font, const char* text, float x, float y, float fontSize, float spacing, Color tint, float maxWidth);
+float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
+                  float fontSize, float spacing, Color tint, float maxWidth);
 
-Image RenderProjectToImage(const Project& project);
+Image RenderProjectToImage(const Project &project);
 
-bool LoadCSV(const std::string& filename, Project& project);
+bool LoadCSV(const std::string &filename, Project &project);
 
 // Apply the data from project.currentCSVRow to all linked objects
-void ApplyCSVDataToObjects(Project& project);
-                
-}
+void ApplyCSVDataToObjects(Project &project);
+
+} // namespace Utils

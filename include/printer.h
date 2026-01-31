@@ -3,21 +3,21 @@
  * @brief    Handles the printer communication
  * @details  Handles the bluetooth connection neede to
  * talk to the printer.
- * @note     
+ * @note
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
- 
+
 #pragma once
-#include <string>
-#include <vector>
 #include <atomic>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <vector>
 
 struct BluetoothDevice {
-    std::string name;
-    std::string address;
+  std::string name;
+  std::string address;
 };
 
 class Printer {
@@ -47,9 +47,9 @@ public:
   // Check status
   bool IsConnected() const { return connected; }
   std::string GetConnectedName() const { return connectedDeviceName; }
-  
-  // Send it to the printer 
-  bool Write(const std::vector<uint8_t>& data);
+
+  // Send it to the printer
+  bool Write(const std::vector<uint8_t> &data);
 
   // Singleton access for the UI to use
   static Printer &Get() {
