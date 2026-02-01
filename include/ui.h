@@ -17,4 +17,5 @@ void RequestExit();
 bool ShouldClose();
 void ClearExitRequest();
 void DrawExitConfirmation(Project &project);
+void DrawLoadConfirmation(Project &project);
 } // namespace UI

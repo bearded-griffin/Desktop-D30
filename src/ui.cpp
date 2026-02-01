@@ -29,6 +29,7 @@ static bool triggerIconPopup = false;
 static bool triggerBorderPopup = false;
 static bool triggerScanPopup = false;
 static bool triggerBatchPopup = false;
+static bool triggerLoadConfirmation = false;
 
 // Exit State Flags
 static bool exitRequested = false;
@@ -81,6 +82,57 @@ void DrawExitConfirmation(Project &project) {
   }
 }
 
+void DrawLoadConfirmation(Project &project) {
+  if (triggerLoadConfirmation) {
+    if (!project.isDirty) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      triggerLoadConfirmation = false;
+    } else {
+      ImGui::OpenPopup("ConfirmLoad");
+    }
+  }
+
+  if (ImGui::BeginPopupModal("ConfirmLoad", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("You have unsaved changes! Do you want to save before "
+                "loading a new project?\n\n");
+    ImGui::Separator();
+
+    if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
+      bool saveSuccess = false;
+      if (project.csvFilePath.empty()) {
+        saveSuccess = Utils::SaveProject(project);
+      } else {
+        saveSuccess = Utils::SaveProject(project, project.csvFilePath);
+      }
+
+      if (saveSuccess) {
+        if (Utils::LoadProject("project.d30", project)) {
+          project.isDirty = false;
+        }
+      }
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Discard and Load", ImVec2(150, 0))) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
 /*!***************************************************
  * @brief    Draw the main menu
  * @details  Draws the drop down main menu that
@@ -116,9 +168,7 @@ void DrawMainMenu(Project &project) {
         }
       }
       if (ImGui::MenuItem("Load Project")) {
-        if (Utils::LoadProject("project.d30", project)) {
-          project.isDirty = false; // A fresh load means no dirty state
-        }
+        triggerLoadConfirmation = true;
       }
 
       ImGui::Separator();

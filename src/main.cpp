@@ -324,6 +324,7 @@ int main() {
     UI::DrawMainMenu(currentProject);
     UI::DrawSidebar(currentProject, selectedIndex);
     UI::DrawExitConfirmation(currentProject);
+    UI::DrawLoadConfirmation(currentProject);
     rlImGuiEnd();
 
     EndDrawing();
