@@ -396,8 +396,6 @@ Image RenderProjectToImage(const Project &project) {
 
   // 3. Draw Objects onto the Image
   for (const auto &obj : project.objects) {
-    Color col = GetColor(obj.colorHex);
-
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       Font printFont = AssetManager::Get().GetFont(obj.fontName);
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
@@ -420,7 +418,7 @@ Image RenderProjectToImage(const Project &project) {
               int pSize = (int)(moduleSize + 1);
 
               // Use ImageDrawRectangle (CPU) not DrawRectangle (GPU)
-              ImageDrawRectangle(&canvas, px, py, pSize, pSize, col);
+              ImageDrawRectangle(&canvas, px, py, pSize, pSize, BLACK);
             }
           }
         }
@@ -429,12 +427,23 @@ Image RenderProjectToImage(const Project &project) {
       if (FileExists(obj.data.c_str())) {
         Image srcImg = LoadImage(obj.data.c_str());
 
+        // --- CONVERT TO B&W ---
+        ImageColorGrayscale(&srcImg);
+        // Manual Thresholding
+        Color *pixels = LoadImageColors(srcImg);
+        for (int i = 0; i < srcImg.width * srcImg.height; i++) {
+          if (pixels[i].r < 128) {
+            pixels[i] = BLACK;
+          } else {
+            pixels[i] = WHITE;
+          }
+        }
+        UnloadImageColors(pixels);
+
         // Resize to target dimensions
         ImageResize(&srcImg, (int)obj.width, (int)obj.height);
 
         // Draw onto canvas
-        // Raylib doesn't have ImageDrawImage, but has ImageDraw
-        // rect source (entire image) -> rect dest (position on canvas)
         Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};
         Rectangle dstRec = {obj.x, obj.y, (float)srcImg.width,
                             (float)srcImg.height};
