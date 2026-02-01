@@ -1,21 +1,21 @@
 #!/bin/sh
 set -e
 
-# 1. Create a wrapper in /usr/bin so users can type 'labelforge'
-echo '#!/bin/bash' > /usr/bin/labelforge
-echo 'cd /opt/LabelForge' >> /usr/bin/labelforge
-echo './LabelForge' >> /usr/bin/labelforge
-chmod +x /usr/bin/labelforge
+# 1. Create a wrapper in /usr/bin so users can type 'Desktop-D30'
+echo '#!/bin/bash' > /usr/bin/Desktop-D30
+echo 'cd /opt/Desktop-D30' >> /usr/bin/Desktop-D30
+echo './Desktop-D30' >> /usr/bin/Desktop-D30
+chmod +x /usr/bin/Desktop-D30
 
 # 2. Grant Bluetooth Capabilities
 if command -v setcap > /dev/null; then
-    setcap 'cap_net_raw,cap_net_admin+eip' /opt/LabelForge/LabelForge
+    setcap 'cap_net_raw,cap_net_admin+eip' /opt/Desktop-D30/Desktop-D30
 fi
 
 # 3. Link Desktop Icon & File (This makes it show in the Start Menu)
 # We link from our /opt folder to the system folders
-ln -sf /opt/LabelForge/LabelForge.desktop /usr/share/applications/LabelForge.desktop
-ln -sf /opt/LabelForge/app_icon.png /usr/share/pixmaps/LabelForge.png
+ln -sf /opt/Desktop-D30/Desktop-D30.desktop /usr/share/applications/Desktop-D30.desktop
+ln -sf /opt/Desktop-D30/app_icon.png /usr/share/pixmaps/Desktop-D30.png
 
 # 4. Refresh the desktop database so the icon appears immediately
 if command -v update-desktop-database > /dev/null; then

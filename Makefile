@@ -25,7 +25,7 @@ release:
 
 # Run the executable
 run: build
-	./$(BUILD_DIR)/LabelForge
+	./$(BUILD_DIR)/Desktop-D30
 
 # Nuke the build folder
 clean:

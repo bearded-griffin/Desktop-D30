@@ -1,11 +1,13 @@
 /*!***************************************************
  * @file     main.cpp
- * @brief    The main entry point for LabelForge
+ * @brief    The main entry point for Desktop-D30
  * @details  Handels the input from the user and draws the interface.
  * @note     Updated with Camera Centering, Object Clamping, and Deletion.
  * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
+
+#include <algorithm>  // For std::max/min clamps
 
 #include "assets.h"
 #include "barcode.h"
@@ -16,21 +18,19 @@
 #include "ui.h"
 #include "utils.h"
 
-#include <algorithm> // For std::max/min clamps
-
 int main() {
   const int screenWidth = 1280;
   const int screenHeight = 800;
 
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-  InitWindow(screenWidth, screenHeight, "LabelForge");
+  InitWindow(screenWidth, screenHeight, "Desktop-D30");
   SetTargetFPS(60);
 
   rlImGuiSetup(true);
 
   Project currentProject;
   currentProject.objects.push_back({ObjectType::Text, 20, 40, 0, 0,
-                                    "LabelForge", "", "", 30.0f, 0x000000FF});
+                                    "Desktop-D30", "", "", 30.0f, 0x000000FF});
 
   // --- FIX 1: CENTER CAMERA INITIALLY ---
   // We want the camera to look at the center of the label, not (0,0)
@@ -38,9 +38,10 @@ int main() {
 
   Camera2D camera = {0};
   camera.zoom = 1.0f;
-  camera.offset = {screenWidth / 2.0f, screenHeight / 2.0f}; // Center of screen
+  camera.offset = {screenWidth / 2.0f,
+                   screenHeight / 2.0f};  // Center of screen
   camera.target = {initialSize.width / 2.0f,
-                   initialSize.height / 2.0f}; // Center of label
+                   initialSize.height / 2.0f};  // Center of label
 
   int selectedIndex = -1;
   bool isDraggingObject = false;
@@ -102,8 +103,7 @@ int main() {
                         mouseWorld.y - currentProject.objects[selectedIndex].y};
         }
       }
-      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
-        isDraggingObject = false;
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) isDraggingObject = false;
 
       // --- FIX 2: DRAGGING WITH BOUNDS CLAMPING ---
       if (isDraggingObject && selectedIndex != -1) {
@@ -120,16 +120,14 @@ int main() {
 
         // 3. Clamp X
         // Prevent going left of 0
-        if (newX < 0)
-          newX = 0;
+        if (newX < 0) newX = 0;
         // Prevent going right of canvas edge (CanvasWidth - ObjectWidth)
         else if (newX + bounds.width > canvasSz.width)
           newX = canvasSz.width - bounds.width;
 
         // 4. Clamp Y
         // Prevent going above 0
-        if (newY < 0)
-          newY = 0;
+        if (newY < 0) newY = 0;
         // Prevent going below canvas edge
         else if (newY + bounds.height > canvasSz.height)
           newY = canvasSz.height - bounds.height;
@@ -144,8 +142,7 @@ int main() {
     float wheel = GetMouseWheelMove();
     if (wheel != 0 && !mouseHandledByUI) {
       camera.zoom += wheel * 0.1f;
-      if (camera.zoom < 0.1f)
-        camera.zoom = 0.1f;
+      if (camera.zoom < 0.1f) camera.zoom = 0.1f;
     }
 
     // --- DRAWING ---
@@ -206,10 +203,8 @@ int main() {
           obj.texture = LoadTextureFromImage(img);
           UnloadImage(img);
           // Auto-size if new
-          if (obj.width == 0)
-            obj.width = (float)obj.texture.width;
-          if (obj.height == 0)
-            obj.height = (float)obj.texture.height;
+          if (obj.width == 0) obj.width = (float)obj.texture.width;
+          if (obj.height == 0) obj.height = (float)obj.texture.height;
         }
 
         // 2. Draw
@@ -246,12 +241,9 @@ int main() {
         // 1. Calculate Roundness
         float minDim = (rec.width < rec.height) ? rec.width : rec.height;
         float roundness = 0.0f;
-        if (minDim > 0)
-          roundness = obj.cornerRadius / (minDim / 2.0f);
-        if (roundness > 1.0f)
-          roundness = 1.0f;
-        if (roundness < 0.0f)
-          roundness = 0.0f;
+        if (minDim > 0) roundness = obj.cornerRadius / (minDim / 2.0f);
+        if (roundness > 1.0f) roundness = 1.0f;
+        if (roundness < 0.0f) roundness = 0.0f;
 
         // 2. Draw Outer Box (The Color/Black)
         // We use DrawRectangleRounded (Filled) which exists in ALL Raylib
@@ -290,7 +282,7 @@ int main() {
         for (int i = 0; i < code.length(); i++) {
           if (code[i] == '1') {
             DrawRectangle((int)(obj.x + (i * moduleWidth)), (int)obj.y,
-                          (int)(moduleWidth + 1.0f), // +1 for screen crispness
+                          (int)(moduleWidth + 1.0f),  // +1 for screen crispness
                           (int)obj.height, col);
           }
         }

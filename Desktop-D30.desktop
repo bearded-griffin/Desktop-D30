@@ -1,9 +1,9 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=LabelForge
+Name=Desktop-D30
 Comment=Custom Label Printer Suite
-Exec=/usr/local/bin/labelforge
-Icon=/opt/LabelForge/assets/app_icon.png
+Exec=/usr/local/bin/Desktop-D30
+Icon=/opt/Desktop-D30/assets/app_icon.png
 Terminal=false
 Categories=Utility;Printing;

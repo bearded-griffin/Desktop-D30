@@ -1,6 +1,6 @@
 /*!***************************************************
  * @file     types.h
- * @brief    The various types of objects used by LabelForge
+ * @brief    The various types of objects used by Desktop-D30
  * @details  All the things...objects atleast.
  * @note
  * @date     2026.01.19
@@ -8,17 +8,18 @@
  ****************************************************/
 
 #pragma once
-#include "raylib.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
+
+#include "raylib.h"
 
 // Define the types of objects we can have
 enum class ObjectType {
   Text,
   QRCode,
   Image,
-  Field, // For CSV batch printing
+  Field,  // For CSV batch printing
   Line,
   ShapeRect,
   ShapeCircle,
@@ -37,8 +38,8 @@ struct LabelObject {
   ObjectType type = ObjectType::Text;
   float x = 0.0f;
   float y = 0.0f;
-  float width = 0.0f;  // Used for Image/QR resizing
-  float height = 0.0f; // Used for Image/QR resizing
+  float width = 0.0f;   // Used for Image/QR resizing
+  float height = 0.0f;  // Used for Image/QR resizing
 
   // Content
   // For Text: The text string
@@ -55,7 +56,7 @@ struct LabelObject {
   float fontSize = 20.0f;
   unsigned int colorHex = 0x000000FF;
 
-  float cornerRadius = 0.0f; // 0.0 = Sharp corners
+  float cornerRadius = 0.0f;  // 0.0 = Sharp corners
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
@@ -63,8 +64,8 @@ struct LabelObject {
 
 struct Project {
   int version = 1;
-  bool darkTheme = false; // Checkbox state
-  bool showGrid = true;   // Checkbox state
+  bool darkTheme = false;  // Checkbox state
+  bool showGrid = true;    // Checkbox state
   int selectedLabelIndex = 0;
   std::vector<LabelObject> objects;
 
