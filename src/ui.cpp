@@ -29,6 +29,109 @@ static bool triggerIconPopup = false;
 static bool triggerBorderPopup = false;
 static bool triggerScanPopup = false;
 static bool triggerBatchPopup = false;
+static bool triggerLoadConfirmation = false;
+
+// Exit State Flags
+static bool exitRequested = false;
+static bool forceQuit = false;
+
+void RequestExit() { exitRequested = true; }
+bool ShouldClose() { return forceQuit; }
+void ClearExitRequest() { exitRequested = false; }
+
+void DrawExitConfirmation(Project &project) {
+  if (exitRequested) {
+    if (!project.isDirty) {
+      forceQuit = true;
+    } else {
+      ImGui::OpenPopup("ConfirmExit");
+    }
+  }
+
+  if (ImGui::BeginPopupModal("ConfirmExit", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("You have unsaved changes!\n\n");
+    ImGui::Separator();
+
+    if (ImGui::Button("Save and Exit", ImVec2(120, 0))) {
+      bool saveSuccess = false;
+      if (project.csvFilePath.empty()) {
+        saveSuccess = Utils::SaveProject(project);
+      } else {
+        saveSuccess = Utils::SaveProject(project, project.csvFilePath);
+      }
+
+      if (saveSuccess) {
+        project.isDirty = false;
+        forceQuit = true;
+      }
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SetItemDefaultFocus();
+    ImGui::SameLine();
+    if (ImGui::Button("Exit Without Saving", ImVec2(150, 0))) {
+      forceQuit = true;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+      ClearExitRequest();
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
+void DrawLoadConfirmation(Project &project) {
+  if (triggerLoadConfirmation) {
+    if (!project.isDirty) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      triggerLoadConfirmation = false;
+    } else {
+      ImGui::OpenPopup("ConfirmLoad");
+    }
+  }
+
+  if (ImGui::BeginPopupModal("ConfirmLoad", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("You have unsaved changes! Do you want to save before "
+                "loading a new project?\n\n");
+    ImGui::Separator();
+
+    if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
+      bool saveSuccess = false;
+      if (project.csvFilePath.empty()) {
+        saveSuccess = Utils::SaveProject(project);
+      } else {
+        saveSuccess = Utils::SaveProject(project, project.csvFilePath);
+      }
+
+      if (saveSuccess) {
+        if (Utils::LoadProject("project.d30", project)) {
+          project.isDirty = false;
+        }
+      }
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Discard and Load", ImVec2(150, 0))) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+      triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
 
 /*!***************************************************
  * @brief    Draw the main menu
@@ -46,10 +149,27 @@ void DrawMainMenu(Project &project) {
 
     // --- FILE MENU ---
     if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save Project"))
-        Utils::SaveProject("project.flbl", project);
-      if (ImGui::MenuItem("Load Project"))
-        Utils::LoadProject("", project);
+      if (ImGui::MenuItem("Save")) {
+        // If no file path is set, open a save dialog
+        if (project.csvFilePath.empty()) {
+          if (Utils::SaveProject(project)) {
+            project.isDirty = false;
+          }
+        } else {
+          // Otherwise, save to the existing path
+          if (Utils::SaveProject(project, project.csvFilePath)) {
+            project.isDirty = false;
+          }
+        }
+      }
+      if (ImGui::MenuItem("Save As...")) {
+        if (Utils::SaveProject(project)) {
+          project.isDirty = false;
+        }
+      }
+      if (ImGui::MenuItem("Load Project")) {
+        triggerLoadConfirmation = true;
+      }
 
       ImGui::Separator();
 
@@ -81,7 +201,8 @@ void DrawMainMenu(Project &project) {
       }
 
       ImGui::Separator();
-      if (ImGui::MenuItem("Exit")) { /* TODO: Close Window Flag */
+      if (ImGui::MenuItem("Exit")) {
+        RequestExit();
       }
       ImGui::EndMenu();
     }
@@ -299,6 +420,7 @@ void DrawMainMenu(Project &project) {
           project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
                                      currentCat.icons[i].path, "", "", 0,
                                      0xFFFFFFFF});
+          project.isDirty = true;
           ImGui::CloseCurrentPopup();
         }
         ImGui::PopID();
@@ -352,6 +474,7 @@ void DrawMainMenu(Project &project) {
           project.objects.push_back(
               {ObjectType::Image, 0, 0, (float)sz.width, (float)sz.height,
                currentCat.icons[i].path, "", "", 0, 0xFFFFFFFF});
+          project.isDirty = true;
           ImGui::CloseCurrentPopup();
         }
         ImGui::PopID();
@@ -399,6 +522,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       bool is_selected = (project.selectedLabelIndex == i);
       if (ImGui::Selectable(Utils::LabelSizes[i].name.c_str(), is_selected)) {
         project.selectedLabelIndex = i;
+        project.isDirty = true;
       }
       if (is_selected)
         ImGui::SetItemDefaultFocus();
@@ -406,9 +530,11 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     ImGui::EndCombo();
   }
 
-  ImGui::Checkbox("Show Grid", &project.showGrid);
+  if (ImGui::Checkbox("Show Grid", &project.showGrid))
+    project.isDirty = true;
   ImGui::SameLine();
-  ImGui::Checkbox("Dark Mode", &project.darkTheme);
+  if (ImGui::Checkbox("Dark Mode", &project.darkTheme))
+    project.isDirty = true;
 
   if (!project.csvRows.empty()) {
     ImGui::Spacing();
@@ -510,8 +636,10 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     LabelObject &obj = project.objects[selectedIndex];
     ImGui::Text("Properties");
 
-    ImGui::DragFloat("X", &obj.x);
-    ImGui::DragFloat("Y", &obj.y);
+    if (ImGui::DragFloat("X", &obj.x))
+      project.isDirty = true;
+    if (ImGui::DragFloat("Y", &obj.y))
+      project.isDirty = true;
 
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
@@ -523,8 +651,10 @@ void DrawSidebar(Project &project, int &selectedIndex) {
         if (!selection.empty())
           AssetManager::Get().ImportFont(selection[0]);
       }
-      ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f);
-      ImGui::DragFloat("Box Width", &obj.width, 1.0f, 0.0f, 1000.0f, "%.1f");
+      if (ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f))
+        project.isDirty = true;
+      if (ImGui::DragFloat("Box Width", &obj.width, 1.0f, 0.0f, 1000.0f, "%.1f"))
+        project.isDirty = true;
       // Tooltip to explain
       if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Set > 0 to enable text wrapping");
@@ -536,6 +666,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
                             ImGuiComboFlags_HeightLarge)) {
         if (ImGui::Selectable("Default", obj.fontName.empty())) {
           obj.fontName = "";
+          project.isDirty = true;
         }
 
         bool hasUser = false;
@@ -546,8 +677,10 @@ void DrawSidebar(Project &project, int &selectedIndex) {
               ImGui::TextDisabled("--- User Fonts ---");
               hasUser = true;
             }
-            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name))
+            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name)) {
               obj.fontName = f.name;
+              project.isDirty = true;
+            }
           }
         }
         bool hasSystem = false;
@@ -558,8 +691,10 @@ void DrawSidebar(Project &project, int &selectedIndex) {
               ImGui::TextDisabled("--- System Fonts ---");
               hasSystem = true;
             }
-            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name))
+            if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name)) {
               obj.fontName = f.name;
+              project.isDirty = true;
+            }
           }
         }
         ImGui::EndCombo();
@@ -567,23 +702,33 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
     } else if (obj.type == ObjectType::Border ||
                obj.type == ObjectType::ShapeRect) {
-      ImGui::SliderFloat("Thickness", &obj.fontSize, 1, 20);
-      ImGui::SliderFloat("Radius", &obj.cornerRadius, 0, 50);
-      ImGui::DragFloat("W", &obj.width);
-      ImGui::DragFloat("H", &obj.height);
+      if (ImGui::SliderFloat("Thickness", &obj.fontSize, 1, 20))
+        project.isDirty = true;
+      if (ImGui::SliderFloat("Radius", &obj.cornerRadius, 0, 50))
+        project.isDirty = true;
+      if (ImGui::DragFloat("W", &obj.width))
+        project.isDirty = true;
+      if (ImGui::DragFloat("H", &obj.height))
+        project.isDirty = true;
 
     } else if (obj.type == ObjectType::ShapeCircle ||
                obj.type == ObjectType::Line) {
-      ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f);
-      ImGui::DragFloat("Width", &obj.width);
-      ImGui::DragFloat("Height", &obj.height);
+      if (ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f))
+        project.isDirty = true;
+      if (ImGui::DragFloat("Width", &obj.width))
+        project.isDirty = true;
+      if (ImGui::DragFloat("Height", &obj.height))
+        project.isDirty = true;
     } else if (obj.type == ObjectType::QRCode) {
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
         obj.height = obj.width; // Keep Square
+        project.isDirty = true;
       }
     } else if (obj.type == ObjectType::Image) {
-      ImGui::DragFloat("Width", &obj.width);
-      ImGui::DragFloat("Height", &obj.height);
+      if (ImGui::DragFloat("Width", &obj.width))
+        project.isDirty = true;
+      if (ImGui::DragFloat("Height", &obj.height))
+        project.isDirty = true;
 
       ImGui::Spacing();
       if (ImGui::Button("Browse Image...")) {
@@ -593,6 +738,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
                 .result();
         if (!selection.empty()) {
           obj.data = selection[0];
+          project.isDirty = true;
 
           // Unload old
           if (obj.texture.id != 0)
@@ -611,8 +757,10 @@ void DrawSidebar(Project &project, int &selectedIndex) {
         }
       }
     } else if (obj.type == ObjectType::Barcode) {
-      ImGui::DragFloat("Width", &obj.width);
-      ImGui::DragFloat("Height", &obj.height);
+      if (ImGui::DragFloat("Width", &obj.width))
+        project.isDirty = true;
+      if (ImGui::DragFloat("Height", &obj.height))
+        project.isDirty = true;
     }
 
     // --- DATA BINDING (CSV) ---
@@ -631,12 +779,14 @@ void DrawSidebar(Project &project, int &selectedIndex) {
       if (ImGui::BeginCombo("Link Column", currentLink.c_str())) {
         if (ImGui::Selectable("[None]", obj.linkedColumn.empty())) {
           obj.linkedColumn = "";
+          project.isDirty = true;
         }
 
         for (const auto &header : project.csvHeaders) {
           bool isSelected = (obj.linkedColumn == header);
           if (ImGui::Selectable(header.c_str(), isSelected)) {
             obj.linkedColumn = header;
+            project.isDirty = true;
             // Preview first row immediately
             if (!project.csvRows.empty()) {
               for (size_t i = 0; i < project.csvHeaders.size(); i++) {
@@ -667,6 +817,7 @@ void DrawSidebar(Project &project, int &selectedIndex) {
                                                           : "Text";
     if (ImGui::InputText(label, buffer, sizeof(buffer))) {
       obj.data = buffer;
+      project.isDirty = true;
     }
   }
 
@@ -683,36 +834,70 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Text, 50, 50, 0, 0, "Text", "", "", 20, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Text;
+    obj.x = 50;
+    obj.y = 50;
+    obj.data = "Text";
+    obj.fontSize = 20;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Field, 50, 50, 0, 0, "{Col}", "", "", 20, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Field;
+    obj.x = 50;
+    obj.y = 50;
+    obj.data = "{Col}";
+    obj.fontSize = 20;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
-    project.objects.push_back({ObjectType::QRCode, 50, 50, 100, 100,
-                               "www.example.com", "", 0, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::QRCode;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.data = "www.example.com";
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
-    project.objects.push_back({ObjectType::Barcode, 50, 50, 200,
-                               60,         // Default: Wider than it is tall
-                               "12345678", // Default data
-                               "", 0, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Barcode;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 200;
+    obj.height = 60;
+    obj.data = "12345678";
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Image, 50, 50, 100, 100, "", "", "", 0, 0xFFFFFFFF});
+    LabelObject obj;
+    obj.type = ObjectType::Image;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
@@ -722,21 +907,44 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
-    // Default horizontal line
-    project.objects.push_back(
-        {ObjectType::Line, 50, 50, 100, 0, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Line;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 0;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::ShapeRect, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::ShapeRect;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::ShapeCircle, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::ShapeCircle;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
+    project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
@@ -744,11 +952,17 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
     LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
-    project.objects.insert(project.objects.begin(),
-                           {ObjectType::Border, 4, 4, (float)sz.width - 8,
-                            (float)sz.height - 8, "", "", "", 4, 0x000000FF,
-                            10});
-
+    LabelObject obj;
+    obj.type = ObjectType::Border;
+    obj.x = 4;
+    obj.y = 4;
+    obj.width = (float)sz.width - 8;
+    obj.height = (float)sz.height - 8;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    obj.cornerRadius = 10;
+    project.objects.insert(project.objects.begin(), obj);
+    project.isDirty = true;
     // Select the new object (which is now at index 0)
     selectedIndex = 0;
   }
