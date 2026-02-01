@@ -31,6 +31,7 @@ int main() {
   Project currentProject;
   currentProject.objects.push_back({ObjectType::Text, 20, 40, 0, 0,
                                     "Desktop-D30", "", "", 30.0f, 0x000000FF});
+  currentProject.isDirty = true;
 
   // --- FIX 1: CENTER CAMERA INITIALLY ---
   // We want the camera to look at the center of the label, not (0,0)
@@ -50,7 +51,7 @@ int main() {
   // Track if label size changed to re-center camera
   int lastLabelIndex = currentProject.selectedLabelIndex;
 
-  while (!WindowShouldClose()) {
+  while (!WindowShouldClose() && !UI::ShouldClose()) {
     // Handle Resize: Keep camera offset in center of window
     camera.offset = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 
@@ -71,6 +72,7 @@ int main() {
       if (IsKeyPressed(KEY_DELETE) || IsKeyPressed(KEY_BACKSPACE)) {
         currentProject.objects.erase(currentProject.objects.begin() +
                                      selectedIndex);
+        currentProject.isDirty = true;
         selectedIndex = -1;
         isDraggingObject = false;
       }
@@ -135,6 +137,7 @@ int main() {
         // 5. Apply
         obj.x = newX;
         obj.y = newY;
+        currentProject.isDirty = true;
       }
     }
 
@@ -303,6 +306,7 @@ int main() {
     rlImGuiBegin();
     UI::DrawMainMenu(currentProject);
     UI::DrawSidebar(currentProject, selectedIndex);
+    UI::DrawExitConfirmation(currentProject);
     rlImGuiEnd();
 
     EndDrawing();

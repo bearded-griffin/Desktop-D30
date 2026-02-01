@@ -78,6 +78,9 @@ struct Project {
 
   // Used for Data Navigation
   int currentCSVRow = 0;
+
+  // --- Runtime State (Not Saved) ---
+  bool isDirty = false;
 };
 
 // JSON Serialization Macros

@@ -12,6 +12,9 @@
 
 namespace UI {
 void DrawSidebar(Project &project, int &selectedIndex);
-
 void DrawMainMenu(Project &project);
+void RequestExit();
+bool ShouldClose();
+void ClearExitRequest();
+void DrawExitConfirmation(Project &project);
 } // namespace UI

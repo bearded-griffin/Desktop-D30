@@ -240,23 +240,32 @@ Vector2 GetMouseDeltaWorld(Camera2D camera) {
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
-void SaveProject(const std::string &defaultName, const Project &project) {
-  // Native Save Dialog
-  auto dest =
-      pfd::save_file("Save Project", defaultName,
-                     {"Desktop-D30 Files", "*.d30"}, pfd::opt::force_overwrite)
-          .result();
+bool SaveProject(Project &project, const std::string &filePath) {
+  std::string destPath = filePath;
 
-  if (!dest.empty()) {
+  if (destPath.empty()) {
+    // Native Save Dialog
+    destPath = pfd::save_file("Save Project", "project.d30",
+                              {"Desktop-D30 Files", "*.d30"},
+                              pfd::opt::force_overwrite)
+                   .result();
+  }
+
+  if (!destPath.empty()) {
     // Ensure extension
-    if (dest.find(".d30") == std::string::npos)
-      dest += ".d30";
+    if (destPath.find(".d30") == std::string::npos)
+      destPath += ".d30";
 
     nlohmann::json j = project;
-    std::ofstream file(dest);
-    if (file.is_open())
+    std::ofstream file(destPath);
+    if (file.is_open()) {
       file << j.dump(4);
+      project.csvFilePath = destPath; // Update project's saved path
+      std::cout << "[Utils] Project saved to: " << destPath << std::endl;
+      return true;
+    }
   }
+  return false;
 }
 
 /*!***************************************************
@@ -274,7 +283,7 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
   auto dest = pfd::open_file("Open Project", defaultName,
-                             {"Desktop-D30 Files", "*..d30"})
+                             {"Desktop-D30 Files", "*.d30"})
                   .result();
 
   if (!dest.empty()) {
@@ -285,6 +294,7 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
       nlohmann::json j;
       file >> j;
       outProject = j.get<Project>();
+      outProject.isDirty = false; // A fresh load means no dirty state
 
       // --- RELOAD CSV DATA ---
       if (!outProject.csvFilePath.empty()) {
