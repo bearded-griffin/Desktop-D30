@@ -127,10 +127,14 @@ install(TARGETS LabelForge DESTINATION .)
 install(DIRECTORY assets DESTINATION .)
 
 # 3. Install the Desktop File (for the Start Menu)
-install(FILES LabelForge.desktop DESTINATION /usr/share/applications)
+#install(FILES LabelForge.desktop DESTINATION /usr/share/applications)
+install(FILES LabelForge.desktop DESTINATION .)
 
 # 4. Install the Icon (for the Start Menu)
-install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME LabelForge.png)
+#install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME LabelForge.png)
+install(FILES assets/app_icon.png DESTINATION .)
+
+
 
 # --- PACKAGING (CPack) ---
 set(CPACK_PACKAGE_NAME "LabelForge")
