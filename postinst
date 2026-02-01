@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# 1. Create a wrapper in /usr/bin so users can type 'labelforge'
+#    and it automatically runs from /opt/LabelForge (fixing asset paths)
+echo '#!/bin/bash' > /usr/bin/labelforge
+echo 'cd /opt/LabelForge' >> /usr/bin/labelforge
+echo './LabelForge' >> /usr/bin/labelforge
+chmod +x /usr/bin/labelforge
+
+# 2. Grant Bluetooth Capabilities (so no sudo needed)
+if command -v setcap > /dev/null; then
+    setcap 'cap_net_raw,cap_net_admin+eip' /opt/LabelForge/LabelForge
+fi

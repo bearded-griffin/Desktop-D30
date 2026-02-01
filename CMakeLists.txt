@@ -118,3 +118,36 @@ if (WIN32)
 elseif (UNIX AND NOT APPLE)
     target_link_libraries(LabelForge PRIVATE m pthread dl)
 endif()
+
+# --- INSTALLATION INSTRUCTIONS ---
+# 1. Install the Executable to /opt/LabelForge
+install(TARGETS LabelForge DESTINATION .)
+
+# 2. Install the Assets folder to /opt/LabelForge/assets
+install(DIRECTORY assets DESTINATION .)
+
+# 3. Install the Desktop File (for the Start Menu)
+install(FILES LabelForge.desktop DESTINATION /usr/share/applications)
+
+# 4. Install the Icon (for the Start Menu)
+install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME LabelForge.png)
+
+# --- PACKAGING (CPack) ---
+set(CPACK_PACKAGE_NAME "LabelForge")
+set(CPACK_PACKAGE_VENDOR "BeardedGriffin")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Custom Label Printer Suite")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_CONTACT "bearded.griffinsc@protonmail.com")
+
+# Install to /opt/LabelForge so relative paths work nicely
+set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/LabelForge")
+
+# Generate a .deb file (Debian/Ubuntu) and a .tar.gz (Generic)
+set(CPACK_GENERATOR "DEB;TGZ")
+
+# Debian Specifics
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "BeardedGriffin")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) # Auto-detect dependencies
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/postinst")
+
+include(CPack)
