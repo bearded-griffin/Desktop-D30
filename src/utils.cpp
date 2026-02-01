@@ -17,7 +17,7 @@
 
 #include "assets.h"
 #include "barcode.h"
-#include "portable-file-dialogs.h"  // Native dialogs
+#include "portable-file-dialogs.h" // Native dialogs
 #include "qrcodegen.hpp"
 #include "types.h"
 
@@ -59,7 +59,7 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
       ImageDrawTextEx(target, font, text, {x, y}, fontSize, spacing, tint);
     else
       DrawTextEx(font, text, {x, y}, fontSize, spacing,
-                 tint);  // <--- Screen Draw
+                 tint); // <--- Screen Draw
     return fontSize;
   }
 
@@ -71,14 +71,17 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
   // 1. Split into words
   for (char c : textStr) {
     if (c == ' ' || c == '\n') {
-      if (!currentWord.empty()) words.push_back(currentWord);
-      if (c == '\n') words.push_back("\n");
+      if (!currentWord.empty())
+        words.push_back(currentWord);
+      if (c == '\n')
+        words.push_back("\n");
       currentWord = "";
     } else {
       currentWord += c;
     }
   }
-  if (!currentWord.empty()) words.push_back(currentWord);
+  if (!currentWord.empty())
+    words.push_back(currentWord);
 
   // 2. Build Lines
   float currentX = 0;
@@ -143,11 +146,11 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
 
   // 1. Draw 4 Corner Circles
   int r = (int)radius;
-  ImageDrawCircle(dst, (int)(x + r), (int)(y + r), r, col);      // Top-Left
-  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + r), r, col);  // Top-Right
-  ImageDrawCircle(dst, (int)(x + r), (int)(y + h - r), r, col);  // Bottom-Left
+  ImageDrawCircle(dst, (int)(x + r), (int)(y + r), r, col);     // Top-Left
+  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + r), r, col); // Top-Right
+  ImageDrawCircle(dst, (int)(x + r), (int)(y + h - r), r, col); // Bottom-Left
   ImageDrawCircle(dst, (int)(x + w - r), (int)(y + h - r), r,
-                  col);  // Bottom-Right
+                  col); // Bottom-Right
 
   // 2. Draw 2 Crossing Rectangles
   // Horizontal bar (covers left to right, inset by radius height)
@@ -174,7 +177,7 @@ Rectangle GetObjectBounds(const LabelObject &obj) {
 
     if (obj.width > 0) {
       return {obj.x, obj.y, obj.width,
-              obj.height > 0 ? obj.height : obj.fontSize * 2};  // Wrapped Box
+              obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
     }
 
     Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
@@ -194,10 +197,12 @@ Rectangle GetObjectBounds(const LabelObject &obj) {
     float h = std::abs(obj.height);
 
     // If Horizontal Line (h=0), the "Height" is just the thickness
-    if (h < obj.fontSize) h = obj.fontSize;
+    if (h < obj.fontSize)
+      h = obj.fontSize;
 
     // If Vertical Line (w=0), the "Width" is just the thickness
-    if (w < obj.fontSize) w = obj.fontSize;
+    if (w < obj.fontSize)
+      w = obj.fontSize;
 
     return {obj.x, obj.y, w, h};
   } else if (obj.type == ObjectType::ShapeRect ||
@@ -239,16 +244,18 @@ void SaveProject(const std::string &defaultName, const Project &project) {
   // Native Save Dialog
   auto dest =
       pfd::save_file("Save Project", defaultName,
-                     {"Desktop-D30 Files", "*.flbl"}, pfd::opt::force_overwrite)
+                     {"Desktop-D30 Files", "*.d30"}, pfd::opt::force_overwrite)
           .result();
 
   if (!dest.empty()) {
     // Ensure extension
-    if (dest.find(".flbl") == std::string::npos) dest += ".flbl";
+    if (dest.find(".d30") == std::string::npos)
+      dest += ".d30";
 
     nlohmann::json j = project;
     std::ofstream file(dest);
-    if (file.is_open()) file << j.dump(4);
+    if (file.is_open())
+      file << j.dump(4);
   }
 }
 
@@ -267,12 +274,13 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
   auto dest = pfd::open_file("Open Project", defaultName,
-                             {"Desktop-D30 Files", "*.flbl"})
+                             {"Desktop-D30 Files", "*..d30"})
                   .result();
 
   if (!dest.empty()) {
     std::ifstream file(dest[0]);
-    if (!file.is_open()) return false;
+    if (!file.is_open())
+      return false;
     try {
       nlohmann::json j;
       file >> j;
@@ -321,15 +329,17 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
  ****************************************************/
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color) {
-  if (text.empty()) return;
+  if (text.empty())
+    return;
 
   // 1. Generate the QR Data
   // Ecc::MEDIUM allows for ~15% error correction (good for printing)
   QrCode qr = QrCode::encodeText(text.c_str(), QrCode::Ecc::MEDIUM);
 
   // 2. Calculate drawing metrics
-  int gridSize = qr.getSize();  // e.g., 21, 25, etc.
-  if (gridSize <= 0) return;
+  int gridSize = qr.getSize(); // e.g., 21, 25, etc.
+  if (gridSize <= 0)
+    return;
 
   // Size of one little square (module)
   float moduleSize = size / (float)gridSize;
@@ -343,7 +353,7 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
             (int)(x + (xModule * moduleSize)),
             (int)(y + (yModule * moduleSize)),
             (int)(moduleSize +
-                  1),  // +1 to fix tiny gaps between floating point rects
+                  1), // +1 to fix tiny gaps between floating point rects
             (int)(moduleSize + 1), color);
       }
     }
@@ -379,7 +389,8 @@ Image RenderProjectToImage(const Project &project) {
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
-      if (obj.data.empty()) continue;
+      if (obj.data.empty())
+        continue;
 
       // Manual QR Drawing for Image Buffer
       QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
@@ -472,10 +483,10 @@ Image RenderProjectToImage(const Project &project) {
 
       for (int i = 0; i < code.length(); i++) {
         if (code[i] == '1') {
-          Rectangle bar = {
-              obj.x + (i * moduleWidth), obj.y,
-              moduleWidth + 0.5f,  // +0.5 to fix floating point gaps
-              obj.height};
+          Rectangle bar = {obj.x + (i * moduleWidth), obj.y,
+                           moduleWidth +
+                               0.5f, // +0.5 to fix floating point gaps
+                           obj.height};
           ImageDrawRectangle(&canvas, (int)bar.x, (int)bar.y, (int)bar.width,
                              (int)bar.height, BLACK);
         }
@@ -506,7 +517,8 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
 
   // Step 2: Save to disk
   std::string finalPath = filename;
-  if (finalPath.find(".png") == std::string::npos) finalPath += ".png";
+  if (finalPath.find(".png") == std::string::npos)
+    finalPath += ".png";
 
   ExportImage(img, finalPath.c_str());
 
@@ -528,7 +540,8 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
  ****************************************************/
 bool LoadCSV(const std::string &filename, Project &project) {
   std::ifstream file(filename);
-  if (!file.is_open()) return false;
+  if (!file.is_open())
+    return false;
 
   project.csvHeaders.clear();
   project.csvRows.clear();
@@ -546,7 +559,8 @@ bool LoadCSV(const std::string &filename, Project &project) {
 
     while (std::getline(ss, cell, ',')) {
       // Remove carriage returns if any (Windows formatting)
-      if (!cell.empty() && cell.back() == '\r') cell.pop_back();
+      if (!cell.empty() && cell.back() == '\r')
+        cell.pop_back();
       row.push_back(cell);
     }
 
@@ -573,10 +587,12 @@ bool LoadCSV(const std::string &filename, Project &project) {
  * @author   bearded.griffin
  ****************************************************/
 void ApplyCSVDataToObjects(Project &project) {
-  if (project.csvRows.empty()) return;
+  if (project.csvRows.empty())
+    return;
 
   // Safety Clamp
-  if (project.currentCSVRow < 0) project.currentCSVRow = 0;
+  if (project.currentCSVRow < 0)
+    project.currentCSVRow = 0;
   if (project.currentCSVRow >= project.csvRows.size())
     project.currentCSVRow = (int)project.csvRows.size() - 1;
 
@@ -596,24 +612,27 @@ void ApplyCSVDataToObjects(Project &project) {
 
             // Special Case: If it's an Image, we need to reload the texture!
             if (obj.type == ObjectType::Image) {
-              if (obj.texture.id != 0) UnloadTexture(obj.texture);
+              if (obj.texture.id != 0)
+                UnloadTexture(obj.texture);
 
               if (FileExists(obj.data.c_str())) {
                 Image img = LoadImage(obj.data.c_str());
                 // Auto-size if zero
-                if (obj.width == 0) obj.width = (float)img.width;
-                if (obj.height == 0) obj.height = (float)img.height;
+                if (obj.width == 0)
+                  obj.width = (float)img.width;
+                if (obj.height == 0)
+                  obj.height = (float)img.height;
 
                 obj.texture = LoadTextureFromImage(img);
                 UnloadImage(img);
               }
             }
           }
-          break;  // Stop searching headers
+          break; // Stop searching headers
         }
       }
     }
   }
 }
 
-}  // namespace Utils
+} // namespace Utils
