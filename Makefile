@@ -20,6 +20,9 @@ build:
 	@if [ ! -d "$(BUILD_DIR)" ]; then $(MAKE) configure; fi
 	cmake --build $(BUILD_DIR)
 
+release:
+	./build_release.sh
+
 # Run the executable
 run: build
 	./$(BUILD_DIR)/LabelForge
