@@ -316,6 +316,9 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
         }
       }
 
+      // Persist the loaded settings as the new default
+      SaveSettings(outProject);
+
       return true;
     } catch (...) {
       return false;
@@ -646,4 +649,35 @@ void ApplyCSVDataToObjects(Project &project) {
   }
 }
 
-} // namespace Utils
+// --- Local Settings ---
+void SaveSettings(const Project &project) {
+  nlohmann::json j;
+  j["darkTheme"] = project.darkTheme;
+  j["showGrid"] = project.showGrid;
+
+  std::ofstream file("settings.json");
+  if (file.is_open()) {
+    file << j.dump(4);
+  }
+}
+
+void LoadSettings(Project &project) {
+  std::ifstream file("settings.json");
+  if (!file.is_open()) {
+    return;
+  }
+  try {
+    nlohmann::json j;
+    file >> j;
+    if (j.contains("darkTheme")) {
+      project.darkTheme = j["darkTheme"].get<bool>();
+    }
+    if (j.contains("showGrid")) {
+      project.showGrid = j["showGrid"].get<bool>();
+    }
+  } catch (...) {
+    // Fail silently if settings are corrupt
+  }
+}
+
+}  // namespace Utils

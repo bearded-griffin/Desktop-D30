@@ -29,6 +29,8 @@ int main() {
   rlImGuiSetup(true);
 
   Project currentProject;
+  Utils::LoadSettings(currentProject);
+
   currentProject.objects.push_back({ObjectType::Text, 20, 40, 0, 0,
                                     "Desktop-D30", "", "", 30.0f, 0x000000FF});
   currentProject.isDirty = true;
