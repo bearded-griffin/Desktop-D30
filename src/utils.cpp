@@ -1,6 +1,6 @@
 /*!***************************************************
  * @file     utils.cpp
- * @brief    Uitity functions used in LabelForge
+ * @brief    Uitity functions used in Desktop-D30
  * @details  Utility functions that allow for saving,
  *  loading, and other general functions.
  * @note
@@ -9,16 +9,17 @@
  ****************************************************/
 
 #include "utils.h"
-#include "assets.h"
-#include "barcode.h"
-#include "types.h"
 
-#include "portable-file-dialogs.h" // Native dialogs
-#include "qrcodegen.hpp"
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+
+#include "assets.h"
+#include "barcode.h"
+#include "portable-file-dialogs.h" // Native dialogs
+#include "qrcodegen.hpp"
+#include "types.h"
 
 using namespace qrcodegen;
 
@@ -243,13 +244,13 @@ void SaveProject(const std::string &defaultName, const Project &project) {
   // Native Save Dialog
   auto dest =
       pfd::save_file("Save Project", defaultName,
-                     {"LabelForge Files", "*.flbl"}, pfd::opt::force_overwrite)
+                     {"Desktop-D30 Files", "*.d30"}, pfd::opt::force_overwrite)
           .result();
 
   if (!dest.empty()) {
     // Ensure extension
-    if (dest.find(".flbl") == std::string::npos)
-      dest += ".flbl";
+    if (dest.find(".d30") == std::string::npos)
+      dest += ".d30";
 
     nlohmann::json j = project;
     std::ofstream file(dest);
@@ -273,7 +274,7 @@ void SaveProject(const std::string &defaultName, const Project &project) {
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
   auto dest = pfd::open_file("Open Project", defaultName,
-                             {"LabelForge Files", "*.flbl"})
+                             {"Desktop-D30 Files", "*..d30"})
                   .result();
 
   if (!dest.empty()) {
@@ -602,11 +603,9 @@ void ApplyCSVDataToObjects(Project &project) {
   for (auto &obj : project.objects) {
     // Only update if this object is linked to a column
     if (!obj.linkedColumn.empty()) {
-
       // Find which column index matches the header name
       for (size_t colIdx = 0; colIdx < project.csvHeaders.size(); colIdx++) {
         if (project.csvHeaders[colIdx] == obj.linkedColumn) {
-
           // If we have data for this column, update the object
           if (colIdx < rowData.size()) {
             obj.data = rowData[colIdx];

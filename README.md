@@ -1,6 +1,6 @@
-# LabelForge
+# Desktop-D30
 
-Tired of building labels on your phone and want to have a **real** label maker? Label Forge is here to help you. No pay walls, No barriers, just labels...
+Tired of building labels on your phone and want to have a **real** label maker? Desktop-D30 is here to help you.
 
 ## Building
 

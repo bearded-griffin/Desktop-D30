@@ -6,7 +6,7 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-echo "--- Building LabelForge ---"
+echo "--- Building Desktop-D30 ---"
 rm -rf build
 mkdir build
 cd build
@@ -14,34 +14,34 @@ cmake ..
 make
 cd ..
 
-echo "--- Installing to /opt/LabelForge ---"
+echo "--- Installing to /opt/Desktop-D30 ---"
 # Create the directory
-mkdir -p /opt/LabelForge
+mkdir -p /opt/Desktop-D30
 
 # Copy the binary
-cp build/LabelForge /opt/LabelForge/
+cp build/Desktop-D30 /opt/Desktop-D30/
 
 # Copy the assets folder
-cp -r assets /opt/LabelForge/
+cp -r assets /opt/Desktop-D30/
 
 # Fix permissions so you can read/write if necessary
-chmod -R 755 /opt/LabelForge
+chmod -R 755 /opt/Desktop-D30
 
 echo "--- Creating Launcher ---"
 # Create a wrapper script that cd's into the dir before running
 # This fixes the "Relative Path" issue for assets
-echo '#!/bin/bash' > /usr/local/bin/labelforge
-echo 'cd /opt/LabelForge' >> /usr/local/bin/labelforge
-echo './LabelForge' >> /usr/local/bin/labelforge
+echo '#!/bin/bash' > /usr/local/bin/Desktop-D30
+echo 'cd /opt/Desktop-D30' >> /usr/local/bin/Desktop-D30
+echo './Desktop-D30' >> /usr/local/bin/Desktop-D30
 
 # Make it executable
-chmod +x /usr/local/bin/labelforge
+chmod +x /usr/local/bin/Desktop-D30
 
 echo "--- Registering Desktop Icon ---"
-cp LabelForge.desktop /usr/share/applications/
+cp Desktop-D30.desktop /usr/share/applications/
 
 echo "--- Setting Bluetooth Permissions ---"
 # Allow the binary to access raw bluetooth sockets without sudo
-setcap 'cap_net_raw,cap_net_admin+eip' /opt/LabelForge/LabelForge
+setcap 'cap_net_raw,cap_net_admin+eip' /opt/Desktop-D30/Desktop-D30
 
-echo "Done! You can now launch 'LabelForge' from your applications menu."
+echo "Done! You can now launch 'Desktop-D30' from your applications menu."

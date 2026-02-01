@@ -1,6 +1,6 @@
 /*!***************************************************
  * @file     utils.h
- * @brief    Uitity functions used in LabelForge
+ * @brief    Uitity functions used in Desktop-D30
  * @details  Utility functions that allow for saving,
  *  loading, and other general functions.
  * @note
@@ -9,10 +9,11 @@
  ****************************************************/
 
 #pragma once
+#include <vector>
+
 #include "raylib.h"
 #include "raymath.h"
 #include "types.h"
-#include <vector>
 
 namespace Utils {
 // A Global list of available label sizes
@@ -38,4 +39,4 @@ bool LoadCSV(const std::string &filename, Project &project);
 // Apply the data from project.currentCSVRow to all linked objects
 void ApplyCSVDataToObjects(Project &project);
 
-} // namespace Utils
+}  // namespace Utils

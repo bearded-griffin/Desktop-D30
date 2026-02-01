@@ -2,7 +2,7 @@
 set -e  # Stop script immediately if any command fails
 
 echo "========================================"
-echo "    LabelForge Release Builder 🚀"
+echo "    Desktop-D30 Release Builder 🚀"
 echo "========================================"
 
 # 1. Clean previous builds to ensure no debug symbols remain
@@ -31,4 +31,4 @@ echo "========================================"
 echo "    ✅ BUILD SUCCESSFUL"
 echo "========================================"
 echo "Installers available in build/:"
-ls -lh LabelForge-*.deb LabelForge-*.tar.gz
+ls -lh Desktop-D30-*.deb Desktop-D30-*.tar.gz

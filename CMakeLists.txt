@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(LabelForge VERSION 1.0.0 LANGUAGES CXX)
+project(Desktop-D30 VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -87,7 +87,7 @@ target_include_directories(rlImGui PUBLIC ${rlimgui_SOURCE_DIR})
 target_link_libraries(rlImGui PUBLIC imgui raylib)
 
 # --- EXECUTABLE ---
-add_executable(LabelForge
+add_executable(Desktop-D30
     src/main.cpp
     src/utils.cpp
     src/ui.cpp
@@ -96,7 +96,7 @@ add_executable(LabelForge
     src/assets.cpp
 )
 
-target_include_directories(LabelForge PRIVATE 
+target_include_directories(Desktop-D30 PRIVATE 
     include/ 
     ${json_SOURCE_DIR}/include
     ${pfd_SOURCE_DIR} # Include path for file dialogs
@@ -104,7 +104,7 @@ target_include_directories(LabelForge PRIVATE
     qrcodegen
 )
 
-target_link_libraries(LabelForge PRIVATE 
+target_link_libraries(Desktop-D30 PRIVATE 
     rlImGui 
     imgui 
     raylib 
@@ -114,37 +114,37 @@ target_link_libraries(LabelForge PRIVATE
 )
 
 if (WIN32)
-    target_link_libraries(LabelForge PRIVATE winmm)
+    target_link_libraries(Desktop-D30 PRIVATE winmm)
 elseif (UNIX AND NOT APPLE)
-    target_link_libraries(LabelForge PRIVATE m pthread dl)
+    target_link_libraries(Desktop-D30 PRIVATE m pthread dl)
 endif()
 
 # --- INSTALLATION INSTRUCTIONS ---
-# 1. Install the Executable to /opt/LabelForge
-install(TARGETS LabelForge DESTINATION .)
+# 1. Install the Executable to /opt/Desktop-D30
+install(TARGETS Desktop-D30 DESTINATION .)
 
-# 2. Install the Assets folder to /opt/LabelForge/assets
+# 2. Install the Assets folder to /opt/Desktop-D30/assets
 install(DIRECTORY assets DESTINATION .)
 
 # 3. Install the Desktop File (for the Start Menu)
-#install(FILES LabelForge.desktop DESTINATION /usr/share/applications)
-install(FILES LabelForge.desktop DESTINATION .)
+#install(FILES Desktop-D30.desktop DESTINATION /usr/share/applications)
+install(FILES Desktop-D30.desktop DESTINATION .)
 
 # 4. Install the Icon (for the Start Menu)
-#install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME LabelForge.png)
+#install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME Desktop-D30.png)
 install(FILES assets/app_icon.png DESTINATION .)
 
 
 
 # --- PACKAGING (CPack) ---
-set(CPACK_PACKAGE_NAME "LabelForge")
+set(CPACK_PACKAGE_NAME "Desktop-D30")
 set(CPACK_PACKAGE_VENDOR "BeardedGriffin")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Custom Label Printer Suite")
 set(CPACK_PACKAGE_VERSION "1.0.0")
 set(CPACK_PACKAGE_CONTACT "bearded.griffinsc@protonmail.com")
 
-# Install to /opt/LabelForge so relative paths work nicely
-set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/LabelForge")
+# Install to /opt/Desktop-D30 so relative paths work nicely
+set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/Desktop-D30")
 
 # Generate a .deb file (Debian/Ubuntu) and a .tar.gz (Generic)
 set(CPACK_GENERATOR "DEB;TGZ")
