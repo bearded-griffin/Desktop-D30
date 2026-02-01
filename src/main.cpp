@@ -50,6 +50,21 @@ int main() {
   bool isDraggingObject = false;
   Vector2 dragOffset = {0, 0};
 
+  // --- Resizing State ---
+  enum ResizeHandle {
+    HANDLE_NONE,
+    HANDLE_TOP_LEFT,
+    HANDLE_TOP_RIGHT,
+    HANDLE_BOTTOM_LEFT,
+    HANDLE_BOTTOM_RIGHT,
+    HANDLE_TOP,
+    HANDLE_BOTTOM,
+    HANDLE_LEFT,
+    HANDLE_RIGHT
+  };
+  bool isResizing = false;
+  ResizeHandle activeHandle = HANDLE_NONE;
+
   // Track if label size changed to re-center camera
   int lastLabelIndex = currentProject.selectedLabelIndex;
 
@@ -104,30 +119,136 @@ int main() {
         camera.target = Vector2Add(camera.target, delta);
       }
     }
-    // 3. SELECTION & DRAGGING
+    // 3. SELECTION, DRAGGING, & RESIZING
     else if (!mouseHandledByUI) {
       if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        int clickedIndex = -1;
-        // Iterate backwards to select top-most item
-        for (int i = currentProject.objects.size() - 1; i >= 0; i--) {
-          if (CheckCollisionPointRec(
-                  mouseWorld,
-                  Utils::GetObjectBounds(currentProject.objects[i]))) {
-            clickedIndex = i;
-            break;
+        isResizing = false;
+        activeHandle = HANDLE_NONE;
+
+        // Hit test handles first if an object is already selected
+        if (selectedIndex != -1) {
+          Rectangle bounds =
+              Utils::GetObjectBounds(currentProject.objects[selectedIndex]);
+          const float handleSize = 8.0f / camera.zoom;
+          Rectangle handles[] = {
+              {bounds.x - handleSize / 2, bounds.y - handleSize / 2, handleSize,
+               handleSize}, // Top-left
+              {bounds.x + bounds.width - handleSize / 2,
+               bounds.y - handleSize / 2, handleSize, handleSize}, // Top-right
+              {bounds.x - handleSize / 2,
+               bounds.y + bounds.height - handleSize / 2, handleSize,
+               handleSize}, // Bottom-left
+              {bounds.x + bounds.width - handleSize / 2,
+               bounds.y + bounds.height - handleSize / 2, handleSize,
+               handleSize} // Bottom-right
+          };
+
+          for (int i = 0; i < 4; i++) {
+            if (CheckCollisionPointRec(mouseWorld, handles[i])) {
+              isResizing = true;
+              activeHandle = (ResizeHandle)(i + 1);
+              break;
+            }
           }
         }
-        selectedIndex = clickedIndex;
-        if (selectedIndex != -1) {
-          isDraggingObject = true;
-          dragOffset = {mouseWorld.x - currentProject.objects[selectedIndex].x,
-                        mouseWorld.y - currentProject.objects[selectedIndex].y};
+
+        // If not resizing, check for object selection/drag
+        if (!isResizing) {
+          int clickedIndex = -1;
+          // Iterate backwards to select top-most item
+          for (int i = currentProject.objects.size() - 1; i >= 0; i--) {
+            if (CheckCollisionPointRec(
+                    mouseWorld,
+                    Utils::GetObjectBounds(currentProject.objects[i]))) {
+              clickedIndex = i;
+              break;
+            }
+          }
+          selectedIndex = clickedIndex;
+          if (selectedIndex != -1) {
+            isDraggingObject = true;
+            dragOffset =
+                {mouseWorld.x - currentProject.objects[selectedIndex].x,
+                 mouseWorld.y - currentProject.objects[selectedIndex].y};
+          }
         }
       }
-      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) isDraggingObject = false;
 
-      // --- FIX 2: DRAGGING WITH BOUNDS CLAMPING ---
-      if (isDraggingObject && selectedIndex != -1) {
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+        isDraggingObject = false;
+        isResizing = false;
+        activeHandle = HANDLE_NONE;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+      }
+
+      // --- RESIZING LOGIC ---
+      if (isResizing && selectedIndex != -1) {
+        LabelObject &obj = currentProject.objects[selectedIndex];
+        isDraggingObject = false; // Ensure we don't drag while resizing
+        currentProject.isDirty = true;
+        
+        // Text objects are resized by font size
+        if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+            Vector2 mouseDelta = GetMouseDelta();
+            obj.fontSize -= (mouseDelta.y * 0.2f);
+            if (obj.fontSize < 8) obj.fontSize = 8;
+        } 
+        // Other objects are resized by width/height
+        else {
+            float originalWidth = obj.width;
+            float originalHeight = obj.height;
+            float aspectRatio = (originalHeight != 0) ? (originalWidth / originalHeight) : 1.0f;
+
+            switch (activeHandle) {
+            case HANDLE_TOP_LEFT:
+              SetMouseCursor(MOUSE_CURSOR_RESIZE_NWSE);
+              obj.width = (obj.x + obj.width) - mouseWorld.x;
+              obj.height = (obj.y + obj.height) - mouseWorld.y;
+              obj.x = mouseWorld.x;
+              obj.y = mouseWorld.y;
+              if (IsKeyDown(KEY_LEFT_SHIFT) && aspectRatio != 0) {
+                obj.height = obj.width / aspectRatio;
+                obj.y = (obj.y + originalHeight) - obj.height;
+              }
+              break;
+            case HANDLE_TOP_RIGHT:
+              SetMouseCursor(MOUSE_CURSOR_RESIZE_NESW);
+              obj.width = mouseWorld.x - obj.x;
+              obj.height = (obj.y + obj.height) - mouseWorld.y;
+              obj.y = mouseWorld.y;
+              if (IsKeyDown(KEY_LEFT_SHIFT) && aspectRatio != 0) {
+                obj.height = obj.width / aspectRatio;
+                obj.y = (obj.y + originalHeight) - obj.height;
+              }
+              break;
+            case HANDLE_BOTTOM_LEFT:
+              SetMouseCursor(MOUSE_CURSOR_RESIZE_NESW);
+              obj.width = (obj.x + obj.width) - mouseWorld.x;
+              obj.height = mouseWorld.y - obj.y;
+              obj.x = mouseWorld.x;
+              if (IsKeyDown(KEY_LEFT_SHIFT) && aspectRatio != 0) {
+                obj.height = obj.width / aspectRatio;
+              }
+              break;
+            case HANDLE_BOTTOM_RIGHT:
+              SetMouseCursor(MOUSE_CURSOR_RESIZE_NWSE);
+              obj.width = mouseWorld.x - obj.x;
+              obj.height = mouseWorld.y - obj.y;
+              if (IsKeyDown(KEY_LEFT_SHIFT) && aspectRatio != 0) {
+                obj.height = obj.width / aspectRatio;
+              }
+              break;
+            default:
+              break;
+            }
+
+            // Prevent negative size
+            if (obj.width < 10) obj.width = 10;
+            if (obj.height < 10) obj.height = 10;
+        }
+      }
+      // --- DRAGGING LOGIC ---
+      else if (isDraggingObject && selectedIndex != -1) {
         LabelObject &obj = currentProject.objects[selectedIndex];
 
         // 1. Calculate Proposed Position
@@ -312,12 +433,32 @@ int main() {
                            Fade(GRAY, 0.5f));
       }
 
-      // Selection Box (Skip for Line as it has its own handles)
-      if (i == selectedIndex && obj.type != ObjectType::Line) {
+      // Draw selection box and handles
+      if (i == selectedIndex) {
         Rectangle bounds = Utils::GetObjectBounds(obj);
-        DrawRectangleLinesEx(
-            {bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10},
-            2.0f / camera.zoom, SKYBLUE);
+
+        // Draw main selection box
+        DrawRectangleLinesEx(bounds, 1.0f / camera.zoom, SKYBLUE);
+
+        // Define handles
+        const float handleSize = 8.0f / camera.zoom;
+        Rectangle handles[] = {
+            {bounds.x - handleSize / 2, bounds.y - handleSize / 2, handleSize,
+             handleSize}, // Top-left
+            {bounds.x + bounds.width - handleSize / 2,
+             bounds.y - handleSize / 2, handleSize, handleSize}, // Top-right
+            {bounds.x - handleSize / 2,
+             bounds.y + bounds.height - handleSize / 2, handleSize,
+             handleSize}, // Bottom-left
+            {bounds.x + bounds.width - handleSize / 2,
+             bounds.y + bounds.height - handleSize / 2, handleSize,
+             handleSize} // Bottom-right
+        };
+
+        // Draw handles
+        for (const auto &handle : handles) {
+          DrawRectangleRec(handle, SKYBLUE);
+        }
       }
     }
     EndMode2D();
