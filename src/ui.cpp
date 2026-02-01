@@ -779,40 +779,69 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Text, 50, 50, 0, 0, "Text", "", "", 20, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Text;
+    obj.x = 50;
+    obj.y = 50;
+    obj.data = "Text";
+    obj.fontSize = 20;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Field, 50, 50, 0, 0, "{Col}", "", "", 20, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Field;
+    obj.x = 50;
+    obj.y = 50;
+    obj.data = "{Col}";
+    obj.fontSize = 20;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
-    project.objects.push_back({ObjectType::QRCode, 50, 50, 100, 100,
-                               "www.example.com", "", 0, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::QRCode;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.data = "www.example.com";
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
-    project.objects.push_back({ObjectType::Barcode, 50, 50, 200,
-                               60,         // Default: Wider than it is tall
-                               "12345678", // Default data
-                               "", 0, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Barcode;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 200;
+    obj.height = 60;
+    obj.data = "12345678";
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::Image, 50, 50, 100, 100, "", "", "", 0, 0xFFFFFFFF});
+    LabelObject obj;
+    obj.type = ObjectType::Image;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
@@ -823,23 +852,43 @@ void DrawSidebar(Project &project, int &selectedIndex) {
 
   // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
-    // Default horizontal line
-    project.objects.push_back(
-        {ObjectType::Line, 50, 50, 100, 0, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::Line;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 0;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::ShapeRect, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::ShapeRect;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
-    project.objects.push_back(
-        {ObjectType::ShapeCircle, 50, 50, 100, 100, "", "", "", 4, 0x000000FF});
+    LabelObject obj;
+    obj.type = ObjectType::ShapeCircle;
+    obj.x = 50;
+    obj.y = 50;
+    obj.width = 100;
+    obj.height = 100;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
@@ -848,10 +897,16 @@ void DrawSidebar(Project &project, int &selectedIndex) {
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
     LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
-    project.objects.insert(project.objects.begin(),
-                           {ObjectType::Border, 4, 4, (float)sz.width - 8,
-                            (float)sz.height - 8, "", "", "", 4, 0x000000FF,
-                            10});
+    LabelObject obj;
+    obj.type = ObjectType::Border;
+    obj.x = 4;
+    obj.y = 4;
+    obj.width = (float)sz.width - 8;
+    obj.height = (float)sz.height - 8;
+    obj.fontSize = 4;
+    obj.colorHex = 0x000000FF;
+    obj.cornerRadius = 10;
+    project.objects.insert(project.objects.begin(), obj);
     project.isDirty = true;
     // Select the new object (which is now at index 0)
     selectedIndex = 0;
