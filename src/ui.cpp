@@ -312,61 +312,63 @@ void DrawMainMenu(Project &project) {
       }
       ImGui::EndChild();
     }
-    // 4. BORDER LIBRARY
-    if (triggerBorderPopup) {
-      ImGui::OpenPopup("BorderLibraryPopup");
-      triggerBorderPopup = false;
-    }
-    ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-    if (ImGui::BeginPopupModal("BorderLibraryPopup", NULL,
-                               ImGuiWindowFlags_None)) {
-      static int selectedBCat = 0;
-      auto &categories = AssetManager::Get().GetBorders();
-      if (categories.empty()) {
-        ImGui::Text("No borders found in assets/borders");
-        if (ImGui::Button("Close"))
-          ImGui::CloseCurrentPopup();
-      } else {
-        ImGui::BeginChild("BCats", ImVec2(150, 0), true);
-        for (int i = 0; i < categories.size(); i++) {
-          if (ImGui::Selectable(categories[i].name.c_str(), selectedBCat == i))
-            selectedBCat = i;
-        }
-        ImGui::EndChild();
-        ImGui::SameLine();
-        ImGui::BeginChild("BIcons", ImVec2(0, 0), true);
-        AssetManager::Get().LoadBorderTextures(selectedBCat);
-        auto &currentCat = categories[selectedBCat];
-        float windowX2 =
-            ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-        LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
-        for (int i = 0; i < currentCat.icons.size(); i++) {
-          ImGui::PushID(i);
-          if (ImGui::ImageButton(
-                  "border",
-                  (ImTextureID)(intptr_t)currentCat.icons[i].thumbnail.id,
-                  ImVec2(48, 48))) {
-            project.objects.push_back(
-                {ObjectType::Image, 0, 0, (float)sz.width, (float)sz.height,
-                 currentCat.icons[i].path, "", "", 0, 0xFFFFFFFF});
-            ImGui::CloseCurrentPopup();
-          }
-          ImGui::PopID();
-          float nextX2 =
-              ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + 48;
-          if (i + 1 < currentCat.icons.size() && nextX2 < windowX2)
-            ImGui::SameLine();
-        }
-        ImGui::EndChild();
-      }
+    ImGui::EndPopup();
+  }
 
-      // Close button at bottom? Or just click outside/top-right X (if enabled)
-      // For Modal, we usually need a manual Close if we didn't pick anything
-      if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+  // 4. BORDER LIBRARY
+  if (triggerBorderPopup) {
+    ImGui::OpenPopup("BorderLibraryPopup");
+    triggerBorderPopup = false;
+  }
+  ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+  if (ImGui::BeginPopupModal("BorderLibraryPopup", NULL,
+                             ImGuiWindowFlags_None)) {
+    static int selectedBCat = 0;
+    auto &categories = AssetManager::Get().GetBorders();
+    if (categories.empty()) {
+      ImGui::Text("No borders found in assets/borders");
+      if (ImGui::Button("Close"))
         ImGui::CloseCurrentPopup();
-
-      ImGui::EndPopup();
+    } else {
+      ImGui::BeginChild("BCats", ImVec2(150, 0), true);
+      for (int i = 0; i < categories.size(); i++) {
+        if (ImGui::Selectable(categories[i].name.c_str(), selectedBCat == i))
+          selectedBCat = i;
+      }
+      ImGui::EndChild();
+      ImGui::SameLine();
+      ImGui::BeginChild("BIcons", ImVec2(0, 0), true);
+      AssetManager::Get().LoadBorderTextures(selectedBCat);
+      auto &currentCat = categories[selectedBCat];
+      float windowX2 =
+          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+      LabelSize sz = Utils::LabelSizes[project.selectedLabelIndex];
+      for (int i = 0; i < currentCat.icons.size(); i++) {
+        ImGui::PushID(i);
+        if (ImGui::ImageButton(
+                "border",
+                (ImTextureID)(intptr_t)currentCat.icons[i].thumbnail.id,
+                ImVec2(48, 48))) {
+          project.objects.push_back(
+              {ObjectType::Image, 0, 0, (float)sz.width, (float)sz.height,
+               currentCat.icons[i].path, "", "", 0, 0xFFFFFFFF});
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopID();
+        float nextX2 =
+            ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + 48;
+        if (i + 1 < currentCat.icons.size() && nextX2 < windowX2)
+          ImGui::SameLine();
+      }
+      ImGui::EndChild();
     }
+
+    // Close button at bottom? Or just click outside/top-right X (if enabled)
+    // For Modal, we usually need a manual Close if we didn't pick anything
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+      ImGui::CloseCurrentPopup();
+
+    ImGui::EndPopup();
   }
 }
 
