@@ -31,7 +31,7 @@ build/*
 *-prefix/
 
 # ---> Miscellaneous Files
-*.flbl
+*.d30
 imgui.ini
 
 # ---> ClangD
