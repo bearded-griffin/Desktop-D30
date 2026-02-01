@@ -294,7 +294,8 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
       nlohmann::json j;
       file >> j;
       outProject = j.get<Project>();
-      outProject.isDirty = false; // A fresh load means no dirty state
+      outProject.isDirty = false;       // A fresh load means no dirty state
+      outProject.csvFilePath = dest[0]; // Update the project's own file path
 
       // --- RELOAD CSV DATA ---
       if (!outProject.csvFilePath.empty()) {

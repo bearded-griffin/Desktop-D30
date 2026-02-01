@@ -52,6 +52,23 @@ int main() {
   int lastLabelIndex = currentProject.selectedLabelIndex;
 
   while (!WindowShouldClose() && !UI::ShouldClose()) {
+    // --- Window Title ---
+    std::string title = "Desktop-D30";
+    if (!currentProject.csvFilePath.empty()) {
+      title += ": ";
+      if (currentProject.isDirty) {
+        title += "*";
+      }
+      // Extract just the filename from the path
+      size_t lastSlash = currentProject.csvFilePath.find_last_of("/\\");
+      if (lastSlash != std::string::npos) {
+        title += currentProject.csvFilePath.substr(lastSlash + 1);
+      } else {
+        title += currentProject.csvFilePath;
+      }
+    }
+    SetWindowTitle(title.c_str());
+
     // Handle Resize: Keep camera offset in center of window
     camera.offset = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 

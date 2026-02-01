@@ -97,7 +97,7 @@ void DrawMainMenu(Project &project) {
 
     // --- FILE MENU ---
     if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save Project")) {
+      if (ImGui::MenuItem("Save")) {
         // If no file path is set, open a save dialog
         if (project.csvFilePath.empty()) {
           if (Utils::SaveProject(project)) {
@@ -108,6 +108,11 @@ void DrawMainMenu(Project &project) {
           if (Utils::SaveProject(project, project.csvFilePath)) {
             project.isDirty = false;
           }
+        }
+      }
+      if (ImGui::MenuItem("Save As...")) {
+        if (Utils::SaveProject(project)) {
+          project.isDirty = false;
         }
       }
       if (ImGui::MenuItem("Load Project")) {
