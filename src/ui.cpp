@@ -530,11 +530,15 @@ void DrawSidebar(Project &project, int &selectedIndex) {
     ImGui::EndCombo();
   }
 
-  if (ImGui::Checkbox("Show Grid", &project.showGrid))
+  if (ImGui::Checkbox("Show Grid", &project.showGrid)) {
     project.isDirty = true;
+    Utils::SaveSettings(project);
+  }
   ImGui::SameLine();
-  if (ImGui::Checkbox("Dark Mode", &project.darkTheme))
+  if (ImGui::Checkbox("Dark Mode", &project.darkTheme)) {
     project.isDirty = true;
+    Utils::SaveSettings(project);
+  }
 
   if (!project.csvRows.empty()) {
     ImGui::Spacing();

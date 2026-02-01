@@ -40,4 +40,8 @@ bool LoadCSV(const std::string &filename, Project &project);
 // Apply the data from project.currentCSVRow to all linked objects
 void ApplyCSVDataToObjects(Project &project);
 
+// --- Local Settings ---
+void SaveSettings(const Project &project);
+void LoadSettings(Project &project);
+
 }  // namespace Utils
