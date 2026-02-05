@@ -1,5 +1,18 @@
+//  This file is part of Desktop-D30
+//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation version 3 of the License.
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 /*!***************************************************
- * @file     protocol.cpp
+ * @file     src/protocol.cpp
  * @brief    Defines the communication to the printer.
  * @details  Contains the small details for how to
  * actually talk to the D30 printer.
@@ -11,6 +24,7 @@
 #include "protocol.h"
 #include "printer.h"
 #include "raylib.h"
+#include "rendering.h"
 #include "utils.h"
 #include <algorithm>
 #include <chrono>
@@ -19,6 +33,20 @@
 #include <vector>
 
 namespace Protocol {
+
+void DefaultPrintLabel(const Project &project);
+
+PrintLabelFunc printLabelFunc = DefaultPrintLabel;
+
+void SetPrintLabelFunc(PrintLabelFunc func) {
+    printLabelFunc = func;
+}
+
+void PrintLabel(const Project &project) {
+    if (printLabelFunc) {
+        printLabelFunc(project);
+    }
+}
 
 /*!***************************************************
  * @brief    Converts grayscale image to black and white.
@@ -79,17 +107,7 @@ void ApplyDithering(Image &image) {
   }
 }
 
-/*!***************************************************
- * @brief    Prints the label...
- * @details  Pulls all the details together to be able
- * to send the label to the printer.
- * @param    project const Project&
- * @return   void
- * @note
- * @date     2026.01.20
- * @author   bearded.griffin
- ****************************************************/
-void PrintLabel(const Project &project) {
+void DefaultPrintLabel(const Project &project) {
   if (!Printer::Get().IsConnected()) {
     std::cout << "[Protocol] Cannot print: Printer not connected." << std::endl;
     return;
@@ -98,7 +116,7 @@ void PrintLabel(const Project &project) {
   std::cout << "[Protocol] Generating Label Data..." << std::endl;
 
   // 1. Get Source Image
-  Image source = Utils::RenderProjectToImage(project);
+  Image source = RENDERING::RenderProjectToImage(project);
 
   // 2. Convert to Grayscale
   ImageFormat(&source, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);

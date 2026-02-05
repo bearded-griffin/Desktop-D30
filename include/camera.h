@@ -12,28 +12,23 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /*!***************************************************
- * @file     include/protocol.h
- * @brief    Defines the communication to the printer.
- * @details  Contains the small details for how to
- * actually talk to the D30 printer.
+ * @file     include/camera.h
+ * @brief    Handels all camera functions
+ * @details  deals with initalizing the camera and
+ * updating the camera.
  * @note
- * @date     2026.01.20
+ * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
+
 #include "raylib.h"
 #include "types.h"
-#include <vector>
 
-namespace Protocol {
+namespace CAMERA {
+void InitializeCamera(const int *scrnwidth, const int *scrnheight,
+                      Camera2D *camera, Project *proj);
 
-// Function pointer for mocking
-using PrintLabelFunc = void (*)(const Project &);
-void SetPrintLabelFunc(PrintLabelFunc func);
-
-// Takes the project, renders it to an image, converts it to
-// printer-ready bytes, and sends it via the Printer class.
-void PrintLabel(const Project &project);
-
-} // namespace Protocol
+void UpdateCamera(Camera2D &camera, const Project &project);
+} // namespace CAMERA

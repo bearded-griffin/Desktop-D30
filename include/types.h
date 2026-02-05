@@ -1,5 +1,18 @@
+//  This file is part of Desktop-D30
+//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation version 3 of the License.
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 /*!***************************************************
- * @file     types.h
+ * @file     include/types.h
  * @brief    The various types of objects used by Desktop-D30
  * @details  All the things...objects atleast.
  * @note
@@ -14,12 +27,25 @@
 
 #include "raylib.h"
 
+// Constants
+constexpr float HANDLE_RADIUS = 6.0f;
+constexpr float HANDLE_SIZE = 8.0f;
+constexpr float MIN_ZOOM = 0.1f;
+constexpr float MIN_OBJECT_SIZE = 10.0f;
+constexpr float MIN_FONT_SIZE = 8.0f;
+constexpr float TEXT_RESIZE_FACTOR = 0.2f;
+constexpr float ZOOM_SPEED = 0.1f;
+constexpr int GRID_SIZE = 20;
+constexpr int BARCODE_MODULE_EXTRA = 1;
+constexpr int SCREEN_WIDTH = 1280;
+constexpr int SCREEN_HEIGHT = 800;
+
 // Define the types of objects we can have
 enum class ObjectType {
   Text,
   QRCode,
   Image,
-  Field,  // For CSV batch printing
+  Field, // For CSV batch printing
   Line,
   ShapeRect,
   ShapeCircle,
@@ -33,13 +59,20 @@ struct LabelSize {
   float height;
 };
 
+// A Global list of available label sizes
+// extern const std::vector<LabelSize> LabelSizes;
+const std::vector<LabelSize> LabelSizes = {
+    {"12mm x 30mm", 240, 96},  {"12mm x 40mm", 320, 96},
+    {"14mm x 30mm", 240, 112}, {"14mm x 40mm", 320, 112},
+    {"14mm x 50mm", 400, 112}, {"15mm x 50mm", 400, 120}};
+
 struct LabelObject {
   // Common Properties
   ObjectType type = ObjectType::Text;
   float x = 0.0f;
   float y = 0.0f;
-  float width = 0.0f;   // Used for Image/QR resizing
-  float height = 0.0f;  // Used for Image/QR resizing
+  float width = 0.0f;  // Used for Image/QR resizing
+  float height = 0.0f; // Used for Image/QR resizing
 
   // Content
   // For Text: The text string
@@ -56,17 +89,23 @@ struct LabelObject {
   float fontSize = 20.0f;
   unsigned int colorHex = 0x000000FF;
 
-  float cornerRadius = 0.0f;  // 0.0 = Sharp corners
+  float cornerRadius = 0.0f; // 0.0 = Sharp corners
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
 };
 
+struct AppSettings {
+  bool darkTheme = false;
+  bool showGrid = true;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppSettings, darkTheme, showGrid)
+
 struct Project {
   int version = 1;
-  bool darkTheme = false;  // Checkbox state
-  bool showGrid = true;    // Checkbox state
   int selectedLabelIndex = 0;
+  std::string projectFilePath = "";
   std::vector<LabelObject> objects;
 
   // --- CSV Data ---
@@ -83,6 +122,26 @@ struct Project {
   bool isDirty = false;
 };
 
+enum ResizeHandle {
+  HANDLE_NONE,
+  HANDLE_TOP_LEFT,
+  HANDLE_TOP_RIGHT,
+  HANDLE_BOTTOM_LEFT,
+  HANDLE_BOTTOM_RIGHT,
+  HANDLE_TOP,
+  HANDLE_BOTTOM,
+  HANDLE_LEFT,
+  HANDLE_RIGHT
+};
+
+struct InteractionState {
+  int selectedIndex = -1;
+  bool isDraggingObject = false;
+  Vector2 dragOffset = {0, 0};
+  bool isResizing = false;
+  ResizeHandle activeHandle = HANDLE_NONE;
+};
+
 // JSON Serialization Macros
 NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
                                           {ObjectType::QRCode, "qrcode"},
@@ -97,6 +156,5 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
                                    cornerRadius)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, darkTheme, showGrid,
-                                   selectedLabelIndex, objects, csvFilePath,
-                                   currentCSVRow)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
+                                   currentCSVRow, projectFilePath)

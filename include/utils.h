@@ -1,5 +1,18 @@
+//  This file is part of Desktop-D30
+//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation version 3 of the License.
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 /*!***************************************************
- * @file     utils.h
+ * @file     include/utils.h
  * @brief    Uitity functions used in Desktop-D30
  * @details  Utility functions that allow for saving,
  *  loading, and other general functions.
@@ -16,32 +29,21 @@
 #include "types.h"
 
 namespace Utils {
-// A Global list of available label sizes
-extern const std::vector<LabelSize> LabelSizes;
 
-// Helper: Calculates the rectangle (x,y,w,h) for a text object
-// We need this for hit-testing and drawing selection boxes
-Rectangle GetObjectBounds(const LabelObject &obj);
-
-Vector2 GetMouseDeltaWorld(Camera2D camera);
 // Save/Load Project
 bool SaveProject(Project &project, const std::string &filePath = "");
 bool LoadProject(const std::string &filename, Project &outProject);
 void ExportProjectToPNG(const std::string &filename, const Project &project);
-void DrawQRCode(const std::string &text, float x, float y, float size,
-                Color color);
-float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
-                  float fontSize, float spacing, Color tint, float maxWidth);
-
-Image RenderProjectToImage(const Project &project);
 
 bool LoadCSV(const std::string &filename, Project &project);
 
 // Apply the data from project.currentCSVRow to all linked objects
 void ApplyCSVDataToObjects(Project &project);
+void BatchPrint(const Project &project, int startRow, int endRow);
 
 // --- Local Settings ---
-void SaveSettings(const Project &project);
-void LoadSettings(Project &project);
+extern AppSettings appSettings;
+void SaveSettings(const AppSettings &settings, const std::string &filename = "settings.json");
+void LoadSettings(AppSettings &settings, const std::string &filename = "settings.json");
 
-}  // namespace Utils
+} // namespace Utils

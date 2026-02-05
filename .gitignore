@@ -36,3 +36,10 @@ imgui.ini
 
 # ---> ClangD
 .cache/*
+
+# gcc coverage testing tool files
+
+*.gcno
+*.gcda
+*.gcov
+coverage_report/*

@@ -1,9 +1,24 @@
+#   This file is part of Desktop-D30
+#   Copyright (C) 2026 Chris Griffin (bearded-griffin)
+# 
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation version 3 of the License.
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 cmake_minimum_required(VERSION 3.14)
 project(Desktop-D30 VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+
 
 # --- DEBUG FLAGS ---
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -20,6 +35,8 @@ FetchContent_Declare(
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(raylib)
+# Get Raylib include directory
+get_target_property(RAYLIB_INCLUDE_DIR raylib INTERFACE_INCLUDE_DIRECTORIES)
 
 # 2. Dear ImGui
 message(STATUS "Fetching Dear ImGui...")
@@ -71,6 +88,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(qrcodegen)
 
+# 7. Fetch GoogleTest
+message(STATUS "Fetching GoogleTest...")
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.12.1
+    GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(googletest)
+
+# Enable testing
+enable_testing()
+include(GoogleTest)
+
+
+
 # --- FIND SYSTEM BLUETOOTH LIBRARY ---
 find_library(BLUETOOTH_LIB bluetooth REQUIRED)
 
@@ -86,14 +119,84 @@ add_library(rlImGui STATIC "${rlimgui_SOURCE_DIR}/rlImGui.cpp")
 target_include_directories(rlImGui PUBLIC ${rlimgui_SOURCE_DIR})
 target_link_libraries(rlImGui PUBLIC imgui raylib)
 
+# --- INCLUDE DIRECTORIES ---
+include_directories(
+    ${RAYLIB_INCLUDE_DIR}
+    ${imgui_SOURCE_DIR}
+    ${rlimgui_SOURCE_DIR}
+    ${json_SOURCE_DIR}/include
+    ${pfd_SOURCE_DIR}
+    ${qrcodegen_SOURCE_DIR}/cpp
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# --- MODULE LIBRARIES ---
+# Create libraries for each module
+add_library(input src/input.cpp)
+target_include_directories(input PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+
+add_library(camera src/camera.cpp)
+target_include_directories(camera PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+
+add_library(rendering src/rendering.cpp)
+target_include_directories(rendering PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+target_link_libraries(rendering PUBLIC assets)
+
+add_library(objects src/objects.cpp)
+target_include_directories(objects PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+target_link_libraries(objects PUBLIC assets)
+
+add_library(utils src/utils.cpp)
+target_include_directories(utils PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+    ${json_SOURCE_DIR}/include
+    ${pfd_SOURCE_DIR} # Include path for file dialogs
+    ${qrcodegen_SOURCE_DIR}/cpp
+)
+target_link_libraries(utils PUBLIC rendering)
+
+add_library(printer src/printer.cpp)
+target_include_directories(printer PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+target_link_libraries(printer PUBLIC  ${BLUETOOTH_LIB})
+
+add_library(protocol src/protocol.cpp)
+target_include_directories(protocol PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+
+add_library(ui src/ui.cpp)
+target_include_directories(ui PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+target_link_libraries(ui PUBLIC printer protocol)
+
+add_library(assets src/assets.cpp)
+target_include_directories(assets PUBLIC 
+    ${CMAKE_SOURCE_DIR}/include
+    ${RAYLIB_INCLUDE_DIR}
+)
+
 # --- EXECUTABLE ---
 add_executable(Desktop-D30
     src/main.cpp
-    src/utils.cpp
-    src/ui.cpp
-    src/printer.cpp
-    src/protocol.cpp
-    src/assets.cpp
 )
 
 target_include_directories(Desktop-D30 PRIVATE 
@@ -102,9 +205,20 @@ target_include_directories(Desktop-D30 PRIVATE
     ${pfd_SOURCE_DIR} # Include path for file dialogs
     ${qrcodegen_SOURCE_DIR}/cpp
     qrcodegen
+    gtest
+    gtest_main
 )
 
-target_link_libraries(Desktop-D30 PRIVATE 
+target_link_libraries(Desktop-D30 PRIVATE
+    camera
+    input
+    rendering
+    objects
+    utils
+    printer
+    protocol
+    ui
+    assets 
     rlImGui 
     imgui 
     raylib 
@@ -118,6 +232,9 @@ if (WIN32)
 elseif (UNIX AND NOT APPLE)
     target_link_libraries(Desktop-D30 PRIVATE m pthread dl)
 endif()
+
+# --- TESTS ---
+add_subdirectory(tests)
 
 # --- INSTALLATION INSTRUCTIONS ---
 # 1. Install the Executable to /opt/Desktop-D30

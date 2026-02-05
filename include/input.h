@@ -12,28 +12,23 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /*!***************************************************
- * @file     include/protocol.h
- * @brief    Defines the communication to the printer.
- * @details  Contains the small details for how to
- * actually talk to the D30 printer.
+ * @file     include/input.h
+ * @brief    Handles all Input
+ * @details  Handles the mouse and keyboard interactions
+ * with designing a label
  * @note
- * @date     2026.01.20
+ * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
 #include "raylib.h"
 #include "types.h"
-#include <vector>
 
-namespace Protocol {
+namespace INPUT {
+void HandleMouseInteractions(Project &project, InteractionState &state,
+                             const Vector2 &mouseWorld, const Camera2D &camera);
+void HandleInput(Project &project, InteractionState &state, Camera2D &camera);
+Vector2 GetMouseDeltaWorld(Camera2D camera);
 
-// Function pointer for mocking
-using PrintLabelFunc = void (*)(const Project &);
-void SetPrintLabelFunc(PrintLabelFunc func);
-
-// Takes the project, renders it to an image, converts it to
-// printer-ready bytes, and sends it via the Printer class.
-void PrintLabel(const Project &project);
-
-} // namespace Protocol
+} // namespace INPUT
