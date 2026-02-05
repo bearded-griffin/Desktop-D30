@@ -46,4 +46,7 @@ void DrawLoadConfirmation(Project &project, UIState &uiState);
 void InitializeUI();
 void UpdateWindowTitle(const Project &project);
 void CleanupApplication(Project &project);
+
+void LoadFontPreviews();
+
 } // namespace UI

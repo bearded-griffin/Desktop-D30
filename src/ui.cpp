@@ -21,6 +21,7 @@
 
 #include "ui.h"
 #include "assets.h"
+#include "font_preview.h"
 #include "imgui.h"
 #include "objects.h"
 #include "printer.h"
@@ -32,12 +33,50 @@
 #include "portable-file-dialogs.h"
 #include <chrono>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
 
 namespace UI {
+
+// Extend FontInfo
+struct FontInfoEx : public FontInfo {
+  ImFont *imgui_font = nullptr;
+  float size = 14.0f; // Default size; adjustable
+};
+
+// Global or class member
+std::vector<FontInfoEx> g_fonts;
+std::string g_selected_font_family = "Default"; // Track selection
+ImFont *g_default_font = nullptr;               // ImGui's default
+
+void LoadFontsIntoImGui() {
+  ImGuiIO &io = ImGui::GetIO();
+  g_default_font = io.Fonts->AddFontDefault(); // Or from file
+
+  auto fonts = get_system_fonts(true); // Filter to Latin-capable
+  // Optional: Sort alphabetically by family + style
+  std::sort(fonts.begin(), fonts.end(),
+            [](const FontInfo &a, const FontInfo &b) {
+              return (a.family + " " + a.style) < (b.family + " " + b.style);
+            });
+
+  // Load up to N fonts to avoid overload (expand as needed)
+  size_t max_load = 100; // Tune this
+  for (size_t i = 0; i < fonts.size() && i < max_load; ++i) {
+    const auto &info = fonts[i];
+    ImFont *font = io.Fonts->AddFontFromFileTTF(info.file.c_str(), 14.0f);
+    if (font) {
+      FontInfoEx ex;
+      static_cast<FontInfo &>(ex) = info;
+      ex.imgui_font = font;
+      g_fonts.push_back(ex);
+    }
+  }
+  io.Fonts->Build(); // Finalize atlas
+}
 
 /*!***************************************************
  * @brief    Initializes the UI system
@@ -51,6 +90,7 @@ void InitializeUI() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Desktop-D30");
   SetTargetFPS(60);
+  LoadFontsIntoImGui();
 
   rlImGuiSetup(true);
 }
@@ -935,12 +975,12 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
-    auto selection =
-        pfd::open_file("Select Image", ".",
-                       {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
-            .result();
+    auto selection = pfd::open_file("Select Image", ".",
+                                    {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
+                         .result();
     if (!selection.empty()) {
-      LabelObject obj = OBJECTS::CreateImageObject(50, 50, 100, 100, selection[0]);
+      LabelObject obj =
+          OBJECTS::CreateImageObject(50, 50, 100, 100, selection[0]);
       project.objects.push_back(obj);
       project.isDirty = true;
       selectedIndex = project.objects.size() - 1;
