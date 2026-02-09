@@ -29,9 +29,10 @@ configure:
 	cmake -S . -B $(BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=$(TYPE)
 
 # Compile the project
-build:
-	@if [ ! -d "$(BUILD_DIR)" ]; then $(MAKE) configure; fi
-	cmake --build $(BUILD_DIR)
+build: configure
+	cmake --build $(BUILD_DIR) --config $(TYPE)
+  
+  
 
 # Build a release version
 release:

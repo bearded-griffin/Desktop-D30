@@ -66,13 +66,24 @@ TEST(CreateObjectTest, CreateCircleObject) {
     EXPECT_EQ(obj.colorHex, 0x000000FF);
 }
 
-TEST(CreateObjectTest, CreateBarcodeObject) {
-    LabelObject obj = OBJECTS::CreateBarcodeObject(130, 140, 250, 80, "12345");
-    EXPECT_EQ(obj.type, ObjectType::Barcode);
-    EXPECT_EQ(obj.x, 130);
-    EXPECT_EQ(obj.y, 140);
-    EXPECT_EQ(obj.width, 250);
-    EXPECT_EQ(obj.height, 80);
-    EXPECT_EQ(obj.data, "12345");
+TEST(CreateObjectTest, CreateFieldObject) {
+    LabelObject obj = OBJECTS::CreateFieldObject(150, 160, "{Price}", 20);
+    EXPECT_EQ(obj.type, ObjectType::Field);
+    EXPECT_EQ(obj.x, 150);
+    EXPECT_EQ(obj.y, 160);
+    EXPECT_EQ(obj.data, "{Price}");
+    EXPECT_EQ(obj.fontSize, 20);
     EXPECT_EQ(obj.colorHex, 0x000000FF);
+}
+
+TEST(CreateObjectTest, CreateBorderObject) {
+    LabelSize sz = {"TestSize", 400, 200};
+    LabelObject obj = OBJECTS::CreateBorderObject(5, 5, sz, 15);
+    EXPECT_EQ(obj.type, ObjectType::Border);
+    EXPECT_EQ(obj.x, 5);
+    EXPECT_EQ(obj.y, 5);
+    EXPECT_EQ(obj.width, 392); // 400 - 8
+    EXPECT_EQ(obj.height, 192); // 200 - 8
+    EXPECT_EQ(obj.cornerRadius, 15);
+    EXPECT_EQ(obj.fontSize, 4);
 }

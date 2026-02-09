@@ -189,10 +189,14 @@ target_include_directories(ui PUBLIC
 target_link_libraries(ui PUBLIC printer protocol)
 
 add_library(assets src/assets.cpp)
+target_compile_definitions(assets PUBLIC 
+    $<$<CONFIG:Debug>:UNIT_TESTING>
+)
 target_include_directories(assets PUBLIC 
     ${CMAKE_SOURCE_DIR}/include
     ${RAYLIB_INCLUDE_DIR}
 )
+
 
 # --- EXECUTABLE ---
 add_executable(Desktop-D30

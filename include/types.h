@@ -157,4 +157,4 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
                                    cornerRadius)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
-                                   currentCSVRow, projectFilePath)
+                                   currentCSVRow, projectFilePath, csvHeaders, csvRows)

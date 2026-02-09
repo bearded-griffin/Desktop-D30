@@ -62,13 +62,18 @@ public:
   }
 
   // Scans assets/icons and builds the category list
-  void RefreshLibrary();
-  void RefreshBorders();
-  void RefreshFonts();
+  void RefreshLibrary(const std::string &providedBasePath);
+  void RefreshBorders(const std::string &providedBasePath);
+  void RefreshFonts(const std::vector<std::string> &providedUserPaths,
+                    const std::vector<std::string> &providedSystemPaths);
+
+  void AddFontsToList(std::vector<std::string> &ScanPaths,
+                      std::vector<FontAsset> &targetList, LabelFontType type);
 
   // Returns the list of categories found
   std::vector<IconCategory> &GetCategories() { return categories; }
   std::vector<IconCategory> &GetBorders() { return borderCategories; }
+
   const std::vector<FontAsset> &GetFontList() { return fonts; }
 
   // Loads textures for a specific category (Lazy Loading)
@@ -79,13 +84,45 @@ public:
   // Actions
   bool ImportFont(const std::string &sourcePath);
 
+#ifdef UNIT_TESTING
+  // --- Test Path Configuration (for Unit Tests) ---
+  void SetTestFontPaths(const std::vector<std::string> &userPaths,
+                        const std::vector<std::string> &systemPaths) {
+    testUserFontPaths = userPaths;
+    testSystemFontPaths = systemPaths;
+  }
+
+  const std::vector<FontAsset> &GetUserFontList() { return userFonts; }
+  const std::vector<FontAsset> &GetSystemFontList() { return systemFonts; }
+
+  void SetTestIconPath(const std::string &path) { testIconsBasePath = path; }
+
+  void SetTestBorderPath(const std::string &path) {
+    testBordersBasePath = path;
+  }
+
+#endif
+
 private:
   AssetManager() {
-    RefreshLibrary();
-    RefreshBorders();
-    RefreshFonts();
+    RefreshLibrary("assets/icons");
+    RefreshBorders("assets/borders");
+    RefreshFonts({}, {}); // System fonts will be added in RefreshFonts
   }
   std::vector<IconCategory> categories;
   std::vector<IconCategory> borderCategories;
-  std::vector<FontAsset> fonts;
+  std::vector<FontAsset>
+      fonts; // Combined list of all fonts (system + user) for easy access
+  std::vector<FontAsset>
+      systemFonts; // Separate list for system fonts to avoid confusion
+  std::vector<FontAsset>
+      userFonts; // Separate list for user fonts to avoid confusion
+
+// --- Test Paths (always declared, only setters are conditional) ---
+#ifdef UNIT_TESTING
+  std::vector<std::string> testUserFontPaths;
+  std::vector<std::string> testSystemFontPaths;
+  std::string testIconsBasePath;
+  std::string testBordersBasePath;
+#endif
 };

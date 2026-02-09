@@ -36,4 +36,7 @@ void SetPrintLabelFunc(PrintLabelFunc func);
 // printer-ready bytes, and sends it via the Printer class.
 void PrintLabel(const Project &project);
 
+// Exposed for testing
+void ApplyDithering(Image &image);
+
 } // namespace Protocol

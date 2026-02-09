@@ -38,6 +38,15 @@ TEST(ObjectManipulationTest, ValidateObjectSize_MinSize) {
     EXPECT_FLOAT_EQ(obj.fontSize, MIN_FONT_SIZE);
 }
 
+TEST(ObjectManipulationTest, IsObjectSelected) {
+    Project project;
+    project.objects.push_back(OBJECTS::CreateTextObject(0, 0, "Test", 12));
+    
+    EXPECT_TRUE(OBJECTS::IsObjectSelected(project, 0));
+    EXPECT_FALSE(OBJECTS::IsObjectSelected(project, -1));
+    EXPECT_FALSE(OBJECTS::IsObjectSelected(project, 1));
+}
+
 TEST(ObjectManipulationTest, ValidateObjectSize_NormalSize) {
     LabelObject obj;
     obj.width = 100;

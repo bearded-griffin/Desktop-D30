@@ -37,16 +37,14 @@
  * @date     2026.01.23
  * @author   bearded.griffin
  ****************************************************/
-void AssetManager::RefreshLibrary() {
+void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
   categories.clear();
 
-  // Path to assets/icons
-  // Note: When running from build/, we might need to go up one level or copy
-  // assets For now, assume "assets/icons" exists next to the binary
-  std::string basePath = "assets/icons";
+  std::string basePath =
+      providedBasePath.empty() ? "assets/icons" : providedBasePath;
 
   if (!fs::exists(basePath)) {
-    std::cerr << "[Assets] Warning: 'assets/icons' folder not found!"
+    std::cerr << "[Assets] Warning: '" << basePath << "' folder not found!"
               << std::endl;
     // Try creating it to be helpful
     fs::create_directories(basePath);
@@ -71,6 +69,9 @@ void AssetManager::RefreshLibrary() {
 
       // Only add if it has icons
       if (!cat.icons.empty()) {
+        // Sort icons alphabetically within the category
+        std::sort(cat.icons.begin(), cat.icons.end(),
+                  [](const Icon &a, const Icon &b) { return a.name < b.name; });
         categories.push_back(cat);
       }
     }
@@ -124,36 +125,83 @@ void AssetManager::LoadCategoryTextures(int categoryIndex) {
  * @date     2026.01.26
  * @author   bearded.griffin
  ****************************************************/
-void AssetManager::RefreshFonts() {
+void AssetManager::RefreshFonts(
+    const std::vector<std::string> &providedUserPaths,
+    const std::vector<std::string> &providedSystemPaths) {
+  userFonts.clear();
+  systemFonts.clear();
   fonts.clear();
 
-  // 1. Scan USER Fonts
-  std::string userPath = "assets/fonts";
-  if (fs::exists(userPath)) {
-    for (const auto &entry : fs::directory_iterator(userPath)) {
-      std::string ext = entry.path().extension().string();
-      for (auto &c : ext)
-        c = tolower(c);
-      if (ext == ".ttf" || ext == ".otf") {
-        FontAsset f;
-        f.name = entry.path().stem().string();
-        f.path = entry.path().string();
-        f.type = LabelFontType::User;
-        fonts.push_back(f);
+  // Determine paths to scan
+  std::vector<std::string> userScanPaths;
+  std::vector<std::string> systemScanPaths;
+
+  if (!providedUserPaths.empty()) {
+    userScanPaths = providedUserPaths;
+  } else {
+#ifdef UNIT_TESTING
+    if (!testUserFontPaths.empty()) {
+      userScanPaths = testUserFontPaths;
+    } else {
+      userScanPaths.push_back("assets/fonts");
+    }
+#else
+    userScanPaths.push_back("assets/fonts");
+#endif
+  }
+
+  if (!providedSystemPaths.empty()) {
+    systemScanPaths = providedSystemPaths;
+  } else {
+#ifdef UNIT_TESTING
+    if (!testSystemFontPaths.empty()) {
+      systemScanPaths = testSystemFontPaths;
+    } else {
+      const char *homeEnv = std::getenv("HOME");
+      if (homeEnv) {
+        systemScanPaths.push_back("/usr/share/fonts");
+        systemScanPaths.push_back("/usr/local/share/fonts");
+        systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
+        systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
       }
     }
+#else
+    const char *homeEnv = std::getenv("HOME");
+    if (homeEnv) {
+      systemScanPaths.push_back("/usr/share/fonts");
+      systemScanPaths.push_back("/usr/local/share/fonts");
+      systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
+      systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
+    }
+#endif
   }
 
-  // 2. Scan SYSTEM Fonts
-  std::vector<std::string> sysPaths = {"/usr/share/fonts",
-                                       "/usr/local/share/fonts"};
-  const char *homeEnv = std::getenv("HOME");
-  if (homeEnv) {
-    sysPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
-    sysPaths.push_back(std::string(homeEnv) + "/.fonts");
-  }
+  AddFontsToList(systemScanPaths, systemFonts, LabelFontType::System);
+  AddFontsToList(userScanPaths, userFonts, LabelFontType::User);
 
-  for (const auto &basePath : sysPaths) {
+  // Combine user and system fonts into a single list for easy access, with user
+  // fonts first
+
+  // Sort user fonts alphabetically
+  std::sort(userFonts.begin(), userFonts.end(),
+            [](const FontAsset &a, const FontAsset &b) {
+              return a.name < b.name;
+            });
+
+  // Sort system fonts alphabetically
+  std::sort(systemFonts.begin(), systemFonts.end(),
+            [](const FontAsset &a, const FontAsset &b) {
+              return a.name < b.name;
+            });
+
+  fonts.insert(fonts.end(), userFonts.begin(), userFonts.end());
+  fonts.insert(fonts.end(), systemFonts.begin(), systemFonts.end());
+}
+
+void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
+                                  std::vector<FontAsset> &targetList,
+                                  LabelFontType type) {
+  for (const auto &basePath : ScanPaths) {
     if (!fs::exists(basePath))
       continue;
     try {
@@ -168,29 +216,22 @@ void AssetManager::RefreshFonts() {
           FontAsset f;
           f.name = entry.path().stem().string();
           f.path = entry.path().string();
-          f.type = LabelFontType::System;
+          f.type = type;
 
           bool exists = false;
-          for (const auto &existing : fonts) {
+          for (const auto &existing : targetList) {
             if (existing.name == f.name) {
               exists = true;
               break;
             }
           }
           if (!exists)
-            fonts.push_back(f);
+            targetList.push_back(f);
         }
       }
     } catch (...) {
     }
   }
-
-  std::sort(fonts.begin(), fonts.end(),
-            [](const FontAsset &a, const FontAsset &b) {
-              if (a.type != b.type)
-                return a.type == LabelFontType::User;
-              return a.name < b.name;
-            });
 }
 
 /*!***************************************************
@@ -241,7 +282,7 @@ bool AssetManager::ImportFont(const std::string &sourcePath) {
   std::string destPath = destDir + "/" + filename;
   try {
     fs::copy_file(sourcePath, destPath, fs::copy_options::overwrite_existing);
-    RefreshFonts();
+    RefreshFonts({}, {}); // Refresh to include the new font
     return true;
   } catch (...) {
     return false;
@@ -258,9 +299,10 @@ bool AssetManager::ImportFont(const std::string &sourcePath) {
  * @date     2026.01.27
  * @author   bearded.griffin
  ****************************************************/
-void AssetManager::RefreshBorders() {
+void AssetManager::RefreshBorders(const std::string &providedBasePath) {
   borderCategories.clear();
-  std::string basePath = "assets/borders";
+  std::string basePath =
+      providedBasePath.empty() ? "assets/borders" : providedBasePath;
   if (!fs::exists(basePath)) {
     fs::create_directories(basePath);
     return;
@@ -279,8 +321,12 @@ void AssetManager::RefreshBorders() {
           cat.icons.push_back(icon);
         }
       }
-      if (!cat.icons.empty())
+      if (!cat.icons.empty()) {
+        // Sort icons alphabetically within the category
+        std::sort(cat.icons.begin(), cat.icons.end(),
+                  [](const Icon &a, const Icon &b) { return a.name < b.name; });
         borderCategories.push_back(cat);
+      }
     }
   }
   std::sort(borderCategories.begin(), borderCategories.end(),

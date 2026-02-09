@@ -58,11 +58,37 @@ TEST(GetObjectBoundsTest, CircleObject) {
     EXPECT_FLOAT_EQ(bounds.height, 100);
 }
 
-TEST(GetObjectBoundsTest, BarcodeObject) {
-    LabelObject obj = OBJECTS::CreateBarcodeObject(130, 140, 250, 80, "12345");
+TEST(GetObjectBoundsTest, TextObject_Wrapped) {
+    LabelObject obj = OBJECTS::CreateTextObject(10, 20, "Hello World", 24);
+    obj.width = 100; // Enable wrapping
+    obj.height = 0;
     Rectangle bounds = OBJECTS::GetObjectBounds(obj);
-    EXPECT_FLOAT_EQ(bounds.x, 130);
-    EXPECT_FLOAT_EQ(bounds.y, 140);
-    EXPECT_FLOAT_EQ(bounds.width, 250);
-    EXPECT_FLOAT_EQ(bounds.height, 80);
+    EXPECT_FLOAT_EQ(bounds.x, 10);
+    EXPECT_FLOAT_EQ(bounds.y, 20);
+    EXPECT_FLOAT_EQ(bounds.width, 100);
+    EXPECT_FLOAT_EQ(bounds.height, 48); // fontSize * 2 as per implementation for height <= 0
+}
+
+TEST(GetObjectBoundsTest, LineObject_Negative) {
+    // Line from 70, 80 with width -100, height -50
+    LabelObject obj = OBJECTS::CreateLineObject(70, 80, -100, -50, 4);
+    Rectangle bounds = OBJECTS::GetObjectBounds(obj);
+    EXPECT_FLOAT_EQ(bounds.x, 70);
+    EXPECT_FLOAT_EQ(bounds.y, 80);
+    EXPECT_FLOAT_EQ(bounds.width, 100);
+    EXPECT_FLOAT_EQ(bounds.height, 50);
+}
+
+TEST(GetObjectBoundsTest, ShapeRect) {
+    LabelObject obj = OBJECTS::CreateRectangleObject(10, 10, 50, 50, 0);
+    Rectangle bounds = OBJECTS::GetObjectBounds(obj);
+    EXPECT_FLOAT_EQ(bounds.width, 50);
+    EXPECT_FLOAT_EQ(bounds.height, 50);
+}
+
+TEST(GetObjectBoundsTest, ShapeCircle) {
+    LabelObject obj = OBJECTS::CreateCircleObject(10, 10, 25);
+    Rectangle bounds = OBJECTS::GetObjectBounds(obj);
+    EXPECT_FLOAT_EQ(bounds.width, 50);
+    EXPECT_FLOAT_EQ(bounds.height, 50);
 }
