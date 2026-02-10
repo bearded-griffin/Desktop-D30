@@ -105,7 +105,7 @@ public:
 
 private:
   AssetManager() {
-    RefreshLibrary("assets/icons");
+    RefreshLibrary("");
     RefreshBorders("assets/borders");
     RefreshFonts({}, {}); // System fonts will be added in RefreshFonts
   }

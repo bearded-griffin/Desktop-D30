@@ -27,6 +27,16 @@
 #include <cstdlib>
 #include <iostream>
 
+namespace {
+std::string FormatDisplayName(std::string name) {
+  std::replace(name.begin(), name.end(), '_', ' ');
+  std::replace(name.begin(), name.end(), '-', ' ');
+  if (!name.empty())
+    name[0] = std::toupper(name[0]);
+  return name;
+}
+} // namespace
+
 /*!***************************************************
  * @brief    Rebuilds the icon library
  * @details  Reads the file system to see if there are
@@ -40,41 +50,58 @@
 void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
   categories.clear();
 
-  std::string basePath =
-      providedBasePath.empty() ? "assets/icons" : providedBasePath;
-
-  if (!fs::exists(basePath)) {
-    std::cerr << "[Assets] Warning: '" << basePath << "' folder not found!"
-              << std::endl;
-    // Try creating it to be helpful
-    fs::create_directories(basePath);
-    return;
+  std::vector<std::string> searchPaths;
+  if (!providedBasePath.empty()) {
+    searchPaths.push_back(providedBasePath);
+  } else {
+    searchPaths.push_back("assets/icons/built-in");
+    searchPaths.push_back("assets/icons/user");
   }
 
-  for (const auto &entry : fs::directory_iterator(basePath)) {
-    if (entry.is_directory()) {
-      IconCategory cat;
-      cat.name = entry.path().filename().string();
+  for (const auto &basePath : searchPaths) {
+    if (!fs::exists(basePath)) {
+      fs::create_directories(basePath);
+      continue;
+    }
 
-      // Scan files inside this category
-      for (const auto &file : fs::directory_iterator(entry.path())) {
-        if (file.path().extension() == ".png" ||
-            file.path().extension() == ".jpg") {
+    for (const auto &entry : fs::recursive_directory_iterator(basePath)) {
+      if (fs::is_regular_file(entry)) {
+        std::string ext = entry.path().extension().string();
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
+          std::string categoryName = entry.path().parent_path().filename().string();
+          
+          // If the file is in the root of built-in or user, call it "General"
+          if (categoryName == "built-in" || categoryName == "user" || categoryName == "icons") {
+              categoryName = "General";
+          }
+
+          // Find or create category
+          IconCategory *targetCat = nullptr;
+          for (auto &cat : categories) {
+            if (cat.name == categoryName) {
+              targetCat = &cat;
+              break;
+            }
+          }
+
+          if (!targetCat) {
+            categories.push_back({categoryName, {}, false});
+            targetCat = &categories.back();
+          }
+
           Icon icon;
-          icon.name = file.path().stem().string(); // "skull" from "skull.png"
-          icon.path = file.path().string();
-          cat.icons.push_back(icon);
+          icon.name = FormatDisplayName(entry.path().stem().string());
+          icon.path = entry.path().string();
+          targetCat->icons.push_back(icon);
         }
       }
-
-      // Only add if it has icons
-      if (!cat.icons.empty()) {
-        // Sort icons alphabetically within the category
-        std::sort(cat.icons.begin(), cat.icons.end(),
-                  [](const Icon &a, const Icon &b) { return a.name < b.name; });
-        categories.push_back(cat);
-      }
     }
+  }
+
+  // Sort icons within categories
+  for (auto &cat : categories) {
+    std::sort(cat.icons.begin(), cat.icons.end(),
+              [](const Icon &a, const Icon &b) { return a.name < b.name; });
   }
 
   // Sort categories alphabetically
@@ -214,7 +241,7 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
 
         if (ext == ".ttf" || ext == ".otf") {
           FontAsset f;
-          f.name = entry.path().stem().string();
+          f.name = FormatDisplayName(entry.path().stem().string());
           f.path = entry.path().string();
           f.type = type;
 
