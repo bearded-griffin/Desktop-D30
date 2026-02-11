@@ -485,8 +485,8 @@ void ClampObjectPosition(LabelObject &obj, const LabelSize &canvasSize) {
  * @author   bearded.griffin
  ****************************************************/
 void ValidateObjectSize(LabelObject &obj) {
-  obj.width = std::max(obj.width, MIN_OBJECT_SIZE);
-  obj.height = std::max(obj.height, MIN_OBJECT_SIZE);
+  obj.width = std::clamp(obj.width, MIN_OBJECT_SIZE, MAX_OBJECT_SIZE);
+  obj.height = std::clamp(obj.height, MIN_OBJECT_SIZE, MAX_OBJECT_SIZE);
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
     obj.fontSize = std::max(obj.fontSize, MIN_FONT_SIZE);
   }

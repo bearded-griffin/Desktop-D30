@@ -404,8 +404,10 @@ Image RenderProjectToImage(const Project &project) {
           }
         }
 
-        // Resize to target dimensions
-        ImageResize(&srcImg, (int)obj.width, (int)obj.height);
+        // Resize to target dimensions with safety clamp
+        int targetW = std::clamp((int)obj.width, 1, (int)MAX_OBJECT_SIZE);
+        int targetH = std::clamp((int)obj.height, 1, (int)MAX_OBJECT_SIZE);
+        ImageResize(&srcImg, targetW, targetH);
 
         // Draw onto canvas
         Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};

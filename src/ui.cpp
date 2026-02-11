@@ -1234,18 +1234,37 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
                        {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
             .result();
     if (!selection.empty()) {
-      LabelObject obj = OBJECTS::CreateImageObject(50, 50, 100, 100, selection[0]);
-      project.objects.push_back(obj);
-      project.isDirty = true;
-      selectedIndex = project.objects.size() - 1;
+      LabelObject obj =
+          OBJECTS::CreateImageObject(50, 50, 100, 100, selection[0]);
 
-      // Immediately load texture for display
+      // Immediately load and constrain image for display
       Image img = LoadImage(obj.data.c_str());
       if (img.data != NULL) {
-        if (obj.width == 0 || obj.height == 0) {
-          obj.width = (float)img.width;
-          obj.height = (float)img.height;
+        // --- CONSTRAIN IMAGE SIZE ---
+        // If image is huge, downscale it before creating a texture
+        // This prevents crashes and saves GPU memory
+        const int MAX_IMPORT_SIZE = 512;
+        if (img.width > MAX_IMPORT_SIZE || img.height > MAX_IMPORT_SIZE) {
+          float aspect = (float)img.width / (float)img.height;
+          int newW, newH;
+          if (img.width > img.height) {
+            newW = MAX_IMPORT_SIZE;
+            newH = (int)(MAX_IMPORT_SIZE / aspect);
+          } else {
+            newH = MAX_IMPORT_SIZE;
+            newW = (int)(MAX_IMPORT_SIZE * aspect);
+          }
+          ImageResize(&img, newW, newH);
         }
+
+        // Set initial logical dimensions to match constrained image
+        obj.width = (float)img.width;
+        obj.height = (float)img.height;
+
+        project.objects.push_back(obj);
+        project.isDirty = true;
+        selectedIndex = project.objects.size() - 1;
+
         project.objects[selectedIndex].texture = LoadTextureFromImage(img);
         UnloadImage(img);
       }
