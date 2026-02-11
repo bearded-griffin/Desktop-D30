@@ -338,6 +338,30 @@ void AssetManager::RefreshFonts(
   systemFonts.clear();
   fonts.clear();
 
+  // Load a high-quality default font if not already loaded
+  if (defaultFont.texture.id == 0) {
+    const char *fallbackPaths[] = {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf" // Windows fallback
+    };
+
+    for (const char *path : fallbackPaths) {
+      if (fs::exists(path)) {
+        defaultFont = LoadFontEx(path, 96, 0, 0);
+        GenTextureMipmaps(&defaultFont.texture);
+        SetTextureFilter(defaultFont.texture, TEXTURE_FILTER_BILINEAR);
+        break;
+      }
+    }
+
+    // If still not loaded, fall back to raylib default
+    if (defaultFont.texture.id == 0) {
+      defaultFont = GetFontDefault();
+    }
+  }
+
   // Determine paths to scan
   std::vector<std::string> userScanPaths;
   std::vector<std::string> systemScanPaths;
@@ -453,7 +477,7 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
  ****************************************************/
 Font AssetManager::GetFont(const std::string &name) {
   if (name.empty())
-    return GetFontDefault();
+    return defaultFont;
   for (auto &f : fonts) {
     if (f.name == name) {
       if (!f.isLoaded) {

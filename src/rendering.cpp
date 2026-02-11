@@ -102,7 +102,8 @@ void RenderImageObject(LabelObject &obj) {
     DrawTexturePro(obj.texture, src, dst, {0, 0}, 0.0f, WHITE);
   } else {
     DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, BLACK);
-    DrawText("IMG", obj.x + 5, obj.y + 5, 10, BLACK);
+    Font f = AssetManager::Get().GetDefaultFont();
+    DrawTextEx(f, "IMG", {obj.x + 5, obj.y + 5}, 10, 1.0f, BLACK);
   }
 }
 

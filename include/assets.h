@@ -82,6 +82,7 @@ public:
   void LoadCategoryTextures(int categoryIndex);
   void LoadBorderTextures(int categoryIndex);
   Font GetFont(const std::string &name);
+  Font GetDefaultFont() { return defaultFont; }
 
   // Metadata & Library Management
   void SaveMetadata();
@@ -127,6 +128,7 @@ private:
   }
   std::vector<IconCategory> categories;
   std::vector<IconCategory> borderCategories;
+  Font defaultFont = {0};
   std::vector<FontAsset>
       fonts; // Combined list of all fonts (system + user) for easy access
   std::vector<FontAsset>
