@@ -45,6 +45,7 @@ void DrawBatchPrintPopup(Project &project, UIState &uiState);
 void DrawIconLibraryPopup(Project &project, UIState &uiState);
 void DrawBorderLibraryPopup(Project &project, UIState &uiState);
 void DrawLibraryManager(UIState &uiState);
+void DrawBorderManager(UIState &uiState);
 } // namespace
 
 /*!***************************************************
@@ -442,11 +443,14 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
 
           // Search Filter
           if (isSearching) {
-            std::string name =
-                icon.customName.empty() ? icon.name : icon.customName;
+            std::string name = icon.name;
+            std::string cname = icon.customName;
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+            std::transform(cname.begin(), cname.end(), cname.begin(),
+                           ::tolower);
 
-            bool match = (name.find(searchStr) != std::string::npos);
+            bool match = (name.find(searchStr) != std::string::npos ||
+                          cname.find(searchStr) != std::string::npos);
             if (!match) {
               for (const auto &t : icon.tags) {
                 std::string tag = t;
@@ -471,8 +475,10 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
           if (ImGui::ImageButton("icon_btn",
                                  (ImTextureID)(intptr_t)icon.thumbnail.id,
                                  ImVec2(48, 48))) {
-            project.objects.push_back({ObjectType::Image, 0, 0, 60, 60,
-                                       icon.path, "", "", 0, 0xFFFFFFFF});
+            LabelObject obj = {ObjectType::Image, 0,  0,  60, 60,
+                               icon.path,         "", "", 0,  0xFFFFFFFF};
+            obj.data = icon.path;
+            project.objects.push_back(obj);
             project.isDirty = true;
             ImGui::CloseCurrentPopup();
           }
@@ -532,16 +538,30 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState) {
           ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
       LabelSize sz = LabelSizes[project.selectedLabelIndex];
       for (size_t i = 0; i < currentCat.icons.size(); i++) {
+        Icon &icon = currentCat.icons[i];
         ImGui::PushID(i);
-        if (ImGui::ImageButton(
-                "border",
-                (ImTextureID)(intptr_t)currentCat.icons[i].thumbnail.id,
-                ImVec2(48, 48))) {
-          project.objects.push_back({ObjectType::Image, 0, 0, (float)sz.width,
-                                     (float)sz.height, currentCat.icons[i].path,
-                                     "", "", 0, 0xFFFFFFFF});
+        if (ImGui::ImageButton("border",
+                               (ImTextureID)(intptr_t)icon.thumbnail.id,
+                               ImVec2(48, 48))) {
+          LabelObject obj = {ObjectType::Image,
+                             0,
+                             0,
+                             (float)sz.width,
+                             (float)sz.height,
+                             icon.path,
+                             "",
+                             "",
+                             0,
+                             0xFFFFFFFF};
+          obj.data = icon.path;
+          project.objects.push_back(obj);
           project.isDirty = true;
           ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip("%s", icon.customName.empty()
+                                      ? icon.name.c_str()
+                                      : icon.customName.c_str());
         }
         ImGui::PopID();
         float nextX2 =
@@ -735,12 +755,196 @@ void DrawLibraryManager(UIState &uiState) {
         ImGui::EndCombo();
       }
       if (ImGui::Button("Perform Move")) {
-        AssetManager::Get().MoveIcon(*selectedIcon,
-                                     categories[moveCatIdx].name);
+        AssetManager::Get().MoveAsset(*selectedIcon,
+                                      categories[moveCatIdx].name);
         selectedIcon = nullptr; // Reset selection as pointers might change
       }
     } else {
       ImGui::TextDisabled("Select an icon to edit metadata.");
+    }
+    ImGui::EndChild();
+
+    ImGui::EndPopup();
+  }
+}
+
+void DrawBorderManager(UIState &uiState) {
+  if (uiState.triggerBorderManager) {
+    ImGui::OpenPopup("Border Manager");
+    uiState.triggerBorderManager = false;
+  }
+
+  ImGui::SetNextWindowSize(ImVec2(1000, 700), ImGuiCond_FirstUseEver);
+  if (ImGui::BeginPopupModal("Border Manager", NULL, ImGuiWindowFlags_None)) {
+    static char searchBuf[128] = "";
+    static int selectedCatIdx = 0;
+    static Icon *selectedIcon = nullptr;
+    static char nameBuf[128] = "";
+    static char tagBuf[128] = "";
+
+    auto &categories = AssetManager::Get().GetBorders();
+
+    ImGui::InputText("Search Borders", searchBuf, sizeof(searchBuf));
+    ImGui::SameLine();
+    if (ImGui::Button("Import Borders...")) {
+      auto selection = pfd::open_file("Import Borders", ".",
+                                      {"Images", "*.png *.jpg *.jpeg *.bmp"},
+                                      pfd::opt::multiselect)
+                           .result();
+      if (!selection.empty()) {
+        AssetManager::Get().ImportUserBorders(selection);
+      }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Close"))
+      ImGui::CloseCurrentPopup();
+    ImGui::Separator();
+
+    ImGui::BeginChild("BorderCategories", ImVec2(200, 0), true);
+    for (size_t i = 0; i < categories.size(); i++) {
+      if (ImGui::Selectable(categories[i].name.c_str(),
+                            selectedCatIdx == (int)i)) {
+        selectedCatIdx = i;
+        selectedIcon = nullptr;
+      }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::BeginChild("BorderGrid", ImVec2(500, 0), true);
+
+    bool isSearching = (searchBuf[0] != '\0');
+    std::string searchStr = searchBuf;
+    if (isSearching) {
+      std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                     ::tolower);
+    }
+
+    int startCat = isSearching ? 0 : selectedCatIdx;
+    int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
+
+    for (int catIdx = startCat; catIdx < endCat; catIdx++) {
+      auto &cat = categories[catIdx];
+      bool catTexturesLoaded = false;
+
+      float windowVisibleX2 =
+          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+
+      for (size_t i = 0; i < cat.icons.size(); i++) {
+        Icon &icon = cat.icons[i];
+
+        if (isSearching) {
+          std::string iconName = icon.name;
+          std::transform(iconName.begin(), iconName.end(), iconName.begin(),
+                         ::tolower);
+          std::string custName = icon.customName;
+          std::transform(custName.begin(), custName.end(), custName.begin(),
+                         ::tolower);
+
+          bool match = (iconName.find(searchStr) != std::string::npos ||
+                        custName.find(searchStr) != std::string::npos);
+          if (!match) {
+            for (const auto &t : icon.tags) {
+              std::string tag = t;
+              std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+              if (tag.find(searchStr) != std::string::npos) {
+                match = true;
+                break;
+              }
+            }
+          }
+          if (!match)
+            continue;
+        }
+
+        if (!catTexturesLoaded) {
+          AssetManager::Get().LoadBorderTextures(catIdx);
+          catTexturesLoaded = true;
+        }
+
+        ImGui::PushID(icon.path.c_str());
+        bool isSelected = (selectedIcon == &icon);
+        if (isSelected)
+          ImGui::PushStyleColor(ImGuiCol_Button,
+                                ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
+
+        if (ImGui::ImageButton("lib_border",
+                               (ImTextureID)(intptr_t)icon.thumbnail.id,
+                               ImVec2(64, 64))) {
+          selectedIcon = &icon;
+          strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
+        }
+
+        if (isSelected)
+          ImGui::PopStyleColor();
+        ImGui::PopID();
+
+        float lastX2 = ImGui::GetItemRectMax().x;
+        float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
+        if (nextX2 < windowVisibleX2)
+          ImGui::SameLine();
+      }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::BeginChild("BorderInspector", ImVec2(0, 0), true);
+    if (selectedIcon) {
+      ImGui::Text("Border Details");
+      ImGui::Separator();
+      ImGui::Image((ImTextureID)(intptr_t)selectedIcon->thumbnail.id,
+                   ImVec2(128, 128));
+      ImGui::Text("File: %s",
+                  fs::path(selectedIcon->path).filename().string().c_str());
+
+      ImGui::Spacing();
+      if (ImGui::InputText("Display Name", nameBuf, sizeof(nameBuf))) {
+        selectedIcon->customName = nameBuf;
+        AssetManager::Get().SaveMetadata();
+      }
+
+      ImGui::Spacing();
+      ImGui::Text("Tags:");
+      for (size_t t = 0; t < selectedIcon->tags.size(); t++) {
+        ImGui::Text(" [#] %s", selectedIcon->tags[t].c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton(("X##" + std::to_string(t)).c_str())) {
+          selectedIcon->tags.erase(selectedIcon->tags.begin() + t);
+          AssetManager::Get().SaveMetadata();
+        }
+      }
+
+      ImGui::InputText("Add Tag", tagBuf, sizeof(tagBuf));
+      ImGui::SameLine();
+      if (ImGui::Button("+")) {
+        if (tagBuf[0] != '\0') {
+          selectedIcon->tags.push_back(tagBuf);
+          AssetManager::Get().SaveMetadata();
+          tagBuf[0] = '\0';
+        }
+      }
+
+      ImGui::Separator();
+      ImGui::Text("Move to Category:");
+      static int moveBorderCatIdx = 0;
+      if (ImGui::BeginCombo("##MoveBorderCombo",
+                            categories[moveBorderCatIdx].name.c_str())) {
+        for (int n = 0; n < (int)categories.size(); n++) {
+          if (ImGui::Selectable(categories[n].name.c_str(),
+                                moveBorderCatIdx == n))
+            moveBorderCatIdx = n;
+        }
+        ImGui::EndCombo();
+      }
+      if (ImGui::Button("Perform Move")) {
+        AssetManager::Get().MoveAsset(*selectedIcon,
+                                      categories[moveBorderCatIdx].name);
+        selectedIcon = nullptr;
+      }
+    } else {
+      ImGui::TextDisabled("Select a border to edit metadata.");
     }
     ImGui::EndChild();
 
@@ -828,6 +1032,9 @@ void DrawMainMenu(Project &project, UIState &uiState) {
       if (ImGui::MenuItem("Manage Icon Library")) {
         uiState.triggerLibraryManager = true;
       }
+      if (ImGui::MenuItem("Manage Deco Borders")) {
+        uiState.triggerBorderManager = true;
+      }
       ImGui::EndMenu();
     }
 
@@ -869,6 +1076,7 @@ void DrawMainMenu(Project &project, UIState &uiState) {
   DrawIconLibraryPopup(project, uiState);
   DrawBorderLibraryPopup(project, uiState);
   DrawLibraryManager(uiState);
+  DrawBorderManager(uiState);
 }
 
 /*!***************************************************
