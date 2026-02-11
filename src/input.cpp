@@ -65,20 +65,23 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
         }
       } else {
         Rectangle bounds = OBJECTS::GetObjectBounds(obj);
-        float handleSize = HANDLE_SIZE / camera.zoom;
-        Rectangle handles[] = {
-            {bounds.x - handleSize / 2, bounds.y - handleSize / 2, handleSize,
-             handleSize},
-            {bounds.x + bounds.width - handleSize / 2,
-             bounds.y - handleSize / 2, handleSize, handleSize},
-            {bounds.x - handleSize / 2,
-             bounds.y + bounds.height - handleSize / 2, handleSize, handleSize},
-            {bounds.x + bounds.width - handleSize / 2,
-             bounds.y + bounds.height - handleSize / 2, handleSize,
-             handleSize}};
+        float handleRadius = HANDLE_RADIUS / camera.zoom;
+        Vector2 handlePositions[] = {
+            {bounds.x, bounds.y},                               // Top-Left
+            {bounds.x + bounds.width, bounds.y},                // Top-Right
+            {bounds.x, bounds.y + bounds.height},               // Bottom-Left
+            {bounds.x + bounds.width, bounds.y + bounds.height} // Bottom-Right
+        };
 
         for (int i = 0; i < 4; i++) {
-          if (CheckCollisionPointRec(mouseWorld, handles[i])) {
+          if (CheckCollisionPointCircle(mouseWorld, handlePositions[i], handleRadius)) {
+            if (i == 0) { // Top-Left: Delete
+              project.objects.erase(project.objects.begin() + state.selectedIndex);
+              project.isDirty = true;
+              state.selectedIndex = -1;
+              state.isDraggingObject = false;
+              return; 
+            }
             state.isResizing = true;
             state.activeHandle = static_cast<ResizeHandle>(i + 1);
             break;

@@ -264,19 +264,40 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     Rectangle bounds = OBJECTS::GetObjectBounds(obj);
     DrawRectangleLinesEx(bounds, 1.0f / camera.zoom, SKYBLUE);
 
-    float handleSize = HANDLE_SIZE / camera.zoom;
-    Rectangle handles[] = {
-        {bounds.x - handleSize / 2, bounds.y - handleSize / 2, handleSize,
-         handleSize},
-        {bounds.x + bounds.width - handleSize / 2, bounds.y - handleSize / 2,
-         handleSize, handleSize},
-        {bounds.x - handleSize / 2, bounds.y + bounds.height - handleSize / 2,
-         handleSize, handleSize},
-        {bounds.x + bounds.width - handleSize / 2,
-         bounds.y + bounds.height - handleSize / 2, handleSize, handleSize}};
+    float handleRadius = HANDLE_RADIUS / camera.zoom;
+    Vector2 handles[] = {
+        {bounds.x, bounds.y},                                       // Top-Left
+        {bounds.x + bounds.width, bounds.y},                        // Top-Right
+        {bounds.x, bounds.y + bounds.height},                       // Bottom-Left
+        {bounds.x + bounds.width, bounds.y + bounds.height}         // Bottom-Right
+    };
 
-    for (const auto &handle : handles) {
-      DrawRectangleRec(handle, SKYBLUE);
+    for (int i = 0; i < 4; i++) {
+      DrawCircleV(handles[i], handleRadius, SKYBLUE);
+      DrawCircleLinesV(handles[i], handleRadius, DARKBLUE);
+
+      if (i == 0) { // Top-Left: Delete (X)
+        float xSize = handleRadius * 0.6f;
+        DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
+                   {handles[i].x + xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
+        DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
+                   {handles[i].x - xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
+      } else if (i == 3) { // Bottom-Right: Resize (Arrows)
+        float aSize = handleRadius * 0.6f;
+        // Main diagonal line
+        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
+                   {handles[i].x + aSize, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
+        // Arrow heads
+        DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                   {handles[i].x + aSize - aSize/2, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
+        DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                   {handles[i].x + aSize, handles[i].y + aSize - aSize/2}, 2.0f / camera.zoom, WHITE);
+        
+        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
+                   {handles[i].x - aSize + aSize/2, handles[i].y - aSize}, 2.0f / camera.zoom, WHITE);
+        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
+                   {handles[i].x - aSize, handles[i].y - aSize + aSize/2}, 2.0f / camera.zoom, WHITE);
+      }
     }
   }
 }

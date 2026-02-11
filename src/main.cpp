@@ -30,7 +30,6 @@
 int main() {
   Camera2D camera;
   Project currentProject;
-  int selectedIndex = -1;
   InteractionState state;
   UI::UIState uiState;
 
@@ -61,8 +60,8 @@ int main() {
     CAMERA::UpdateCamera(camera, currentProject);
 
     INPUT::HandleInput(currentProject, state, camera);
-    RENDERING::RenderScene(currentProject, state, camera, selectedIndex);
-    UI::Draw(currentProject, selectedIndex, uiState);
+    RENDERING::RenderScene(currentProject, state, camera, state.selectedIndex);
+    UI::Draw(currentProject, state.selectedIndex, uiState);
   }
 
   Utils::SaveSettings(Utils::appSettings);
