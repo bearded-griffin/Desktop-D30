@@ -31,8 +31,10 @@
 namespace fs = std::filesystem;
 
 struct Icon {
-  std::string name;
+  std::string name;        // Filename based (Default)
+  std::string customName;  // User-assigned name
   std::string path;
+  std::vector<std::string> tags;
   Texture2D thumbnail = {0}; // Loaded on demand
 };
 
@@ -81,8 +83,22 @@ public:
   void LoadBorderTextures(int categoryIndex);
   Font GetFont(const std::string &name);
 
+  // Metadata & Library Management
+  void SaveMetadata();
+  void LoadMetadata();
+  bool MoveIcon(Icon &icon, const std::string &newCategory);
+  void UpdateIconMetadata(const std::string &path, const std::string &newName,
+                          const std::vector<std::string> &newTags);
+
+  // Loading Pipeline
+  void InitializeLoadQueue(); // Call this at startup
+  bool ProcessLoadQueue(int batchSize = 5); // Returns false when done
+  float GetLoadProgress(); // 0.0f to 1.0f
+  std::string GetCurrentLoadItem(); // e.g. "Loading Office/printer.png..."
+
   // Actions
   bool ImportFont(const std::string &sourcePath);
+  int ImportUserIcons(const std::vector<std::string> &sourcePaths);
 
 #ifdef UNIT_TESTING
   // --- Test Path Configuration (for Unit Tests) ---
@@ -105,7 +121,7 @@ public:
 
 private:
   AssetManager() {
-    RefreshLibrary("assets/icons");
+    RefreshLibrary("");
     RefreshBorders("assets/borders");
     RefreshFonts({}, {}); // System fonts will be added in RefreshFonts
   }
@@ -117,6 +133,11 @@ private:
       systemFonts; // Separate list for system fonts to avoid confusion
   std::vector<FontAsset>
       userFonts; // Separate list for user fonts to avoid confusion
+
+  // --- Loading State ---
+  std::vector<Icon *> loadQueue;
+  size_t totalToLoad = 0;
+  size_t currentLoadIndex = 0;
 
 // --- Test Paths (always declared, only setters are conditional) ---
 #ifdef UNIT_TESTING

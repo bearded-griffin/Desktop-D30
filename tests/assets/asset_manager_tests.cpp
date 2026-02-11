@@ -83,9 +83,9 @@ TEST_F(AssetManagerTest, RefreshFontsScansUserFonts) {
   const auto &fontList = AssetManager::Get().GetUserFontList();
 
   ASSERT_EQ(fontList.size(), 2);
-  EXPECT_EQ(fontList[0].name, "userfont1");
+  EXPECT_EQ(fontList[0].name, "Userfont1");
   EXPECT_EQ(fontList[0].type, LabelFontType::User);
-  EXPECT_EQ(fontList[1].name, "userfont2");
+  EXPECT_EQ(fontList[1].name, "Userfont2");
   EXPECT_EQ(fontList[1].type, LabelFontType::User);
 }
 
@@ -113,11 +113,11 @@ TEST_F(AssetManagerTest, RefreshLibraryScansIconCategories) {
   EXPECT_EQ(categories[1].name, "Category2");
 
   ASSERT_EQ(categories[0].icons.size(), 2);
-  EXPECT_EQ(categories[0].icons[0].name, "icon1");
-  EXPECT_EQ(categories[0].icons[1].name, "icon2");
+  EXPECT_EQ(categories[0].icons[0].name, "Icon1");
+  EXPECT_EQ(categories[0].icons[1].name, "Icon2");
 
   ASSERT_EQ(categories[1].icons.size(), 1);
-  EXPECT_EQ(categories[1].icons[0].name, "icon3");
+  EXPECT_EQ(categories[1].icons[0].name, "Icon3");
 }
 
 TEST_F(AssetManagerTest, RefreshLibraryHandlesEmptyCategories) {
@@ -161,12 +161,32 @@ TEST_F(AssetManagerTest, ImportFontSuccessfullyCopiesFile) {
   // Check if RefreshFonts was called (implicitly through getting fontList)
   const auto &fontList = AssetManager::Get().GetFontList();
   ASSERT_EQ(fontList.size(), 1);
-  EXPECT_EQ(fontList[0].name, "sourcefont");
+  EXPECT_EQ(fontList[0].name, "Sourcefont");
 }
 
 TEST_F(AssetManagerTest, ImportFontHandlesNonExistentSource) {
   fs::path nonExistentPath = tempDir / "nonexistent.ttf";
   EXPECT_FALSE(AssetManager::Get().ImportFont(nonExistentPath.string()));
+}
+
+TEST_F(AssetManagerTest, LoadingPipeline_ProgressTracking) {
+  // Setup icons
+  std::ofstream(iconsBaseDir / "Category1" / "icon1.png").close();
+  std::ofstream(iconsBaseDir / "Category1" / "icon2.png").close();
+  AssetManager::Get().RefreshLibrary(iconsBaseDir.string());
+
+  AssetManager::Get().InitializeLoadQueue();
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 0.0f);
+
+  // Process batch of 1
+  bool more = AssetManager::Get().ProcessLoadQueue(1);
+  EXPECT_TRUE(more);
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 0.5f);
+
+  // Process remaining
+  more = AssetManager::Get().ProcessLoadQueue(1);
+  EXPECT_FALSE(more);
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 1.0f);
 }
 
 // Add more tests for error handling, edge cases, etc.

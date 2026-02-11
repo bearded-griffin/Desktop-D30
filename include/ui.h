@@ -31,6 +31,7 @@ struct UIState {
   bool triggerScanPopup = false;
   bool triggerBatchPopup = false;
   bool triggerLoadConfirmation = false;
+  bool triggerLibraryManager = false;
   bool exitRequested = false;
   bool forceQuit = false;
 };
@@ -43,6 +44,7 @@ bool ShouldClose(const UIState &uiState);
 void ClearExitRequest(UIState &uiState);
 void DrawExitConfirmation(Project &project, UIState &uiState);
 void DrawLoadConfirmation(Project &project, UIState &uiState);
+void DrawSplashScreen(); // New!
 void InitializeUI();
 void UpdateWindowTitle(const Project &project);
 void CleanupApplication(Project &project);

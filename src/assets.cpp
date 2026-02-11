@@ -25,7 +25,19 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <nlohmann/json.hpp>
+
+namespace {
+std::string FormatDisplayName(std::string name) {
+  std::replace(name.begin(), name.end(), '_', ' ');
+  std::replace(name.begin(), name.end(), '-', ' ');
+  if (!name.empty())
+    name[0] = std::toupper(name[0]);
+  return name;
+}
+} // namespace
 
 /*!***************************************************
  * @brief    Rebuilds the icon library
@@ -40,41 +52,58 @@
 void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
   categories.clear();
 
-  std::string basePath =
-      providedBasePath.empty() ? "assets/icons" : providedBasePath;
-
-  if (!fs::exists(basePath)) {
-    std::cerr << "[Assets] Warning: '" << basePath << "' folder not found!"
-              << std::endl;
-    // Try creating it to be helpful
-    fs::create_directories(basePath);
-    return;
+  std::vector<std::string> searchPaths;
+  if (!providedBasePath.empty()) {
+    searchPaths.push_back(providedBasePath);
+  } else {
+    searchPaths.push_back("assets/icons/built-in");
+    searchPaths.push_back("assets/icons/user");
   }
 
-  for (const auto &entry : fs::directory_iterator(basePath)) {
-    if (entry.is_directory()) {
-      IconCategory cat;
-      cat.name = entry.path().filename().string();
+  for (const auto &basePath : searchPaths) {
+    if (!fs::exists(basePath)) {
+      fs::create_directories(basePath);
+      continue;
+    }
 
-      // Scan files inside this category
-      for (const auto &file : fs::directory_iterator(entry.path())) {
-        if (file.path().extension() == ".png" ||
-            file.path().extension() == ".jpg") {
+    for (const auto &entry : fs::recursive_directory_iterator(basePath)) {
+      if (fs::is_regular_file(entry)) {
+        std::string ext = entry.path().extension().string();
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
+          std::string categoryName = entry.path().parent_path().filename().string();
+          
+          // If the file is in the root of built-in or user, call it "General"
+          if (categoryName == "built-in" || categoryName == "user" || categoryName == "icons") {
+              categoryName = "General";
+          }
+
+          // Find or create category
+          IconCategory *targetCat = nullptr;
+          for (auto &cat : categories) {
+            if (cat.name == categoryName) {
+              targetCat = &cat;
+              break;
+            }
+          }
+
+          if (!targetCat) {
+            categories.push_back({categoryName, {}, false});
+            targetCat = &categories.back();
+          }
+
           Icon icon;
-          icon.name = file.path().stem().string(); // "skull" from "skull.png"
-          icon.path = file.path().string();
-          cat.icons.push_back(icon);
+          icon.name = FormatDisplayName(entry.path().stem().string());
+          icon.path = entry.path().string();
+          targetCat->icons.push_back(icon);
         }
       }
-
-      // Only add if it has icons
-      if (!cat.icons.empty()) {
-        // Sort icons alphabetically within the category
-        std::sort(cat.icons.begin(), cat.icons.end(),
-                  [](const Icon &a, const Icon &b) { return a.name < b.name; });
-        categories.push_back(cat);
-      }
     }
+  }
+
+  // Sort icons within categories
+  for (auto &cat : categories) {
+    std::sort(cat.icons.begin(), cat.icons.end(),
+              [](const Icon &a, const Icon &b) { return a.name < b.name; });
   }
 
   // Sort categories alphabetically
@@ -82,6 +111,183 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
             [](const IconCategory &a, const IconCategory &b) {
               return a.name < b.name;
             });
+
+  LoadMetadata(); // Overlay metadata after scanning files
+}
+
+/*!***************************************************
+ * @brief    Saves icon metadata to JSON
+ * @details  Stores tags and custom names for icons.
+ * @return   void
+ ****************************************************/
+void AssetManager::SaveMetadata() {
+  nlohmann::json j;
+  for (const auto &cat : categories) {
+    for (const auto &icon : cat.icons) {
+      if (!icon.tags.empty() || !icon.customName.empty()) {
+        nlohmann::json meta;
+        if (!icon.customName.empty())
+          meta["name"] = icon.customName;
+        if (!icon.tags.empty())
+          meta["tags"] = icon.tags;
+        j[icon.path] = meta;
+      }
+    }
+  }
+
+  std::ofstream file("assets/icons/metadata.json");
+  if (file.is_open()) {
+    file << j.dump(4);
+  }
+}
+
+/*!***************************************************
+ * @brief    Loads icon metadata from JSON
+ * @details  Overlays custom names and tags onto icons.
+ * @return   void
+ ****************************************************/
+void AssetManager::LoadMetadata() {
+  std::ifstream file("assets/icons/metadata.json");
+  if (!file.is_open())
+    return;
+
+  try {
+    nlohmann::json j;
+    file >> j;
+
+    for (auto &cat : categories) {
+      for (auto &icon : cat.icons) {
+        if (j.contains(icon.path)) {
+          auto meta = j[icon.path];
+          if (meta.contains("name"))
+            icon.customName = meta["name"].get<std::string>();
+          if (meta.contains("tags"))
+            icon.tags = meta["tags"].get<std::vector<std::string>>();
+        }
+      }
+    }
+  } catch (...) {
+    std::cerr << "[Assets] Error: Failed to parse metadata.json" << std::endl;
+  }
+}
+
+/*!***************************************************
+ * @brief    Moves an icon to a new category
+ * @details  Physically moves the file and updates metadata.
+ * @param    icon Icon&
+ * @param    newCategory const std::string&
+ * @return   bool
+ ****************************************************/
+bool AssetManager::MoveIcon(Icon &icon, const std::string &newCategory) {
+  fs::path oldPath(icon.path);
+  std::string filename = oldPath.filename().string();
+
+  // Determine root (built-in or user)
+  std::string root = "assets/icons/user";
+  if (icon.path.find("assets/icons/built-in") != std::string::npos) {
+    root = "assets/icons/built-in";
+  }
+
+  fs::path newDirPath = fs::path(root) / newCategory;
+  if (!fs::exists(newDirPath)) {
+    fs::create_directories(newDirPath);
+  }
+
+  fs::path newPath = newDirPath / filename;
+
+  try {
+    fs::rename(oldPath, newPath);
+    icon.path = newPath.string();
+    SaveMetadata();
+    RefreshLibrary(""); // Re-scan to update structure
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "[Assets] Move failed: " << e.what() << std::endl;
+    return false;
+  }
+}
+
+void AssetManager::UpdateIconMetadata(const std::string &path,
+                                      const std::string &newName,
+                                      const std::vector<std::string> &newTags) {
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.path == path) {
+        icon.customName = newName;
+        icon.tags = newTags;
+        SaveMetadata();
+        return;
+      }
+    }
+  }
+}
+
+/*!***************************************************
+ * @brief    Prepares the load queue
+ * @details  Flattens all icons into a single list
+ * so we can load them incrementally.
+ * @return   void
+ ****************************************************/
+void AssetManager::InitializeLoadQueue() {
+  loadQueue.clear();
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id == 0) { // Only queue unloaded ones
+        loadQueue.push_back(&icon);
+      }
+    }
+  }
+  for (auto &cat : borderCategories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id == 0) {
+        loadQueue.push_back(&icon);
+      }
+    }
+  }
+  totalToLoad = loadQueue.size();
+  currentLoadIndex = 0;
+}
+
+/*!***************************************************
+ * @brief    Loads a batch of icons
+ * @details  Loads 'batchSize' textures then returns.
+ * @param    batchSize int
+ * @return   bool True if there is more to load
+ ****************************************************/
+bool AssetManager::ProcessLoadQueue(int batchSize) {
+  if (currentLoadIndex >= totalToLoad)
+    return false;
+
+  for (int i = 0; i < batchSize; i++) {
+    if (currentLoadIndex >= totalToLoad)
+      break;
+
+    Icon *icon = loadQueue[currentLoadIndex];
+    if (icon && icon->thumbnail.id == 0) {
+      Image img = LoadImage(icon->path.c_str());
+      if (img.width > 64 || img.height > 64) {
+        ImageResize(&img, 64, 64);
+      }
+      icon->thumbnail = LoadTextureFromImage(img);
+      UnloadImage(img);
+    }
+    currentLoadIndex++;
+  }
+  return currentLoadIndex < totalToLoad;
+}
+
+float AssetManager::GetLoadProgress() {
+  if (totalToLoad == 0)
+    return 1.0f;
+  return (float)currentLoadIndex / (float)totalToLoad;
+}
+
+std::string AssetManager::GetCurrentLoadItem() {
+  if (currentLoadIndex < totalToLoad) {
+    fs::path p(loadQueue[currentLoadIndex]->path);
+    return "Loading " + p.filename().string();
+  }
+  return "Ready!";
 }
 
 /*!***************************************************
@@ -214,7 +420,7 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
 
         if (ext == ".ttf" || ext == ".otf") {
           FontAsset f;
-          f.name = entry.path().stem().string();
+          f.name = FormatDisplayName(entry.path().stem().string());
           f.path = entry.path().string();
           f.type = type;
 
@@ -287,6 +493,53 @@ bool AssetManager::ImportFont(const std::string &sourcePath) {
   } catch (...) {
     return false;
   }
+}
+
+/*!***************************************************
+ * @brief    Imports user icons
+ * @details  Copies selected files to assets/icons/user/Imports
+ * @param    sourcePaths const std::vector<std::string>&
+ * @return   int Number of files successfully imported
+ ****************************************************/
+int AssetManager::ImportUserIcons(const std::vector<std::string> &sourcePaths) {
+  if (sourcePaths.empty())
+    return 0;
+
+  std::string destDir = "assets/icons/user/Imports";
+  if (!fs::exists(destDir)) {
+    fs::create_directories(destDir);
+  }
+
+  int successCount = 0;
+  for (const auto &src : sourcePaths) {
+    if (!fs::exists(src))
+      continue;
+
+    fs::path srcPath(src);
+    std::string filename = srcPath.filename().string();
+    fs::path destPath = fs::path(destDir) / filename;
+
+    // Handle duplicate names by appending a counter
+    int counter = 1;
+    while (fs::exists(destPath)) {
+      std::string stem = srcPath.stem().string();
+      std::string ext = srcPath.extension().string();
+      destPath = fs::path(destDir) / (stem + "_" + std::to_string(counter++) + ext);
+    }
+
+    try {
+      fs::copy_file(srcPath, destPath);
+      successCount++;
+    } catch (const std::exception &e) {
+      std::cerr << "[Assets] Failed to import " << filename << ": " << e.what()
+                << std::endl;
+    }
+  }
+
+  if (successCount > 0) {
+    RefreshLibrary(""); // Refresh to show new files
+  }
+  return successCount;
 }
 
 /*!***************************************************
