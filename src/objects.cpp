@@ -279,6 +279,7 @@ LabelObject CreateRectangleObject(const float &x, const float &y,
                                   const float &cornerRadius) {
   LabelObject obj;
   obj.type = ObjectType::ShapeRect;
+  obj.fontSize = 4; // Line thickness
   obj.x = x;
   obj.y = y;
   obj.width = width;
@@ -303,6 +304,7 @@ LabelObject CreateCircleObject(const float &x, const float &y,
                                const float &radius) {
   LabelObject obj;
   obj.type = ObjectType::ShapeCircle;
+  obj.fontSize = 4; // Line thickness
   obj.x = x;
   obj.y = y;
   obj.width = radius * 2;

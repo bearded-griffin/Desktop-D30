@@ -238,7 +238,7 @@ void DrawSplashScreen() {
   const char *title = "Desktop-D30";
   float fontSize = 60.0f;
   Vector2 titleSize = MeasureTextEx(f, title, fontSize, 2.0f);
-  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, screenH / 2 - 100},
+  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, (float)screenH / 2 - 100},
              fontSize, 2.0f, DARKGRAY);
 
   // Draw Progress Bar
@@ -263,16 +263,17 @@ void DrawSplashScreen() {
 
   float statusFontSize = 24.0f;
   Vector2 statusSize = MeasureTextEx(f, statusMsg, statusFontSize, 2.0f);
-  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, barY - 35},
+  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, (float)barY - 35},
              statusFontSize, 2.0f, DARKGRAY);
 
   // Percentage Text
   std::string percentStr = std::to_string((int)(progress * 100)) + "%";
   float percentFontSize = 20.0f;
-  Vector2 percentSize = MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
+  Vector2 percentSize =
+      MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
   DrawTextEx(f, percentStr.c_str(),
-             {(screenW - percentSize.x) / 2, barY + barH + 10}, percentFontSize,
-             2.0f, GRAY);
+             {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
+             percentFontSize, 2.0f, GRAY);
 
   EndDrawing();
 }
@@ -430,9 +431,10 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
       int iconDrawCount = 0;
       for (int catIdx = startCat; catIdx < endCat; catIdx++) {
         auto &currentCat = categories[catIdx];
-        
-        // We only load textures if we are actually going to display something from this cat
-        // But for global search, we might load many. Given 128x128 icons, this is usually okay.
+
+        // We only load textures if we are actually going to display something
+        // from this cat But for global search, we might load many. Given
+        // 128x128 icons, this is usually okay.
         bool catTexturesLoaded = false;
 
         for (size_t i = 0; i < currentCat.icons.size(); i++) {
@@ -461,23 +463,24 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
 
           // Ensure texture is loaded before drawing
           if (!catTexturesLoaded) {
-              AssetManager::Get().LoadCategoryTextures(catIdx);
-              catTexturesLoaded = true;
+            AssetManager::Get().LoadCategoryTextures(catIdx);
+            catTexturesLoaded = true;
           }
 
           ImGui::PushID(icon.path.c_str());
           if (ImGui::ImageButton("icon_btn",
                                  (ImTextureID)(intptr_t)icon.thumbnail.id,
                                  ImVec2(48, 48))) {
-            project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
+            project.objects.push_back({ObjectType::Image, 0, 0, 60, 60,
                                        icon.path, "", "", 0, 0xFFFFFFFF});
             project.isDirty = true;
             ImGui::CloseCurrentPopup();
           }
           if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s\n(Category: %s)", 
-                               icon.customName.empty() ? icon.name.c_str() : icon.customName.c_str(),
-                               currentCat.name.c_str());
+            ImGui::SetTooltip("%s\n(Category: %s)",
+                              icon.customName.empty() ? icon.name.c_str()
+                                                      : icon.customName.c_str(),
+                              currentCat.name.c_str());
           }
           ImGui::PopID();
 
@@ -488,9 +491,9 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
             ImGui::SameLine();
         }
       }
-      
+
       if (iconDrawCount == 0 && isSearching) {
-          ImGui::Text("No icons match your search.");
+        ImGui::Text("No icons match your search.");
       }
 
       ImGui::EndChild();
@@ -605,7 +608,7 @@ void DrawLibraryManager(UIState &uiState) {
 
     // --- MIDDLE COLUMN: Icon Grid ---
     ImGui::BeginChild("LibraryGrid", ImVec2(500, 0), true);
-    
+
     bool isSearching = (searchBuf[0] != '\0');
     std::string searchStr = searchBuf;
     if (isSearching) {
@@ -632,7 +635,8 @@ void DrawLibraryManager(UIState &uiState) {
           std::transform(iconName.begin(), iconName.end(), iconName.begin(),
                          ::tolower);
           std::string custName = icon.customName;
-          std::transform(custName.begin(), custName.end(), custName.begin(), ::tolower);
+          std::transform(custName.begin(), custName.end(), custName.begin(),
+                         ::tolower);
 
           bool match = (iconName.find(searchStr) != std::string::npos ||
                         custName.find(searchStr) != std::string::npos);
@@ -651,14 +655,15 @@ void DrawLibraryManager(UIState &uiState) {
         }
 
         if (!catTexturesLoaded) {
-            AssetManager::Get().LoadCategoryTextures(catIdx);
-            catTexturesLoaded = true;
+          AssetManager::Get().LoadCategoryTextures(catIdx);
+          catTexturesLoaded = true;
         }
 
         ImGui::PushID(icon.path.c_str());
         bool isSelected = (selectedIcon == &icon);
         if (isSelected)
-          ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
+          ImGui::PushStyleColor(ImGuiCol_Button,
+                                ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
 
         if (ImGui::ImageButton("lib_icon",
                                (ImTextureID)(intptr_t)icon.thumbnail.id,
@@ -721,7 +726,8 @@ void DrawLibraryManager(UIState &uiState) {
       ImGui::Separator();
       ImGui::Text("Move to Category:");
       static int moveCatIdx = 0;
-      if (ImGui::BeginCombo("##MoveCombo", categories[moveCatIdx].name.c_str())) {
+      if (ImGui::BeginCombo("##MoveCombo",
+                            categories[moveCatIdx].name.c_str())) {
         for (int n = 0; n < (int)categories.size(); n++) {
           if (ImGui::Selectable(categories[n].name.c_str(), moveCatIdx == n))
             moveCatIdx = n;
@@ -1208,14 +1214,14 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
-    LabelObject obj = OBJECTS::CreateTextObject(50, 50, "Text", 20);
+    LabelObject obj = OBJECTS::CreateTextObject(0, 0, "Text", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
-    LabelObject obj = OBJECTS::CreateFieldObject(50, 50, "{Col}", 20);
+    LabelObject obj = OBJECTS::CreateFieldObject(0, 0, "{Col}", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
@@ -1223,15 +1229,14 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
-    LabelObject obj =
-        OBJECTS::CreateQRCodeObject(50, 50, 100, "www.example.com");
+    LabelObject obj = OBJECTS::CreateQRCodeObject(0, 0, 60, "www.example.com");
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
-    LabelObject obj = OBJECTS::CreateBarcodeObject(50, 50, 200, 60, "12345678");
+    LabelObject obj = OBJECTS::CreateBarcodeObject(50, 50, 100, 60, "12345678");
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
@@ -1239,13 +1244,11 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
-    auto selection =
-        pfd::open_file("Select Image", ".",
-                       {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
-            .result();
+    auto selection = pfd::open_file("Select Image", ".",
+                                    {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
+                         .result();
     if (!selection.empty()) {
-      LabelObject obj =
-          OBJECTS::CreateImageObject(50, 50, 100, 100, selection[0]);
+      LabelObject obj = OBJECTS::CreateImageObject(0, 0, 60, 60, selection[0]);
 
       // Immediately load and constrain image for display
       Image img = LoadImage(obj.data.c_str());
@@ -1287,22 +1290,21 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
-    LabelObject obj = OBJECTS::CreateLineObject(50, 50, 100, 0, 4);
+    LabelObject obj = OBJECTS::CreateLineObject(0, 0, 100, 0, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
-    LabelObject obj = OBJECTS::CreateRectangleObject(50, 50, 100, 100, 4);
+    LabelObject obj = OBJECTS::CreateRectangleObject(0, 0, 50, 50, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
-    LabelObject obj = OBJECTS::CreateCircleObject(50, 50, 25);
-    obj.type = ObjectType::ShapeCircle;
+    LabelObject obj = OBJECTS::CreateCircleObject(0, 0, 25);
     project.objects.push_back(obj);
     project.isDirty = true;
     selectedIndex = project.objects.size() - 1;
