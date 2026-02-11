@@ -232,12 +232,14 @@ void DrawSplashScreen() {
 
   int screenW = GetScreenWidth();
   int screenH = GetScreenHeight();
+  Font f = AssetManager::Get().GetDefaultFont();
 
   // Draw Logo/Title
   const char *title = "Desktop-D30";
-  int fontSize = 60;
-  int textW = MeasureText(title, fontSize);
-  DrawText(title, (screenW - textW) / 2, screenH / 2 - 100, fontSize, DARKGRAY);
+  float fontSize = 60.0f;
+  Vector2 titleSize = MeasureTextEx(f, title, fontSize, 2.0f);
+  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, screenH / 2 - 100},
+             fontSize, 2.0f, DARKGRAY);
 
   // Draw Progress Bar
   float progress = AssetManager::Get().GetLoadProgress();
@@ -252,17 +254,25 @@ void DrawSplashScreen() {
 
   // Fun Status Messages
   const char *statusMsg = "Loading Icons...";
-  if (progress > 0.3f) statusMsg = "Wrangling the Angry Pixels...";
-  if (progress > 0.6f) statusMsg = "Polishing the Pixels...";
-  if (progress > 0.9f) statusMsg = "Finalizing Graphics...";
-  
-  int statusW = MeasureText(statusMsg, 24);
-  DrawText(statusMsg, (screenW - statusW) / 2, barY - 35, 24, DARKGRAY);
+  if (progress > 0.3f)
+    statusMsg = "Wrangling the Angry Pixels...";
+  if (progress > 0.6f)
+    statusMsg = "Polishing the Pixels...";
+  if (progress > 0.9f)
+    statusMsg = "Finalizing Graphics...";
+
+  float statusFontSize = 24.0f;
+  Vector2 statusSize = MeasureTextEx(f, statusMsg, statusFontSize, 2.0f);
+  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, barY - 35},
+             statusFontSize, 2.0f, DARKGRAY);
 
   // Percentage Text
   std::string percentStr = std::to_string((int)(progress * 100)) + "%";
-  int percentW = MeasureText(percentStr.c_str(), 20);
-  DrawText(percentStr.c_str(), (screenW - percentW) / 2, barY + barH + 10, 20, GRAY);
+  float percentFontSize = 20.0f;
+  Vector2 percentSize = MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
+  DrawTextEx(f, percentStr.c_str(),
+             {(screenW - percentSize.x) / 2, barY + barH + 10}, percentFontSize,
+             2.0f, GRAY);
 
   EndDrawing();
 }
