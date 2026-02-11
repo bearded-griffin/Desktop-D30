@@ -70,11 +70,13 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
       if (fs::is_regular_file(entry)) {
         std::string ext = entry.path().extension().string();
         if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
-          std::string categoryName = entry.path().parent_path().filename().string();
-          
+          std::string categoryName =
+              entry.path().parent_path().filename().string();
+
           // If the file is in the root of built-in or user, call it "General"
-          if (categoryName == "built-in" || categoryName == "user" || categoryName == "icons") {
-              categoryName = "General";
+          if (categoryName == "built-in" || categoryName == "user" ||
+              categoryName == "icons") {
+            categoryName = "General";
           }
 
           // Find or create category
@@ -94,6 +96,7 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
           Icon icon;
           icon.name = FormatDisplayName(entry.path().stem().string());
           icon.path = entry.path().string();
+          icon.type = AssetType::Icon;
           targetCat->icons.push_back(icon);
         }
       }
@@ -121,24 +124,29 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
  * @return   void
  ****************************************************/
 void AssetManager::SaveMetadata() {
-  nlohmann::json j;
-  for (const auto &cat : categories) {
-    for (const auto &icon : cat.icons) {
-      if (!icon.tags.empty() || !icon.customName.empty()) {
-        nlohmann::json meta;
-        if (!icon.customName.empty())
-          meta["name"] = icon.customName;
-        if (!icon.tags.empty())
-          meta["tags"] = icon.tags;
-        j[icon.path] = meta;
+  auto SaveTo = [](const std::vector<IconCategory> &cats,
+                   const std::string &filePath) {
+    nlohmann::json j;
+    for (const auto &cat : cats) {
+      for (const auto &icon : cat.icons) {
+        if (!icon.tags.empty() || !icon.customName.empty()) {
+          nlohmann::json meta;
+          if (!icon.customName.empty())
+            meta["name"] = icon.customName;
+          if (!icon.tags.empty())
+            meta["tags"] = icon.tags;
+          j[icon.path] = meta;
+        }
       }
     }
-  }
+    std::ofstream file(filePath);
+    if (file.is_open()) {
+      file << j.dump(4);
+    }
+  };
 
-  std::ofstream file("assets/icons/metadata.json");
-  if (file.is_open()) {
-    file << j.dump(4);
-  }
+  SaveTo(categories, "assets/icons/metadata.json");
+  SaveTo(borderCategories, "assets/borders/metadata.json");
 }
 
 /*!***************************************************
@@ -147,28 +155,34 @@ void AssetManager::SaveMetadata() {
  * @return   void
  ****************************************************/
 void AssetManager::LoadMetadata() {
-  std::ifstream file("assets/icons/metadata.json");
-  if (!file.is_open())
-    return;
+  auto LoadFrom = [](std::vector<IconCategory> &cats,
+                     const std::string &filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open())
+      return;
 
-  try {
-    nlohmann::json j;
-    file >> j;
+    try {
+      nlohmann::json j;
+      file >> j;
 
-    for (auto &cat : categories) {
-      for (auto &icon : cat.icons) {
-        if (j.contains(icon.path)) {
-          auto meta = j[icon.path];
-          if (meta.contains("name"))
-            icon.customName = meta["name"].get<std::string>();
-          if (meta.contains("tags"))
-            icon.tags = meta["tags"].get<std::vector<std::string>>();
+      for (auto &cat : cats) {
+        for (auto &icon : cat.icons) {
+          if (j.contains(icon.path)) {
+            auto meta = j[icon.path];
+            if (meta.contains("name"))
+              icon.customName = meta["name"].get<std::string>();
+            if (meta.contains("tags"))
+              icon.tags = meta["tags"].get<std::vector<std::string>>();
+          }
         }
       }
+    } catch (...) {
+      std::cerr << "[Assets] Error: Failed to parse " << filePath << std::endl;
     }
-  } catch (...) {
-    std::cerr << "[Assets] Error: Failed to parse metadata.json" << std::endl;
-  }
+  };
+
+  LoadFrom(categories, "assets/icons/metadata.json");
+  LoadFrom(borderCategories, "assets/borders/metadata.json");
 }
 
 /*!***************************************************
@@ -178,14 +192,19 @@ void AssetManager::LoadMetadata() {
  * @param    newCategory const std::string&
  * @return   bool
  ****************************************************/
-bool AssetManager::MoveIcon(Icon &icon, const std::string &newCategory) {
-  fs::path oldPath(icon.path);
+bool AssetManager::MoveAsset(Icon &asset, const std::string &newCategory) {
+  fs::path oldPath(asset.path);
   std::string filename = oldPath.filename().string();
 
-  // Determine root (built-in or user)
-  std::string root = "assets/icons/user";
-  if (icon.path.find("assets/icons/built-in") != std::string::npos) {
-    root = "assets/icons/built-in";
+  // Determine root
+  std::string root;
+  if (asset.type == AssetType::Icon) {
+    root = "assets/icons/user";
+    if (asset.path.find("assets/icons/built-in") != std::string::npos) {
+      root = "assets/icons/built-in";
+    }
+  } else {
+    root = "assets/borders";
   }
 
   fs::path newDirPath = fs::path(root) / newCategory;
@@ -197,9 +216,12 @@ bool AssetManager::MoveIcon(Icon &icon, const std::string &newCategory) {
 
   try {
     fs::rename(oldPath, newPath);
-    icon.path = newPath.string();
+    asset.path = newPath.string();
     SaveMetadata();
-    RefreshLibrary(""); // Re-scan to update structure
+    if (asset.type == AssetType::Icon)
+      RefreshLibrary("");
+    else
+      RefreshBorders("");
     return true;
   } catch (const std::exception &e) {
     std::cerr << "[Assets] Move failed: " << e.what() << std::endl;
@@ -207,19 +229,12 @@ bool AssetManager::MoveIcon(Icon &icon, const std::string &newCategory) {
   }
 }
 
-void AssetManager::UpdateIconMetadata(const std::string &path,
-                                      const std::string &newName,
-                                      const std::vector<std::string> &newTags) {
-  for (auto &cat : categories) {
-    for (auto &icon : cat.icons) {
-      if (icon.path == path) {
-        icon.customName = newName;
-        icon.tags = newTags;
-        SaveMetadata();
-        return;
-      }
-    }
-  }
+void AssetManager::UpdateAssetMetadata(
+    Icon &asset, const std::string &newName,
+    const std::vector<std::string> &newTags) {
+  asset.customName = newName;
+  asset.tags = newTags;
+  SaveMetadata();
 }
 
 /*!***************************************************
@@ -413,16 +428,14 @@ void AssetManager::RefreshFonts(
   // fonts first
 
   // Sort user fonts alphabetically
-  std::sort(userFonts.begin(), userFonts.end(),
-            [](const FontAsset &a, const FontAsset &b) {
-              return a.name < b.name;
-            });
+  std::sort(
+      userFonts.begin(), userFonts.end(),
+      [](const FontAsset &a, const FontAsset &b) { return a.name < b.name; });
 
   // Sort system fonts alphabetically
-  std::sort(systemFonts.begin(), systemFonts.end(),
-            [](const FontAsset &a, const FontAsset &b) {
-              return a.name < b.name;
-            });
+  std::sort(
+      systemFonts.begin(), systemFonts.end(),
+      [](const FontAsset &a, const FontAsset &b) { return a.name < b.name; });
 
   fonts.insert(fonts.end(), userFonts.begin(), userFonts.end());
   fonts.insert(fonts.end(), systemFonts.begin(), systemFonts.end());
@@ -548,20 +561,69 @@ int AssetManager::ImportUserIcons(const std::vector<std::string> &sourcePaths) {
     while (fs::exists(destPath)) {
       std::string stem = srcPath.stem().string();
       std::string ext = srcPath.extension().string();
-      destPath = fs::path(destDir) / (stem + "_" + std::to_string(counter++) + ext);
+      destPath =
+          fs::path(destDir) / (stem + "_" + std::to_string(counter++) + ext);
     }
 
     try {
       fs::copy_file(srcPath, destPath);
       successCount++;
     } catch (const std::exception &e) {
-      std::cerr << "[Assets] Failed to import " << filename << ": " << e.what()
-                << std::endl;
+      std::cerr << "[Assets] Failed to import icon " << filename << ": "
+                << e.what() << std::endl;
     }
   }
 
   if (successCount > 0) {
     RefreshLibrary(""); // Refresh to show new files
+  }
+  return successCount;
+}
+
+/*!***************************************************
+ * @brief    Imports user borders
+ * @details  Copies selected files to assets/borders/Imports
+ * @param    sourcePaths const std::vector<std::string>&
+ * @return   int Number of files successfully imported
+ ****************************************************/
+int AssetManager::ImportUserBorders(
+    const std::vector<std::string> &sourcePaths) {
+  if (sourcePaths.empty())
+    return 0;
+
+  std::string destDir = "assets/borders/Imports";
+  if (!fs::exists(destDir)) {
+    fs::create_directories(destDir);
+  }
+
+  int successCount = 0;
+  for (const auto &src : sourcePaths) {
+    if (!fs::exists(src))
+      continue;
+
+    fs::path srcPath(src);
+    std::string filename = srcPath.filename().string();
+    fs::path destPath = fs::path(destDir) / filename;
+
+    int counter = 1;
+    while (fs::exists(destPath)) {
+      std::string stem = srcPath.stem().string();
+      std::string ext = srcPath.extension().string();
+      destPath =
+          fs::path(destDir) / (stem + "_" + std::to_string(counter++) + ext);
+    }
+
+    try {
+      fs::copy_file(srcPath, destPath);
+      successCount++;
+    } catch (const std::exception &e) {
+      std::cerr << "[Assets] Failed to import border " << filename << ": "
+                << e.what() << std::endl;
+    }
+  }
+
+  if (successCount > 0) {
+    RefreshBorders("");
   }
   return successCount;
 }
@@ -585,31 +647,53 @@ void AssetManager::RefreshBorders(const std::string &providedBasePath) {
     return;
   }
 
-  for (const auto &entry : fs::directory_iterator(basePath)) {
-    if (entry.is_directory()) {
-      IconCategory cat;
-      cat.name = entry.path().filename().string();
-      for (const auto &file : fs::directory_iterator(entry.path())) {
-        std::string ext = file.path().extension().string();
-        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
-          Icon icon;
-          icon.name = file.path().stem().string();
-          icon.path = file.path().string();
-          cat.icons.push_back(icon);
+  for (const auto &entry : fs::recursive_directory_iterator(basePath)) {
+    if (fs::is_regular_file(entry)) {
+      std::string ext = entry.path().extension().string();
+      if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
+        std::string categoryName =
+            entry.path().parent_path().filename().string();
+
+        if (categoryName == "borders") {
+          categoryName = "General";
         }
-      }
-      if (!cat.icons.empty()) {
-        // Sort icons alphabetically within the category
-        std::sort(cat.icons.begin(), cat.icons.end(),
-                  [](const Icon &a, const Icon &b) { return a.name < b.name; });
-        borderCategories.push_back(cat);
+
+        // Find or create category
+        IconCategory *targetCat = nullptr;
+        for (auto &cat : borderCategories) {
+          if (cat.name == categoryName) {
+            targetCat = &cat;
+            break;
+          }
+        }
+
+        if (!targetCat) {
+          borderCategories.push_back({categoryName, {}, false});
+          targetCat = &borderCategories.back();
+        }
+
+        Icon icon;
+        icon.name = FormatDisplayName(entry.path().stem().string());
+        icon.path = entry.path().string();
+        icon.type = AssetType::Border;
+        targetCat->icons.push_back(icon);
       }
     }
   }
+
+  // Sort icons within categories
+  for (auto &cat : borderCategories) {
+    std::sort(cat.icons.begin(), cat.icons.end(),
+              [](const Icon &a, const Icon &b) { return a.name < b.name; });
+  }
+
+  // Sort categories alphabetically
   std::sort(borderCategories.begin(), borderCategories.end(),
             [](const IconCategory &a, const IconCategory &b) {
               return a.name < b.name;
             });
+
+  LoadMetadata();
 }
 
 /*!***************************************************

@@ -142,8 +142,8 @@ TEST_F(AssetManagerTest, RefreshBordersScansBorderCategories) {
   ASSERT_EQ(categories.size(), 1);
   EXPECT_EQ(categories[0].name, "BorderCategory1");
   ASSERT_EQ(categories[0].icons.size(), 2);
-  EXPECT_EQ(categories[0].icons[0].name, "border1");
-  EXPECT_EQ(categories[0].icons[1].name, "border2");
+  EXPECT_EQ(categories[0].icons[0].name, "Border1");
+  EXPECT_EQ(categories[0].icons[1].name, "Border2");
 }
 
 // --- Tests for ImportFont ---

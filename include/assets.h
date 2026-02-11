@@ -30,12 +30,15 @@
 
 namespace fs = std::filesystem;
 
+enum class AssetType { Icon, Border };
+
 struct Icon {
   std::string name;        // Filename based (Default)
   std::string customName;  // User-assigned name
   std::string path;
   std::vector<std::string> tags;
   Texture2D thumbnail = {0}; // Loaded on demand
+  AssetType type = AssetType::Icon;
 };
 
 struct IconCategory {
@@ -87,9 +90,9 @@ public:
   // Metadata & Library Management
   void SaveMetadata();
   void LoadMetadata();
-  bool MoveIcon(Icon &icon, const std::string &newCategory);
-  void UpdateIconMetadata(const std::string &path, const std::string &newName,
-                          const std::vector<std::string> &newTags);
+  bool MoveAsset(Icon &asset, const std::string &newCategory);
+  void UpdateAssetMetadata(Icon &asset, const std::string &newName,
+                           const std::vector<std::string> &newTags);
 
   // Loading Pipeline
   void InitializeLoadQueue(); // Call this at startup
@@ -100,6 +103,7 @@ public:
   // Actions
   bool ImportFont(const std::string &sourcePath);
   int ImportUserIcons(const std::vector<std::string> &sourcePaths);
+  int ImportUserBorders(const std::vector<std::string> &sourcePaths);
 
 #ifdef UNIT_TESTING
   // --- Test Path Configuration (for Unit Tests) ---
