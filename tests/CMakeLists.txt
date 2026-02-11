@@ -53,7 +53,7 @@ if(TEST_SOURCES)
         "SHELL:-Wl,-wrap,DrawLineEx,-wrap,DrawLine"
         "SHELL:-Wl,-wrap,DrawRectangleRounded,-wrap,DrawRing"
         "SHELL:-Wl,-wrap,DrawRectangle,-wrap,DrawRectangleRec,-wrap,DrawRectangleLines,-wrap,DrawRectangleLinesEx"
-        "SHELL:-Wl,-wrap,DrawCircleV"
+        "SHELL:-Wl,-wrap,DrawCircleV,-wrap,DrawCircleLinesV"
         "SHELL:-Wl,-wrap,DrawTexturePro"
         "SHELL:-Wl,-wrap,GetColor,-wrap,Fade"
         "SHELL:-Wl,-wrap,BeginDrawing,-wrap,EndDrawing,-wrap,BeginMode2D,-wrap,EndMode2D,-wrap,ClearBackground"

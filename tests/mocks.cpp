@@ -38,6 +38,7 @@ static int g_DrawRectangleCount = 0;
 static Rectangle g_lastDrawRectangleRec = {0,0,0,0};
 
 static int g_DrawRectangleLinesCount = 0;
+static int g_DrawCircleCount = 0;
 
 // --- Helper Functions to Reset/Check State ---
 void ResetMockState() {
@@ -71,6 +72,7 @@ void ResetMockState() {
     g_lastDrawRectangleRec = {0,0,0,0};
     
     g_DrawRectangleLinesCount = 0;
+    g_DrawCircleCount = 0;
 }
 
 void SetMockMouseDelta(Vector2 delta) { g_mockMouseDelta = delta; }
@@ -103,6 +105,7 @@ float GetLastDrawRingRadiusOuter() { return g_lastDrawRingRadiusOuter; }
 
 int GetDrawRectangleCount() { return g_DrawRectangleCount; }
 int GetDrawRectangleLinesCount() { return g_DrawRectangleLinesCount; }
+int GetDrawCircleCount() { return g_DrawCircleCount; }
 
 
 extern "C" {
@@ -185,7 +188,14 @@ extern "C" {
         g_DrawRectangleLinesCount++;
     }
 
-    void __wrap_DrawCircleV(Vector2 center, float radius, Color color) {}
+    void __wrap_DrawCircleV(Vector2 center, float radius, Color color) {
+        g_DrawCircleCount++;
+    }
+    
+    void __wrap_DrawCircleLinesV(Vector2 center, float radius, Color color) {
+        g_DrawCircleCount++;
+    }
+
     bool __wrap_CheckCollisionPointRec(Vector2 point, Rectangle rec) {
         return (point.x >= rec.x && point.x <= (rec.x + rec.width) &&
                 point.y >= rec.y && point.y <= (rec.y + rec.height));

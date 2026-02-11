@@ -68,16 +68,28 @@ TEST_F(InputTest, HandleMouseInteractions_StartsResizing) {
     project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
     state.selectedIndex = 0;
     
-    // Top-left handle position: bounds.x - handleSize/2
-    // handleSize is 8. So 10 - 4 = 6.
-    // Click at 6,6
-    SetMockMousePosition({6, 6});
+    // Bottom-right handle position: 60, 60
+    SetMockMousePosition({60, 60});
     SetMockMouseButtonPressed(MOUSE_LEFT_BUTTON, true);
     
     INPUT::HandleInput(project, state, camera);
     
     EXPECT_TRUE(state.isResizing);
-    EXPECT_EQ(state.activeHandle, HANDLE_TOP_LEFT);
+    EXPECT_EQ(state.activeHandle, HANDLE_BOTTOM_RIGHT);
+}
+
+TEST_F(InputTest, HandleMouseInteractions_DeleteViaHandle) {
+    project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
+    state.selectedIndex = 0;
+    
+    // Top-left handle position: 10, 10
+    SetMockMousePosition({10, 10});
+    SetMockMouseButtonPressed(MOUSE_LEFT_BUTTON, true);
+    
+    INPUT::HandleInput(project, state, camera);
+    
+    EXPECT_TRUE(project.objects.empty());
+    EXPECT_EQ(state.selectedIndex, -1);
 }
 
 TEST_F(InputTest, HandleMouseInteractions_StopDraggingOnRelease) {

@@ -22,6 +22,7 @@ float GetLastDrawRingRadiusOuter();
 
 int GetDrawRectangleCount();
 int GetDrawRectangleLinesCount();
+int GetDrawCircleCount();
 
 
 class RenderingTest : public ::testing::Test {
@@ -122,7 +123,8 @@ TEST_F(RenderingTest, RenderSelectionHandles) {
     // Select it
     RENDERING::RenderObject(obj, true, camera);
     
-    EXPECT_EQ(GetDrawRectangleCount(), 4);
+    EXPECT_EQ(GetDrawCircleCount(), 8); // 4 filled + 4 lines
+    EXPECT_EQ(GetDrawLineExCount(), 7);   // 2 for X, 5 for arrows
     EXPECT_EQ(GetDrawRectangleLinesCount(), 1); // Outline
 }
 

@@ -28,8 +28,8 @@
 #include "raylib.h"
 
 // Constants
-constexpr float HANDLE_RADIUS = 6.0f;
-constexpr float HANDLE_SIZE = 8.0f;
+constexpr float HANDLE_RADIUS = 10.0f;
+constexpr float HANDLE_SIZE = 12.0f;
 constexpr float MIN_ZOOM = 0.1f;
 constexpr float MIN_OBJECT_SIZE = 10.0f;
 constexpr float MAX_OBJECT_SIZE = 1000.0f;
