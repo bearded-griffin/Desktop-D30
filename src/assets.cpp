@@ -25,7 +25,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 namespace {
 std::string FormatDisplayName(std::string name) {
@@ -109,6 +111,115 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
             [](const IconCategory &a, const IconCategory &b) {
               return a.name < b.name;
             });
+
+  LoadMetadata(); // Overlay metadata after scanning files
+}
+
+/*!***************************************************
+ * @brief    Saves icon metadata to JSON
+ * @details  Stores tags and custom names for icons.
+ * @return   void
+ ****************************************************/
+void AssetManager::SaveMetadata() {
+  nlohmann::json j;
+  for (const auto &cat : categories) {
+    for (const auto &icon : cat.icons) {
+      if (!icon.tags.empty() || !icon.customName.empty()) {
+        nlohmann::json meta;
+        if (!icon.customName.empty())
+          meta["name"] = icon.customName;
+        if (!icon.tags.empty())
+          meta["tags"] = icon.tags;
+        j[icon.path] = meta;
+      }
+    }
+  }
+
+  std::ofstream file("assets/icons/metadata.json");
+  if (file.is_open()) {
+    file << j.dump(4);
+  }
+}
+
+/*!***************************************************
+ * @brief    Loads icon metadata from JSON
+ * @details  Overlays custom names and tags onto icons.
+ * @return   void
+ ****************************************************/
+void AssetManager::LoadMetadata() {
+  std::ifstream file("assets/icons/metadata.json");
+  if (!file.is_open())
+    return;
+
+  try {
+    nlohmann::json j;
+    file >> j;
+
+    for (auto &cat : categories) {
+      for (auto &icon : cat.icons) {
+        if (j.contains(icon.path)) {
+          auto meta = j[icon.path];
+          if (meta.contains("name"))
+            icon.customName = meta["name"].get<std::string>();
+          if (meta.contains("tags"))
+            icon.tags = meta["tags"].get<std::vector<std::string>>();
+        }
+      }
+    }
+  } catch (...) {
+    std::cerr << "[Assets] Error: Failed to parse metadata.json" << std::endl;
+  }
+}
+
+/*!***************************************************
+ * @brief    Moves an icon to a new category
+ * @details  Physically moves the file and updates metadata.
+ * @param    icon Icon&
+ * @param    newCategory const std::string&
+ * @return   bool
+ ****************************************************/
+bool AssetManager::MoveIcon(Icon &icon, const std::string &newCategory) {
+  fs::path oldPath(icon.path);
+  std::string filename = oldPath.filename().string();
+
+  // Determine root (built-in or user)
+  std::string root = "assets/icons/user";
+  if (icon.path.find("assets/icons/built-in") != std::string::npos) {
+    root = "assets/icons/built-in";
+  }
+
+  fs::path newDirPath = fs::path(root) / newCategory;
+  if (!fs::exists(newDirPath)) {
+    fs::create_directories(newDirPath);
+  }
+
+  fs::path newPath = newDirPath / filename;
+
+  try {
+    fs::rename(oldPath, newPath);
+    icon.path = newPath.string();
+    SaveMetadata();
+    RefreshLibrary(""); // Re-scan to update structure
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "[Assets] Move failed: " << e.what() << std::endl;
+    return false;
+  }
+}
+
+void AssetManager::UpdateIconMetadata(const std::string &path,
+                                      const std::string &newName,
+                                      const std::vector<std::string> &newTags) {
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.path == path) {
+        icon.customName = newName;
+        icon.tags = newTags;
+        SaveMetadata();
+        return;
+      }
+    }
+  }
 }
 
 /*!***************************************************

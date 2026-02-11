@@ -31,8 +31,10 @@
 namespace fs = std::filesystem;
 
 struct Icon {
-  std::string name;
+  std::string name;        // Filename based (Default)
+  std::string customName;  // User-assigned name
   std::string path;
+  std::vector<std::string> tags;
   Texture2D thumbnail = {0}; // Loaded on demand
 };
 
@@ -80,6 +82,13 @@ public:
   void LoadCategoryTextures(int categoryIndex);
   void LoadBorderTextures(int categoryIndex);
   Font GetFont(const std::string &name);
+
+  // Metadata & Library Management
+  void SaveMetadata();
+  void LoadMetadata();
+  bool MoveIcon(Icon &icon, const std::string &newCategory);
+  void UpdateIconMetadata(const std::string &path, const std::string &newName,
+                          const std::vector<std::string> &newTags);
 
   // Actions
   bool ImportFont(const std::string &sourcePath);

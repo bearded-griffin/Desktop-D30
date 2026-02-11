@@ -39,6 +39,14 @@
 
 namespace UI {
 
+namespace {
+void DrawDeviceScanPopup(UIState &uiState);
+void DrawBatchPrintPopup(Project &project, UIState &uiState);
+void DrawIconLibraryPopup(Project &project, UIState &uiState);
+void DrawBorderLibraryPopup(Project &project, UIState &uiState);
+void DrawLibraryManager(UIState &uiState);
+} // namespace
+
 /*!***************************************************
  * @brief    Initializes the UI system
  * @details
@@ -316,23 +324,28 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
   if (uiState.triggerIconPopup) {
     ImGui::OpenPopup("IconLibraryPopup");
     uiState.triggerIconPopup = false;
-    // Refresh purely to be safe, though constructor handles it
-    // AssetManager::Get().RefreshLibrary();
   }
 
   // Set a nice big size for the library window
-  ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_FirstUseEver);
 
   if (ImGui::BeginPopupModal("IconLibraryPopup", NULL, ImGuiWindowFlags_None)) {
     static int selectedCategory = 0;
+    static char searchBuf[64] = "";
     auto &categories = AssetManager::Get().GetCategories();
 
     if (categories.empty()) {
       ImGui::Text("No icons found in 'assets/icons'.");
-      ImGui::Text("Please create folders and add PNG files.");
       if (ImGui::Button("Close"))
         ImGui::CloseCurrentPopup();
     } else {
+      // --- TOP BAR: Search ---
+      ImGui::InputText("Search", searchBuf, sizeof(searchBuf));
+      ImGui::SameLine();
+      if (ImGui::Button("Close"))
+        ImGui::CloseCurrentPopup();
+      ImGui::Separator();
+
       // --- LEFT COLUMN: Categories ---
       ImGui::BeginChild("Categories", ImVec2(150, 0), true);
       for (size_t i = 0; i < categories.size(); i++) {
@@ -348,7 +361,6 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
       // --- RIGHT COLUMN: Icons Grid ---
       ImGui::BeginChild("Icons", ImVec2(0, 0), true);
 
-      // Load thumbnails for this category if needed
       AssetManager::Get().LoadCategoryTextures(selectedCategory);
       auto &currentCat = categories[selectedCategory];
 
@@ -359,27 +371,48 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
       for (size_t i = 0; i < currentCat.icons.size(); i++) {
         Icon &icon = currentCat.icons[i];
 
-        // Draw Image Button
+        // Search Filter
+        if (searchBuf[0] != '\0') {
+          std::string searchStr = searchBuf;
+          std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                         ::tolower);
+          std::string name =
+              icon.customName.empty() ? icon.name : icon.customName;
+          std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+          bool match = (name.find(searchStr) != std::string::npos);
+          for (const auto &t : icon.tags) {
+            std::string tag = t;
+            std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+            if (tag.find(searchStr) != std::string::npos) {
+              match = true;
+              break;
+            }
+          }
+          if (!match)
+            continue;
+        }
+
         ImGui::PushID(i);
-        // We use the thumbnail texture ID (void*)
         if (ImGui::ImageButton("icon_btn",
                                (ImTextureID)(intptr_t)icon.thumbnail.id,
                                ImVec2(48, 48))) {
-          // ACTION: Add the icon as an ObjectType::Image
-          // We load the FULL image from disk for the canvas, not the thumbnail
           project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
-                                     currentCat.icons[i].path, "", "", 0,
-                                     0xFFFFFFFF});
+                                     icon.path, "", "", 0, 0xFFFFFFFF});
           project.isDirty = true;
           ImGui::CloseCurrentPopup();
         }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip("%s", icon.customName.empty()
+                                      ? icon.name.c_str()
+                                      : icon.customName.c_str());
+        }
         ImGui::PopID();
 
-        // Simple wrapping logic for the grid
         float lastButtonX2 = ImGui::GetItemRectMax().x;
         float nextButtonX2 =
-            lastButtonX2 + style.ItemSpacing.x + 48; // Next button width
-        if (i + 1 < currentCat.icons.size() && nextButtonX2 < windowVisibleX2)
+            lastButtonX2 + style.ItemSpacing.x + 48;
+        if (nextButtonX2 < windowVisibleX2)
           ImGui::SameLine();
       }
       ImGui::EndChild();
@@ -438,10 +471,165 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState) {
       ImGui::EndChild();
     }
 
-    // Close button at bottom? Or just click outside/top-right X (if enabled)
-    // For Modal, we usually need a manual Close if we didn't pick anything
     if (ImGui::IsKeyPressed(ImGuiKey_Escape))
       ImGui::CloseCurrentPopup();
+
+    ImGui::EndPopup();
+  }
+}
+
+void DrawLibraryManager(UIState &uiState) {
+  if (uiState.triggerLibraryManager) {
+    ImGui::OpenPopup("Library Manager");
+    uiState.triggerLibraryManager = false;
+  }
+
+  ImGui::SetNextWindowSize(ImVec2(1000, 700), ImGuiCond_FirstUseEver);
+  if (ImGui::BeginPopupModal("Library Manager", NULL, ImGuiWindowFlags_None)) {
+    static char searchBuf[128] = "";
+    static int selectedCatIdx = 0;
+    static Icon *selectedIcon = nullptr;
+    static char nameBuf[128] = "";
+    static char tagBuf[128] = "";
+
+    auto &categories = AssetManager::Get().GetCategories();
+
+    // --- TOP BAR: Search ---
+    ImGui::InputText("Search Icons", searchBuf, sizeof(searchBuf));
+    ImGui::SameLine();
+    if (ImGui::Button("Close"))
+      ImGui::CloseCurrentPopup();
+    ImGui::Separator();
+
+    // --- LEFT COLUMN: Categories ---
+    ImGui::BeginChild("LibraryCategories", ImVec2(200, 0), true);
+    for (size_t i = 0; i < categories.size(); i++) {
+      if (ImGui::Selectable(categories[i].name.c_str(),
+                            selectedCatIdx == (int)i)) {
+        selectedCatIdx = i;
+        selectedIcon = nullptr;
+      }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // --- MIDDLE COLUMN: Icon Grid ---
+    ImGui::BeginChild("LibraryGrid", ImVec2(500, 0), true);
+    if (selectedCatIdx < (int)categories.size()) {
+      AssetManager::Get().LoadCategoryTextures(selectedCatIdx);
+      auto &cat = categories[selectedCatIdx];
+
+      float windowVisibleX2 =
+          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+
+      for (size_t i = 0; i < cat.icons.size(); i++) {
+        Icon &icon = cat.icons[i];
+
+        // Filter by search
+        if (searchBuf[0] != '\0') {
+          std::string searchStr = searchBuf;
+          std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                         ::tolower);
+          std::string iconName = icon.name;
+          std::transform(iconName.begin(), iconName.end(), iconName.begin(),
+                         ::tolower);
+
+          bool match = (iconName.find(searchStr) != std::string::npos);
+          for (const auto &t : icon.tags) {
+            std::string tag = t;
+            std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+            if (tag.find(searchStr) != std::string::npos) {
+              match = true;
+              break;
+            }
+          }
+          if (!match)
+            continue;
+        }
+
+        ImGui::PushID(i);
+        bool isSelected = (selectedIcon == &icon);
+        if (isSelected)
+          ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
+
+        if (ImGui::ImageButton("lib_icon",
+                               (ImTextureID)(intptr_t)icon.thumbnail.id,
+                               ImVec2(64, 64))) {
+          selectedIcon = &icon;
+          strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
+        }
+
+        if (isSelected)
+          ImGui::PopStyleColor();
+        ImGui::PopID();
+
+        float lastX2 = ImGui::GetItemRectMax().x;
+        float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
+        if (nextX2 < windowVisibleX2)
+          ImGui::SameLine();
+      }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // --- RIGHT COLUMN: Inspector ---
+    ImGui::BeginChild("LibraryInspector", ImVec2(0, 0), true);
+    if (selectedIcon) {
+      ImGui::Text("Icon Details");
+      ImGui::Separator();
+      ImGui::Image((ImTextureID)(intptr_t)selectedIcon->thumbnail.id,
+                   ImVec2(128, 128));
+      ImGui::Text("File: %s",
+                  fs::path(selectedIcon->path).filename().string().c_str());
+
+      ImGui::Spacing();
+      if (ImGui::InputText("Display Name", nameBuf, sizeof(nameBuf))) {
+        selectedIcon->customName = nameBuf;
+        AssetManager::Get().SaveMetadata();
+      }
+
+      ImGui::Spacing();
+      ImGui::Text("Tags:");
+      for (size_t t = 0; t < selectedIcon->tags.size(); t++) {
+        ImGui::Text(" [#] %s", selectedIcon->tags[t].c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton(("X##" + std::to_string(t)).c_str())) {
+          selectedIcon->tags.erase(selectedIcon->tags.begin() + t);
+          AssetManager::Get().SaveMetadata();
+        }
+      }
+
+      ImGui::InputText("Add Tag", tagBuf, sizeof(tagBuf));
+      ImGui::SameLine();
+      if (ImGui::Button("+")) {
+        if (tagBuf[0] != '\0') {
+          selectedIcon->tags.push_back(tagBuf);
+          AssetManager::Get().SaveMetadata();
+          tagBuf[0] = '\0';
+        }
+      }
+
+      ImGui::Separator();
+      ImGui::Text("Move to Category:");
+      static int moveCatIdx = 0;
+      if (ImGui::BeginCombo("##MoveCombo", categories[moveCatIdx].name.c_str())) {
+        for (int n = 0; n < (int)categories.size(); n++) {
+          if (ImGui::Selectable(categories[n].name.c_str(), moveCatIdx == n))
+            moveCatIdx = n;
+        }
+        ImGui::EndCombo();
+      }
+      if (ImGui::Button("Perform Move")) {
+        AssetManager::Get().MoveIcon(*selectedIcon,
+                                     categories[moveCatIdx].name);
+        selectedIcon = nullptr; // Reset selection as pointers might change
+      }
+    } else {
+      ImGui::TextDisabled("Select an icon to edit metadata.");
+    }
+    ImGui::EndChild();
 
     ImGui::EndPopup();
   }
@@ -522,6 +710,14 @@ void DrawMainMenu(Project &project, UIState &uiState) {
       ImGui::EndMenu();
     }
 
+    // --- ASSETS MENU ---
+    if (ImGui::BeginMenu("Assets")) {
+      if (ImGui::MenuItem("Manage Icon Library")) {
+        uiState.triggerLibraryManager = true;
+      }
+      ImGui::EndMenu();
+    }
+
     // --- PRINTER MENU ---
     if (ImGui::BeginMenu("Printer")) {
       // Status Indicator
@@ -559,6 +755,7 @@ void DrawMainMenu(Project &project, UIState &uiState) {
   DrawBatchPrintPopup(project, uiState);
   DrawIconLibraryPopup(project, uiState);
   DrawBorderLibraryPopup(project, uiState);
+  DrawLibraryManager(uiState);
 }
 
 /*!***************************************************

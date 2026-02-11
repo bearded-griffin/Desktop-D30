@@ -31,6 +31,7 @@ struct UIState {
   bool triggerScanPopup = false;
   bool triggerBatchPopup = false;
   bool triggerLoadConfirmation = false;
+  bool triggerLibraryManager = false;
   bool exitRequested = false;
   bool forceQuit = false;
 };
