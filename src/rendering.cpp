@@ -378,36 +378,36 @@ Image RenderProjectToImage(const Project &project) {
       }
     } else if (obj.type == ObjectType::Image) {
       if (FileExists(obj.data.c_str())) {
-                Image srcImg = LoadImage(obj.data.c_str());
-        
-        
-                        // --- CONVERT TO B&W ---
-        // Manual Grayscale and Thresholding
-        Color *pixels = (Color*)srcImg.data;
-        for (int i = 0; i < srcImg.width * srcImg.height; i++) {
-          // Grayscale conversion (simple average)
-          unsigned char gray = (pixels[i].r + pixels[i].g + pixels[i].b) / 3;
+        Image srcImg = LoadImage(obj.data.c_str());
+        // Ensure we are in a format we can manipulate easily
+        ImageFormat(&srcImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 
-          // Apply thresholding
-          if (gray < 128) { // You can adjust this threshold
-            pixels[i] = BLACK;
-          } else {
+        // --- CONVERT TO B&W ---
+        // Manual Grayscale and Thresholding with Alpha support
+        Color *pixels = (Color *)srcImg.data;
+        for (int i = 0; i < srcImg.width * srcImg.height; i++) {
+          // If the pixel is transparent, treat it as the white label background
+          if (pixels[i].a < 128) {
             pixels[i] = WHITE;
+          } else {
+            // Grayscale conversion (weighted for better perception)
+            unsigned char gray = (unsigned char)(0.299f * pixels[i].r +
+                                                 0.587f * pixels[i].g +
+                                                 0.114f * pixels[i].b);
+
+            // Apply thresholding
+            if (gray < 128) {
+              pixels[i] = BLACK;
+            } else {
+              pixels[i] = WHITE;
+            }
           }
         }
-        // Manual Thresholding - Temporarily commented out for debugging black square issue
-        // Color *pixels = LoadImageColors(srcImg);
-        // for (int i = 0; i < srcImg.width * srcImg.height; i++) {
-        //   if (pixels[i].r < 128) {
-        //     pixels[i] = BLACK;
-        //   } else {
-        //     pixels[i] = WHITE;
-        //   }
-        // }
-        // UnloadImageColors(pixels);
 
-        // Resize to target dimensions
-        ImageResize(&srcImg, (int)obj.width, (int)obj.height);
+        // Resize to target dimensions with safety clamp
+        int targetW = std::clamp((int)obj.width, 1, (int)MAX_OBJECT_SIZE);
+        int targetH = std::clamp((int)obj.height, 1, (int)MAX_OBJECT_SIZE);
+        ImageResize(&srcImg, targetW, targetH);
 
         // Draw onto canvas
         Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};
