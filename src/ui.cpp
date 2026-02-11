@@ -361,60 +361,87 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
       // --- RIGHT COLUMN: Icons Grid ---
       ImGui::BeginChild("Icons", ImVec2(0, 0), true);
 
-      AssetManager::Get().LoadCategoryTextures(selectedCategory);
-      auto &currentCat = categories[selectedCategory];
-
       ImGuiStyle &style = ImGui::GetStyle();
       float windowVisibleX2 =
           ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
-      for (size_t i = 0; i < currentCat.icons.size(); i++) {
-        Icon &icon = currentCat.icons[i];
-
-        // Search Filter
-        if (searchBuf[0] != '\0') {
-          std::string searchStr = searchBuf;
-          std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
-                         ::tolower);
-          std::string name =
-              icon.customName.empty() ? icon.name : icon.customName;
-          std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-
-          bool match = (name.find(searchStr) != std::string::npos);
-          for (const auto &t : icon.tags) {
-            std::string tag = t;
-            std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
-            if (tag.find(searchStr) != std::string::npos) {
-              match = true;
-              break;
-            }
-          }
-          if (!match)
-            continue;
-        }
-
-        ImGui::PushID(i);
-        if (ImGui::ImageButton("icon_btn",
-                               (ImTextureID)(intptr_t)icon.thumbnail.id,
-                               ImVec2(48, 48))) {
-          project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
-                                     icon.path, "", "", 0, 0xFFFFFFFF});
-          project.isDirty = true;
-          ImGui::CloseCurrentPopup();
-        }
-        if (ImGui::IsItemHovered()) {
-          ImGui::SetTooltip("%s", icon.customName.empty()
-                                      ? icon.name.c_str()
-                                      : icon.customName.c_str());
-        }
-        ImGui::PopID();
-
-        float lastButtonX2 = ImGui::GetItemRectMax().x;
-        float nextButtonX2 =
-            lastButtonX2 + style.ItemSpacing.x + 48;
-        if (nextButtonX2 < windowVisibleX2)
-          ImGui::SameLine();
+      bool isSearching = (searchBuf[0] != '\0');
+      std::string searchStr = searchBuf;
+      if (isSearching) {
+        std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                       ::tolower);
       }
+
+      // Determine which categories to iterate over
+      int startCat = isSearching ? 0 : selectedCategory;
+      int endCat = isSearching ? (int)categories.size() : selectedCategory + 1;
+
+      int iconDrawCount = 0;
+      for (int catIdx = startCat; catIdx < endCat; catIdx++) {
+        auto &currentCat = categories[catIdx];
+        
+        // We only load textures if we are actually going to display something from this cat
+        // But for global search, we might load many. Given 128x128 icons, this is usually okay.
+        bool catTexturesLoaded = false;
+
+        for (size_t i = 0; i < currentCat.icons.size(); i++) {
+          Icon &icon = currentCat.icons[i];
+
+          // Search Filter
+          if (isSearching) {
+            std::string name =
+                icon.customName.empty() ? icon.name : icon.customName;
+            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+            bool match = (name.find(searchStr) != std::string::npos);
+            if (!match) {
+              for (const auto &t : icon.tags) {
+                std::string tag = t;
+                std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+                if (tag.find(searchStr) != std::string::npos) {
+                  match = true;
+                  break;
+                }
+              }
+            }
+            if (!match)
+              continue;
+          }
+
+          // Ensure texture is loaded before drawing
+          if (!catTexturesLoaded) {
+              AssetManager::Get().LoadCategoryTextures(catIdx);
+              catTexturesLoaded = true;
+          }
+
+          ImGui::PushID(icon.path.c_str());
+          if (ImGui::ImageButton("icon_btn",
+                                 (ImTextureID)(intptr_t)icon.thumbnail.id,
+                                 ImVec2(48, 48))) {
+            project.objects.push_back({ObjectType::Image, 50, 50, 100, 100,
+                                       icon.path, "", "", 0, 0xFFFFFFFF});
+            project.isDirty = true;
+            ImGui::CloseCurrentPopup();
+          }
+          if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s\n(Category: %s)", 
+                               icon.customName.empty() ? icon.name.c_str() : icon.customName.c_str(),
+                               currentCat.name.c_str());
+          }
+          ImGui::PopID();
+
+          iconDrawCount++;
+          float lastButtonX2 = ImGui::GetItemRectMax().x;
+          float nextButtonX2 = lastButtonX2 + style.ItemSpacing.x + 48;
+          if (nextButtonX2 < windowVisibleX2)
+            ImGui::SameLine();
+        }
+      }
+      
+      if (iconDrawCount == 0 && isSearching) {
+          ImGui::Text("No icons match your search.");
+      }
+
       ImGui::EndChild();
     }
     ImGui::EndPopup();
@@ -516,9 +543,20 @@ void DrawLibraryManager(UIState &uiState) {
 
     // --- MIDDLE COLUMN: Icon Grid ---
     ImGui::BeginChild("LibraryGrid", ImVec2(500, 0), true);
-    if (selectedCatIdx < (int)categories.size()) {
-      AssetManager::Get().LoadCategoryTextures(selectedCatIdx);
-      auto &cat = categories[selectedCatIdx];
+    
+    bool isSearching = (searchBuf[0] != '\0');
+    std::string searchStr = searchBuf;
+    if (isSearching) {
+      std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                     ::tolower);
+    }
+
+    int startCat = isSearching ? 0 : selectedCatIdx;
+    int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
+
+    for (int catIdx = startCat; catIdx < endCat; catIdx++) {
+      auto &cat = categories[catIdx];
+      bool catTexturesLoaded = false;
 
       float windowVisibleX2 =
           ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
@@ -527,28 +565,35 @@ void DrawLibraryManager(UIState &uiState) {
         Icon &icon = cat.icons[i];
 
         // Filter by search
-        if (searchBuf[0] != '\0') {
-          std::string searchStr = searchBuf;
-          std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
-                         ::tolower);
+        if (isSearching) {
           std::string iconName = icon.name;
           std::transform(iconName.begin(), iconName.end(), iconName.begin(),
                          ::tolower);
+          std::string custName = icon.customName;
+          std::transform(custName.begin(), custName.end(), custName.begin(), ::tolower);
 
-          bool match = (iconName.find(searchStr) != std::string::npos);
-          for (const auto &t : icon.tags) {
-            std::string tag = t;
-            std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
-            if (tag.find(searchStr) != std::string::npos) {
-              match = true;
-              break;
+          bool match = (iconName.find(searchStr) != std::string::npos ||
+                        custName.find(searchStr) != std::string::npos);
+          if (!match) {
+            for (const auto &t : icon.tags) {
+              std::string tag = t;
+              std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+              if (tag.find(searchStr) != std::string::npos) {
+                match = true;
+                break;
+              }
             }
           }
           if (!match)
             continue;
         }
 
-        ImGui::PushID(i);
+        if (!catTexturesLoaded) {
+            AssetManager::Get().LoadCategoryTextures(catIdx);
+            catTexturesLoaded = true;
+        }
+
+        ImGui::PushID(icon.path.c_str());
         bool isSelected = (selectedIcon == &icon);
         if (isSelected)
           ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
