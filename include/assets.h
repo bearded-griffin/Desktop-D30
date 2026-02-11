@@ -98,6 +98,7 @@ public:
 
   // Actions
   bool ImportFont(const std::string &sourcePath);
+  int ImportUserIcons(const std::vector<std::string> &sourcePaths);
 
 #ifdef UNIT_TESTING
   // --- Test Path Configuration (for Unit Tests) ---

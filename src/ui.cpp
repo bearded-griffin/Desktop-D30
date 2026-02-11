@@ -565,6 +565,17 @@ void DrawLibraryManager(UIState &uiState) {
     // --- TOP BAR: Search ---
     ImGui::InputText("Search Icons", searchBuf, sizeof(searchBuf));
     ImGui::SameLine();
+    if (ImGui::Button("Import Icons...")) {
+      auto selection = pfd::open_file("Import Icons", ".",
+                                      {"Images", "*.png *.jpg *.jpeg *.bmp"},
+                                      pfd::opt::multiselect)
+                           .result();
+      if (!selection.empty()) {
+        int count = AssetManager::Get().ImportUserIcons(selection);
+        std::cout << "[UI] Imported " << count << " icons." << std::endl;
+      }
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Close"))
       ImGui::CloseCurrentPopup();
     ImGui::Separator();

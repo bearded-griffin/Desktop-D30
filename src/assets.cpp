@@ -496,6 +496,53 @@ bool AssetManager::ImportFont(const std::string &sourcePath) {
 }
 
 /*!***************************************************
+ * @brief    Imports user icons
+ * @details  Copies selected files to assets/icons/user/Imports
+ * @param    sourcePaths const std::vector<std::string>&
+ * @return   int Number of files successfully imported
+ ****************************************************/
+int AssetManager::ImportUserIcons(const std::vector<std::string> &sourcePaths) {
+  if (sourcePaths.empty())
+    return 0;
+
+  std::string destDir = "assets/icons/user/Imports";
+  if (!fs::exists(destDir)) {
+    fs::create_directories(destDir);
+  }
+
+  int successCount = 0;
+  for (const auto &src : sourcePaths) {
+    if (!fs::exists(src))
+      continue;
+
+    fs::path srcPath(src);
+    std::string filename = srcPath.filename().string();
+    fs::path destPath = fs::path(destDir) / filename;
+
+    // Handle duplicate names by appending a counter
+    int counter = 1;
+    while (fs::exists(destPath)) {
+      std::string stem = srcPath.stem().string();
+      std::string ext = srcPath.extension().string();
+      destPath = fs::path(destDir) / (stem + "_" + std::to_string(counter++) + ext);
+    }
+
+    try {
+      fs::copy_file(srcPath, destPath);
+      successCount++;
+    } catch (const std::exception &e) {
+      std::cerr << "[Assets] Failed to import " << filename << ": " << e.what()
+                << std::endl;
+    }
+  }
+
+  if (successCount > 0) {
+    RefreshLibrary(""); // Refresh to show new files
+  }
+  return successCount;
+}
+
+/*!***************************************************
  * @brief    Rebuilds the border library
  * @details  Reads the file system to see if there are
  * any borders that are available for use.
