@@ -223,6 +223,74 @@ void AssetManager::UpdateIconMetadata(const std::string &path,
 }
 
 /*!***************************************************
+ * @brief    Prepares the load queue
+ * @details  Flattens all icons into a single list
+ * so we can load them incrementally.
+ * @return   void
+ ****************************************************/
+void AssetManager::InitializeLoadQueue() {
+  loadQueue.clear();
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id == 0) { // Only queue unloaded ones
+        loadQueue.push_back(&icon);
+      }
+    }
+  }
+  for (auto &cat : borderCategories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id == 0) {
+        loadQueue.push_back(&icon);
+      }
+    }
+  }
+  totalToLoad = loadQueue.size();
+  currentLoadIndex = 0;
+}
+
+/*!***************************************************
+ * @brief    Loads a batch of icons
+ * @details  Loads 'batchSize' textures then returns.
+ * @param    batchSize int
+ * @return   bool True if there is more to load
+ ****************************************************/
+bool AssetManager::ProcessLoadQueue(int batchSize) {
+  if (currentLoadIndex >= totalToLoad)
+    return false;
+
+  for (int i = 0; i < batchSize; i++) {
+    if (currentLoadIndex >= totalToLoad)
+      break;
+
+    Icon *icon = loadQueue[currentLoadIndex];
+    if (icon && icon->thumbnail.id == 0) {
+      Image img = LoadImage(icon->path.c_str());
+      if (img.width > 64 || img.height > 64) {
+        ImageResize(&img, 64, 64);
+      }
+      icon->thumbnail = LoadTextureFromImage(img);
+      UnloadImage(img);
+    }
+    currentLoadIndex++;
+  }
+  return currentLoadIndex < totalToLoad;
+}
+
+float AssetManager::GetLoadProgress() {
+  if (totalToLoad == 0)
+    return 1.0f;
+  return (float)currentLoadIndex / (float)totalToLoad;
+}
+
+std::string AssetManager::GetCurrentLoadItem() {
+  if (currentLoadIndex < totalToLoad) {
+    fs::path p(loadQueue[currentLoadIndex]->path);
+    return "Loading " + p.filename().string();
+  }
+  return "Ready!";
+}
+
+/*!***************************************************
  * @brief    Loads Thumbnail of icon
  * @details  Creates the icons thumbnail as a preview
  * in the Icon Library.

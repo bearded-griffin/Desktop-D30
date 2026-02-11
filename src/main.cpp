@@ -25,6 +25,7 @@
 #include "rendering.h"
 #include "ui.h"
 #include "utils.h"
+#include "assets.h"
 
 int main() {
   Camera2D camera;
@@ -36,6 +37,18 @@ int main() {
   UI::InitializeUI();
 
   Utils::LoadSettings(Utils::appSettings);
+
+  // --- SPLASH SCREEN LOADING LOOP ---
+  AssetManager::Get().InitializeLoadQueue();
+  
+  bool loading = true;
+  while (!WindowShouldClose() && loading) {
+      // Process a small batch of icons per frame
+      // 10 icons per frame is a good balance between load speed and framerate
+      loading = AssetManager::Get().ProcessLoadQueue(10);
+      
+      UI::DrawSplashScreen();
+  }
 
   CAMERA::InitializeCamera(&SCREEN_WIDTH, &SCREEN_HEIGHT, &camera,
                            &currentProject);

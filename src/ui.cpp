@@ -226,6 +226,47 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
   }
 }
 
+void DrawSplashScreen() {
+  BeginDrawing();
+  ClearBackground(RAYWHITE);
+
+  int screenW = GetScreenWidth();
+  int screenH = GetScreenHeight();
+
+  // Draw Logo/Title
+  const char *title = "Desktop-D30";
+  int fontSize = 60;
+  int textW = MeasureText(title, fontSize);
+  DrawText(title, (screenW - textW) / 2, screenH / 2 - 100, fontSize, DARKGRAY);
+
+  // Draw Progress Bar
+  float progress = AssetManager::Get().GetLoadProgress();
+  int barW = 600;
+  int barH = 30;
+  int barX = (screenW - barW) / 2;
+  int barY = screenH / 2 + 50;
+
+  DrawRectangleLines(barX, barY, barW, barH, LIGHTGRAY);
+  DrawRectangle(barX + 2, barY + 2, (int)((barW - 4) * progress), barH - 4,
+                SKYBLUE);
+
+  // Fun Status Messages
+  const char *statusMsg = "Loading Icons...";
+  if (progress > 0.3f) statusMsg = "Wrangling the Angry Pixels...";
+  if (progress > 0.6f) statusMsg = "Polishing the Pixels...";
+  if (progress > 0.9f) statusMsg = "Finalizing Graphics...";
+  
+  int statusW = MeasureText(statusMsg, 24);
+  DrawText(statusMsg, (screenW - statusW) / 2, barY - 35, 24, DARKGRAY);
+
+  // Percentage Text
+  std::string percentStr = std::to_string((int)(progress * 100)) + "%";
+  int percentW = MeasureText(percentStr.c_str(), 20);
+  DrawText(percentStr.c_str(), (screenW - percentW) / 2, barY + barH + 10, 20, GRAY);
+
+  EndDrawing();
+}
+
 namespace {
 void DrawDeviceScanPopup(UIState &uiState) {
   if (uiState.triggerScanPopup) {

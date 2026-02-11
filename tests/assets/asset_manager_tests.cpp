@@ -169,4 +169,24 @@ TEST_F(AssetManagerTest, ImportFontHandlesNonExistentSource) {
   EXPECT_FALSE(AssetManager::Get().ImportFont(nonExistentPath.string()));
 }
 
+TEST_F(AssetManagerTest, LoadingPipeline_ProgressTracking) {
+  // Setup icons
+  std::ofstream(iconsBaseDir / "Category1" / "icon1.png").close();
+  std::ofstream(iconsBaseDir / "Category1" / "icon2.png").close();
+  AssetManager::Get().RefreshLibrary(iconsBaseDir.string());
+
+  AssetManager::Get().InitializeLoadQueue();
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 0.0f);
+
+  // Process batch of 1
+  bool more = AssetManager::Get().ProcessLoadQueue(1);
+  EXPECT_TRUE(more);
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 0.5f);
+
+  // Process remaining
+  more = AssetManager::Get().ProcessLoadQueue(1);
+  EXPECT_FALSE(more);
+  EXPECT_FLOAT_EQ(AssetManager::Get().GetLoadProgress(), 1.0f);
+}
+
 // Add more tests for error handling, edge cases, etc.
