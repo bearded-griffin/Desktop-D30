@@ -72,4 +72,5 @@ bool IsObjectSelected(const Project &project, int index);
 Rectangle GetObjectBounds(const LabelObject &obj);
 void ClampObjectPosition(LabelObject &obj, const LabelSize &canvasSize);
 void ValidateObjectSize(LabelObject &obj);
+void UnloadProjectObjects(Project &project);
 } // namespace OBJECTS

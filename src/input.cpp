@@ -76,6 +76,8 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
         for (int i = 0; i < 4; i++) {
           if (CheckCollisionPointCircle(mouseWorld, handlePositions[i], handleRadius)) {
             if (i == 0) { // Top-Left: Delete
+              auto &objToDelete = project.objects[state.selectedIndex];
+              if (objToDelete.texture.id != 0) UnloadTexture(objToDelete.texture);
               project.objects.erase(project.objects.begin() + state.selectedIndex);
               project.isDirty = true;
               state.selectedIndex = -1;
@@ -134,6 +136,8 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
   // Delete object
   if (state.selectedIndex != -1 &&
       (IsKeyPressed(KEY_DELETE) || IsKeyPressed(KEY_BACKSPACE))) {
+    auto &objToDelete = project.objects[state.selectedIndex];
+    if (objToDelete.texture.id != 0) UnloadTexture(objToDelete.texture);
     project.objects.erase(project.objects.begin() + state.selectedIndex);
     project.isDirty = true;
     state.selectedIndex = -1;

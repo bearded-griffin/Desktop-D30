@@ -1549,11 +1549,8 @@ void Draw(Project &project, int &selectedIndex, UIState &uiState) {
  ****************************************************/
 void CleanupApplication(Project &currentProject) {
   // Cleanup
-  for (auto &obj : currentProject.objects) {
-    if (obj.texture.id != 0) {
-      UnloadTexture(obj.texture);
-    }
-  }
+  OBJECTS::UnloadProjectObjects(currentProject);
+  AssetManager::Get().UnloadAssets();
 
   rlImGuiShutdown();
   CloseWindow();
