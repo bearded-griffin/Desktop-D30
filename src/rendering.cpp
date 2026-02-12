@@ -187,9 +187,11 @@ void RenderBarcode(const LabelObject &obj, const Color &col) {
 
   for (int i = 0; i < code.length(); i++) {
     if (code[i] == '1') {
-      DrawRectangle((int)(obj.x + (i * moduleWidth)), (int)obj.y,
-                    (int)(moduleWidth + BARCODE_MODULE_EXTRA), (int)obj.height,
-                    col);
+      float fx = obj.x + (i * moduleWidth);
+      int xStart = (int)roundf(fx);
+      int xEnd = (int)roundf(fx + moduleWidth);
+
+      DrawRectangle(xStart, (int)obj.y, xEnd - xStart, (int)obj.height, col);
     }
   }
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
@@ -338,12 +340,15 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
   for (int yModule = 0; yModule < gridSize; yModule++) {
     for (int xModule = 0; xModule < gridSize; xModule++) {
       if (qr.getModule(xModule, yModule)) {
-        DrawRectangle(
-            (int)(x + (xModule * moduleSize)),
-            (int)(y + (yModule * moduleSize)),
-            (int)(moduleSize +
-                  1), // +1 to fix tiny gaps between floating point rects
-            (int)(moduleSize + 1), color);
+        float fx = x + (xModule * moduleSize);
+        float fy = y + (yModule * moduleSize);
+        
+        int xStart = (int)roundf(fx);
+        int yStart = (int)roundf(fy);
+        int xEnd = (int)roundf(fx + moduleSize);
+        int yEnd = (int)roundf(fy + moduleSize);
+
+        DrawRectangle(xStart, yStart, xEnd - xStart, yEnd - yStart, color);
       }
     }
   }
@@ -376,9 +381,6 @@ Image RenderProjectToImage(const Project &project) {
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
-      if (obj.data.empty())
-        continue;
-
       // Manual QR Drawing for Image Buffer
       QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
       int gridSize = qr.getSize();
@@ -388,12 +390,18 @@ Image RenderProjectToImage(const Project &project) {
         for (int yModule = 0; yModule < gridSize; yModule++) {
           for (int xModule = 0; xModule < gridSize; xModule++) {
             if (qr.getModule(xModule, yModule)) {
-              int px = (int)(obj.x + (xModule * moduleSize));
-              int py = (int)(obj.y + (yModule * moduleSize));
-              int pSize = (int)(moduleSize + 1);
+              // Calculate module bounds in float for precision, then floor/ceil for integer buffer
+              float fx = obj.x + (xModule * moduleSize);
+              float fy = obj.y + (yModule * moduleSize);
+              
+              // We want to avoid gaps, but also avoid over-bleeding.
+              // Rounding to nearest integer for the start/end positions is safer for a pixel buffer.
+              int xStart = (int)roundf(fx);
+              int yStart = (int)roundf(fy);
+              int xEnd = (int)roundf(fx + moduleSize);
+              int yEnd = (int)roundf(fy + moduleSize);
 
-              // Use ImageDrawRectangle (CPU) not DrawRectangle (GPU)
-              ImageDrawRectangle(&canvas, px, py, pSize, pSize, BLACK);
+              ImageDrawRectangle(&canvas, xStart, yStart, xEnd - xStart, yEnd - yStart, BLACK);
             }
           }
         }
@@ -494,12 +502,12 @@ Image RenderProjectToImage(const Project &project) {
 
       for (int i = 0; i < code.length(); i++) {
         if (code[i] == '1') {
-          Rectangle bar = {obj.x + (i * moduleWidth), obj.y,
-                           moduleWidth +
-                               0.5f, // +0.5 to fix floating point gaps
-                           obj.height};
-          ImageDrawRectangle(&canvas, (int)bar.x, (int)bar.y, (int)bar.width,
-                             (int)bar.height, BLACK);
+          float fx = obj.x + (i * moduleWidth);
+          int xStart = (int)roundf(fx);
+          int xEnd = (int)roundf(fx + moduleWidth);
+
+          ImageDrawRectangle(&canvas, xStart, (int)obj.y, xEnd - xStart,
+                             (int)obj.height, BLACK);
         }
       }
 
