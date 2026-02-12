@@ -39,7 +39,7 @@ void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
                       const Camera2D &camera);
 
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
-                  AlignmentType type);
+                  AlignmentType type, bool relativeToCanvas = false);
 
 // Object creation functions
 LabelObject CreateTextObject(const float &x, const float &y,
