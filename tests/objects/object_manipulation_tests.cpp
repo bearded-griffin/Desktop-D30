@@ -39,12 +39,12 @@ TEST(ObjectManipulationTest, ValidateObjectSize_MinSize) {
 }
 
 TEST(ObjectManipulationTest, IsObjectSelected) {
-    Project project;
-    project.objects.push_back(OBJECTS::CreateTextObject(0, 0, "Test", 12));
+    std::vector<int> selectedIndices = {0, 2};
     
-    EXPECT_TRUE(OBJECTS::IsObjectSelected(project, 0));
-    EXPECT_FALSE(OBJECTS::IsObjectSelected(project, -1));
-    EXPECT_FALSE(OBJECTS::IsObjectSelected(project, 1));
+    EXPECT_TRUE(OBJECTS::IsObjectSelected(selectedIndices, 0));
+    EXPECT_TRUE(OBJECTS::IsObjectSelected(selectedIndices, 2));
+    EXPECT_FALSE(OBJECTS::IsObjectSelected(selectedIndices, 1));
+    EXPECT_FALSE(OBJECTS::IsObjectSelected(selectedIndices, -1));
 }
 
 TEST(ObjectManipulationTest, ValidateObjectSize_NormalSize) {

@@ -137,8 +137,17 @@ enum ResizeHandle {
   HANDLE_RIGHT
 };
 
+enum AlignmentType {
+  ALIGN_LEFT,
+  ALIGN_CENTER_H,
+  ALIGN_RIGHT,
+  ALIGN_TOP,
+  ALIGN_CENTER_V,
+  ALIGN_BOTTOM
+};
+
 struct InteractionState {
-  int selectedIndex = -1;
+  std::vector<int> selectedIndices;
   bool isDraggingObject = false;
   Vector2 dragOffset = {0, 0};
   bool isResizing = false;

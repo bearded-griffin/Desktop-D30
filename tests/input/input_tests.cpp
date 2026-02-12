@@ -1,4 +1,5 @@
 #include "input.h"
+#include "objects.h"
 #include "types.h"
 #include "raylib.h"
 #include <gtest/gtest.h>
@@ -37,13 +38,13 @@ TEST_F(InputTest, HandleInput_Selection) {
     
     INPUT::HandleInput(project, state, camera);
     
-    EXPECT_EQ(state.selectedIndex, 0);
+    EXPECT_EQ(OBJECTS::GetPrimarySelection(state.selectedIndices), 0);
     EXPECT_TRUE(state.isDraggingObject);
 }
 
 TEST_F(InputTest, HandleInput_Deletion) {
     project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
-    state.selectedIndex = 0;
+    state.selectedIndices = {0};
     
     // Press Delete
     SetMockKeyPressed(KEY_DELETE, true);
@@ -51,7 +52,7 @@ TEST_F(InputTest, HandleInput_Deletion) {
     INPUT::HandleInput(project, state, camera);
     
     EXPECT_TRUE(project.objects.empty());
-    EXPECT_EQ(state.selectedIndex, -1);
+    EXPECT_TRUE(state.selectedIndices.empty());
     EXPECT_TRUE(project.isDirty);
 }
 
@@ -66,7 +67,7 @@ TEST_F(InputTest, HandleInput_Zooming) {
 TEST_F(InputTest, HandleMouseInteractions_StartsResizing) {
     // A box at 10,10 size 50,50
     project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
-    state.selectedIndex = 0;
+    state.selectedIndices = {0};
     
     // Bottom-right handle position: 60, 60
     SetMockMousePosition({60, 60});
@@ -80,7 +81,7 @@ TEST_F(InputTest, HandleMouseInteractions_StartsResizing) {
 
 TEST_F(InputTest, HandleMouseInteractions_DeleteViaHandle) {
     project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
-    state.selectedIndex = 0;
+    state.selectedIndices = {0};
     
     // Top-left handle position: 10, 10
     SetMockMousePosition({10, 10});
@@ -89,12 +90,12 @@ TEST_F(InputTest, HandleMouseInteractions_DeleteViaHandle) {
     INPUT::HandleInput(project, state, camera);
     
     EXPECT_TRUE(project.objects.empty());
-    EXPECT_EQ(state.selectedIndex, -1);
+    EXPECT_TRUE(state.selectedIndices.empty());
 }
 
 TEST_F(InputTest, HandleMouseInteractions_StopDraggingOnRelease) {
     state.isDraggingObject = true;
-    state.selectedIndex = 0;
+    state.selectedIndices = {0};
     project.objects.push_back({ObjectType::ShapeRect, 10, 10, 50, 50, "Box"});
     
     SetMockMouseButtonReleased(MOUSE_LEFT_BUTTON, true);

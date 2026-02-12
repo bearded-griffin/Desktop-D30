@@ -717,7 +717,7 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
  ****************************************************/
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera, const int &selectedIndex) {
+                 const Camera2D &camera, const std::vector<int> &selectedIndices) {
 
   BeginMode2D(camera);
 
@@ -732,7 +732,8 @@ void RenderScene(Project &currentProject,
 
   // Object rendering - Use the consolidated RenderObject function
   for (int i = 0; i < currentProject.objects.size(); i++) {
-    RenderObject(currentProject.objects[i], (i == selectedIndex), camera);
+    bool isSelected = OBJECTS::IsObjectSelected(selectedIndices, i);
+    RenderObject(currentProject.objects[i], isSelected, camera);
   }
 
   EndMode2D();
