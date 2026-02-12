@@ -305,6 +305,44 @@ std::string AssetManager::GetCurrentLoadItem() {
   return "Ready!";
 }
 
+void AssetManager::UnloadAssets() {
+  // Unload Icon Textures
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id != 0) {
+        UnloadTexture(icon.thumbnail);
+        icon.thumbnail = {0};
+      }
+    }
+    cat.isLoaded = false;
+  }
+
+  // Unload Border Textures
+  for (auto &cat : borderCategories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id != 0) {
+        UnloadTexture(icon.thumbnail);
+        icon.thumbnail = {0};
+      }
+    }
+    cat.isLoaded = false;
+  }
+
+  // Unload Font Textures
+  for (auto &f : fonts) {
+    if (f.isLoaded) {
+      UnloadFont(f.font);
+      f.font = {0};
+      f.isLoaded = false;
+    }
+  }
+
+  if (defaultFont.texture.id != 0) {
+    UnloadFont(defaultFont);
+    defaultFont = {0};
+  }
+}
+
 /*!***************************************************
  * @brief    Loads Thumbnail of icon
  * @details  Creates the icons thumbnail as a preview

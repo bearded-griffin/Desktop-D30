@@ -99,6 +99,7 @@ public:
   bool ProcessLoadQueue(int batchSize = 5); // Returns false when done
   float GetLoadProgress(); // 0.0f to 1.0f
   std::string GetCurrentLoadItem(); // e.g. "Loading Office/printer.png..."
+  void UnloadAssets(); // Clean up everything
 
   // Actions
   bool ImportFont(const std::string &sourcePath);

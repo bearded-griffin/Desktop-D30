@@ -494,6 +494,16 @@ void ValidateObjectSize(LabelObject &obj) {
   }
 }
 
+void UnloadProjectObjects(Project &project) {
+  for (auto &obj : project.objects) {
+    if (obj.texture.id != 0) {
+      UnloadTexture(obj.texture);
+      obj.texture = {0};
+    }
+  }
+  project.objects.clear();
+}
+
 /*!***************************************************
  * @brief    Get the object bounds
  * @details  Takes the object passed in and returns
