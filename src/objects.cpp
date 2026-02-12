@@ -41,7 +41,7 @@ namespace OBJECTS {
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-void HandleObjectSelection(Project &project, int &selectedIndex,
+void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
                            bool &isDraggingObject, Vector2 &dragOffset,
                            const Vector2 &mouseWorld, const Camera2D &camera) {
   int clickedIndex = -1;
@@ -63,11 +63,33 @@ void HandleObjectSelection(Project &project, int &selectedIndex,
     }
   }
 
-  selectedIndex = clickedIndex;
-  if (selectedIndex != -1) {
-    isDraggingObject = true;
-    const auto &obj = project.objects[selectedIndex];
-    dragOffset = {mouseWorld.x - obj.x, mouseWorld.y - obj.y};
+  bool isShiftDown = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+
+  if (clickedIndex != -1) {
+    if (isShiftDown) {
+      // Toggle selection
+      auto it = std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex);
+      if (it != selectedIndices.end()) {
+        selectedIndices.erase(it);
+      } else {
+        selectedIndices.push_back(clickedIndex);
+      }
+    } else {
+      // If clicked index is already in selection, keep it (allows group drag)
+      if (std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex) == selectedIndices.end()) {
+        selectedIndices.clear();
+        selectedIndices.push_back(clickedIndex);
+      }
+    }
+    
+    if (!selectedIndices.empty()) {
+      isDraggingObject = true;
+      // Use the clicked object for the drag offset base
+      const auto &obj = project.objects[clickedIndex];
+      dragOffset = {mouseWorld.x - obj.x, mouseWorld.y - obj.y};
+    }
+  } else if (!isShiftDown) {
+    selectedIndices.clear();
   }
 }
 
@@ -75,7 +97,7 @@ void HandleObjectSelection(Project &project, int &selectedIndex,
  * @brief    Handles Object Resizing
  * @details
  * @param    project Project&
- * @param    selectedIndex int
+ * @param    primaryIndex int
  * @param    activeHandle ResizeHandle
  * @param    mouseWorld const Vector2&
  * @param    camera const Camera2D&
@@ -84,10 +106,10 @@ void HandleObjectSelection(Project &project, int &selectedIndex,
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-void HandleObjectResize(Project &project, const int &selectedIndex,
+void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera) {
-  auto &obj = project.objects[selectedIndex];
+  auto &obj = project.objects[primaryIndex];
   project.isDirty = true;
 
   if (obj.type == ObjectType::Line) {
@@ -188,23 +210,96 @@ void HandleObjectResize(Project &project, const int &selectedIndex,
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-void HandleObjectDrag(Project &project, const int &selectedIndex,
+void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
                       const Vector2 &mouseWorld, const Vector2 &dragOffset,
                       const Camera2D &camera) {
-  auto &obj = project.objects[selectedIndex];
-  float newX = mouseWorld.x - dragOffset.x;
-  float newY = mouseWorld.y - dragOffset.y;
+  if (selectedIndices.empty()) return;
 
-  Rectangle bounds = GetObjectBounds(obj);
+  // We need to calculate the movement delta based on the object that was actually clicked
+  // For simplicity, we assume the first in list or we'd need to pass 'clickedIndex'
+  // But our selection logic sets dragOffset relative to the 'clickedIndex'.
+  // Let's find which object matches the current dragOffset
+  int primaryIdx = selectedIndices[0];
+  // Actually, we should just calculate the delta from where the mouse is vs where it was.
+  // But dragOffset is [mouse - obj.pos]. So newPos = mouse - dragOffset.
+  
+  float targetX = mouseWorld.x - dragOffset.x;
+  float targetY = mouseWorld.y - dragOffset.y;
+  
+  float deltaX = targetX - project.objects[primaryIdx].x;
+  float deltaY = targetY - project.objects[primaryIdx].y;
+
   LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
 
-  // Clamp position within canvas bounds
-  newX = std::max(0.0f, std::min(newX, canvasSz.width - bounds.width));
-  newY = std::max(0.0f, std::min(newY, canvasSz.height - bounds.height));
+  // Group movement with boundary check
+  // 1. Calculate combined bounds
+  float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+  for (int idx : selectedIndices) {
+    Rectangle b = GetObjectBounds(project.objects[idx]);
+    minX = std::min(minX, b.x);
+    minY = std::min(minY, b.y);
+    maxX = std::max(maxX, b.x + b.width);
+    maxY = std::max(maxY, b.y + b.height);
+  }
 
-  obj.x = newX;
-  obj.y = newY;
+  // 2. Clamp delta to keep entire group inside
+  if (minX + deltaX < 0) deltaX = -minX;
+  if (minY + deltaY < 0) deltaY = -minY;
+  if (maxX + deltaX > canvasSz.width) deltaX = canvasSz.width - maxX;
+  if (maxY + deltaY > canvasSz.height) deltaY = canvasSz.height - maxY;
+
+  for (int idx : selectedIndices) {
+    project.objects[idx].x += deltaX;
+    project.objects[idx].y += deltaY;
+  }
   project.isDirty = true;
+}
+
+void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
+                  AlignmentType type) {
+  if (selectedIndices.empty()) return;
+
+  LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
+  project.isDirty = true;
+
+  if (selectedIndices.size() == 1) {
+    // Align relative to canvas
+    auto &obj = project.objects[selectedIndices[0]];
+    Rectangle b = GetObjectBounds(obj);
+    switch (type) {
+      case ALIGN_LEFT:     obj.x = 0; break;
+      case ALIGN_CENTER_H: obj.x = (canvasSz.width - b.width) / 2.0f; break;
+      case ALIGN_RIGHT:    obj.x = canvasSz.width - b.width; break;
+      case ALIGN_TOP:      obj.y = 0; break;
+      case ALIGN_CENTER_V: obj.y = (canvasSz.height - b.height) / 2.0f; break;
+      case ALIGN_BOTTOM:   obj.y = canvasSz.height - b.height; break;
+    }
+  } else {
+    // Align relative to group bounds
+    float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (int idx : selectedIndices) {
+      Rectangle b = GetObjectBounds(project.objects[idx]);
+      minX = std::min(minX, b.x);
+      minY = std::min(minY, b.y);
+      maxX = std::max(maxX, b.x + b.width);
+      maxY = std::max(maxY, b.y + b.height);
+    }
+    float centerX = (minX + maxX) / 2.0f;
+    float centerY = (minY + maxY) / 2.0f;
+
+    for (int idx : selectedIndices) {
+      auto &obj = project.objects[idx];
+      Rectangle b = GetObjectBounds(obj);
+      switch (type) {
+        case ALIGN_LEFT:     obj.x = minX; break;
+        case ALIGN_CENTER_H: obj.x = centerX - (b.width / 2.0f); break;
+        case ALIGN_RIGHT:    obj.x = maxX - b.width; break;
+        case ALIGN_TOP:      obj.y = minY; break;
+        case ALIGN_CENTER_V: obj.y = centerY - (b.height / 2.0f); break;
+        case ALIGN_BOTTOM:   obj.y = maxY - b.height; break;
+      }
+    }
+  }
 }
 
 /*!***************************************************
@@ -457,8 +552,12 @@ LabelObject CreateImageObject(const float &x, const float &y,
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-bool IsObjectSelected(const Project &project, int index) {
-  return index >= 0 && index < static_cast<int>(project.objects.size());
+bool IsObjectSelected(const std::vector<int> &selectedIndices, int index) {
+  return std::find(selectedIndices.begin(), selectedIndices.end(), index) != selectedIndices.end();
+}
+
+int GetPrimarySelection(const std::vector<int> &selectedIndices) {
+  return selectedIndices.empty() ? -1 : selectedIndices.back();
 }
 
 /*!***************************************************

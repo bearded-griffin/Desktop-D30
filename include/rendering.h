@@ -52,6 +52,6 @@ void DrawGrid(const LabelSize &currentSize);
 Image RenderProjectToImage(const Project &project);
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera, const int &selectedIndex);
+                 const Camera2D &camera, const std::vector<int> &selectedIndices);
 
 } // namespace RENDERING
