@@ -237,6 +237,11 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
         int xEnd = (int)roundf(fx + moduleWidth);
 
         DrawRectangle(xStart, (int)obj.y, xEnd - xStart, (int)obj.height, col);
+        float fx = obj.x + (i * moduleWidth);
+        int xStart = (int)roundf(fx);
+        int xEnd = (int)roundf(fx + moduleWidth);
+
+        DrawRectangle(xStart, (int)obj.y, xEnd - xStart, (int)obj.height, col);
       }
     }
     DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
@@ -608,6 +613,12 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
 
         for (int i = 0; i < code.length(); i++) {
           if (code[i] == '1') {
+            float fx = obj.x + (i * moduleWidth);
+            int xStart = (int)roundf(fx);
+            int xEnd = (int)roundf(fx + moduleWidth);
+
+            ImageDrawRectangle(&canvas, xStart, (int)obj.y, xEnd - xStart,
+                               (int)obj.height, BLACK);
             float fx = obj.x + (i * moduleWidth);
             int xStart = (int)roundf(fx);
             int xEnd = (int)roundf(fx + moduleWidth);
