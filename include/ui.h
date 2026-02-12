@@ -33,6 +33,7 @@ struct UIState {
   bool triggerLoadConfirmation = false;
   bool triggerLibraryManager = false;
   bool triggerBorderManager = false;
+  bool alignToCanvas = false;
   bool exitRequested = false;
   bool forceQuit = false;
 };

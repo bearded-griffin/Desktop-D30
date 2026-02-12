@@ -256,47 +256,44 @@ void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
 }
 
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
-                  AlignmentType type) {
+                  AlignmentType type, bool relativeToCanvas) {
   if (selectedIndices.empty()) return;
 
   LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
   project.isDirty = true;
 
-  if (selectedIndices.size() == 1) {
+  if (selectedIndices.size() == 1 || relativeToCanvas) {
     // Align relative to canvas
-    auto &obj = project.objects[selectedIndices[0]];
-    Rectangle b = GetObjectBounds(obj);
-    switch (type) {
-      case ALIGN_LEFT:     obj.x = 0; break;
-      case ALIGN_CENTER_H: obj.x = (canvasSz.width - b.width) / 2.0f; break;
-      case ALIGN_RIGHT:    obj.x = canvasSz.width - b.width; break;
-      case ALIGN_TOP:      obj.y = 0; break;
-      case ALIGN_CENTER_V: obj.y = (canvasSz.height - b.height) / 2.0f; break;
-      case ALIGN_BOTTOM:   obj.y = canvasSz.height - b.height; break;
-    }
-  } else {
-    // Align relative to group bounds
-    float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-    for (int idx : selectedIndices) {
-      Rectangle b = GetObjectBounds(project.objects[idx]);
-      minX = std::min(minX, b.x);
-      minY = std::min(minY, b.y);
-      maxX = std::max(maxX, b.x + b.width);
-      maxY = std::max(maxY, b.y + b.height);
-    }
-    float centerX = (minX + maxX) / 2.0f;
-    float centerY = (minY + maxY) / 2.0f;
-
     for (int idx : selectedIndices) {
       auto &obj = project.objects[idx];
       Rectangle b = GetObjectBounds(obj);
       switch (type) {
-        case ALIGN_LEFT:     obj.x = minX; break;
-        case ALIGN_CENTER_H: obj.x = centerX - (b.width / 2.0f); break;
-        case ALIGN_RIGHT:    obj.x = maxX - b.width; break;
-        case ALIGN_TOP:      obj.y = minY; break;
-        case ALIGN_CENTER_V: obj.y = centerY - (b.height / 2.0f); break;
-        case ALIGN_BOTTOM:   obj.y = maxY - b.height; break;
+        case ALIGN_LEFT:     obj.x = 0; break;
+        case ALIGN_CENTER_H: obj.x = (canvasSz.width - b.width) / 2.0f; break;
+        case ALIGN_RIGHT:    obj.x = canvasSz.width - b.width; break;
+        case ALIGN_TOP:      obj.y = 0; break;
+        case ALIGN_CENTER_V: obj.y = (canvasSz.height - b.height) / 2.0f; break;
+        case ALIGN_BOTTOM:   obj.y = canvasSz.height - b.height; break;
+      }
+    }
+  } else {
+    // Align relative to the first selected object (anchor)
+    auto &anchor = project.objects[selectedIndices[0]];
+    Rectangle anchorBounds = GetObjectBounds(anchor);
+    
+    float anchorCenterX = anchorBounds.x + anchorBounds.width / 2.0f;
+    float anchorCenterY = anchorBounds.y + anchorBounds.height / 2.0f;
+
+    for (int i = 1; i < (int)selectedIndices.size(); ++i) {
+      auto &obj = project.objects[selectedIndices[i]];
+      Rectangle b = GetObjectBounds(obj);
+      switch (type) {
+        case ALIGN_LEFT:     obj.x = anchorBounds.x; break;
+        case ALIGN_CENTER_H: obj.x = anchorCenterX - (b.width / 2.0f); break;
+        case ALIGN_RIGHT:    obj.x = anchorBounds.x + anchorBounds.width - b.width; break;
+        case ALIGN_TOP:      obj.y = anchorBounds.y; break;
+        case ALIGN_CENTER_V: obj.y = anchorCenterY - (b.height / 2.0f); break;
+        case ALIGN_BOTTOM:   obj.y = anchorBounds.y + anchorBounds.height - b.height; break;
       }
     }
   }
