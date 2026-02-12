@@ -26,6 +26,7 @@
 #include "ui.h"
 #include "utils.h"
 #include "assets.h"
+#include "rlImGui.h"
 
 int main() {
   Camera2D camera;
@@ -46,7 +47,9 @@ int main() {
       // 10 icons per frame is a good balance between load speed and framerate
       loading = AssetManager::Get().ProcessLoadQueue(10);
       
+      BeginDrawing();
       UI::DrawSplashScreen();
+      EndDrawing();
   }
 
   CAMERA::InitializeCamera(&SCREEN_WIDTH, &SCREEN_HEIGHT, &camera,
@@ -59,9 +62,16 @@ int main() {
     UI::UpdateWindowTitle(currentProject);
     CAMERA::UpdateCamera(camera, currentProject);
 
+    BeginDrawing();
+    ClearBackground(Utils::appSettings.darkTheme ? Color{40, 40, 40, 255} : RAYWHITE);
+
+    rlImGuiBegin();
     INPUT::HandleInput(currentProject, state, camera);
-    RENDERING::RenderScene(currentProject, state, camera, state.selectedIndex);
-    UI::Draw(currentProject, state.selectedIndex, uiState);
+    RENDERING::RenderScene(currentProject, state, camera, state.selectedIndices);
+    UI::Draw(currentProject, state.selectedIndices, uiState);
+    rlImGuiEnd();
+
+    EndDrawing();
   }
 
   Utils::SaveSettings(Utils::appSettings);

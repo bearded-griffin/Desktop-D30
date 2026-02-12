@@ -99,6 +99,7 @@ public:
   bool ProcessLoadQueue(int batchSize = 5); // Returns false when done
   float GetLoadProgress(); // 0.0f to 1.0f
   std::string GetCurrentLoadItem(); // e.g. "Loading Office/printer.png..."
+  void UnloadAssets(); // Clean up everything
 
   // Actions
   bool ImportFont(const std::string &sourcePath);
@@ -127,7 +128,7 @@ public:
 private:
   AssetManager() {
     RefreshLibrary("");
-    RefreshBorders("assets/borders");
+    RefreshBorders("");
     RefreshFonts({}, {}); // System fonts will be added in RefreshFonts
   }
   std::vector<IconCategory> categories;
@@ -135,6 +136,7 @@ private:
   Font defaultFont = {0};
   std::vector<FontAsset>
       fonts; // Combined list of all fonts (system + user) for easy access
+  std::map<std::string, FontAsset *> fontMap; // For fast lookup
   std::vector<FontAsset>
       systemFonts; // Separate list for system fonts to avoid confusion
   std::vector<FontAsset>

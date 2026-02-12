@@ -39,6 +39,7 @@ static Rectangle g_lastDrawRectangleRec = {0,0,0,0};
 
 static int g_DrawRectangleLinesCount = 0;
 static int g_DrawCircleCount = 0;
+static int g_DrawTextureProCount = 0;
 
 // --- Helper Functions to Reset/Check State ---
 void ResetMockState() {
@@ -73,6 +74,7 @@ void ResetMockState() {
     
     g_DrawRectangleLinesCount = 0;
     g_DrawCircleCount = 0;
+    g_DrawTextureProCount = 0;
 }
 
 void SetMockMouseDelta(Vector2 delta) { g_mockMouseDelta = delta; }
@@ -106,6 +108,7 @@ float GetLastDrawRingRadiusOuter() { return g_lastDrawRingRadiusOuter; }
 int GetDrawRectangleCount() { return g_DrawRectangleCount; }
 int GetDrawRectangleLinesCount() { return g_DrawRectangleLinesCount; }
 int GetDrawCircleCount() { return g_DrawCircleCount; }
+int GetDrawTextureProCount() { return g_DrawTextureProCount; }
 
 
 extern "C" {
@@ -208,7 +211,9 @@ extern "C" {
     }
 
     // --- Texture / Image Wraps ---
-    void __wrap_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint) {}
+    void __wrap_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint) {
+        g_DrawTextureProCount++;
+    }
 
     Color __wrap_GetColor(unsigned int hexValue) { return {0,0,0,255}; }
     Color __wrap_Fade(Color color, float alpha) { return color; }

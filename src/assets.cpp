@@ -305,6 +305,44 @@ std::string AssetManager::GetCurrentLoadItem() {
   return "Ready!";
 }
 
+void AssetManager::UnloadAssets() {
+  // Unload Icon Textures
+  for (auto &cat : categories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id != 0) {
+        UnloadTexture(icon.thumbnail);
+        icon.thumbnail = {0};
+      }
+    }
+    cat.isLoaded = false;
+  }
+
+  // Unload Border Textures
+  for (auto &cat : borderCategories) {
+    for (auto &icon : cat.icons) {
+      if (icon.thumbnail.id != 0) {
+        UnloadTexture(icon.thumbnail);
+        icon.thumbnail = {0};
+      }
+    }
+    cat.isLoaded = false;
+  }
+
+  // Unload Font Textures
+  for (auto &f : fonts) {
+    if (f.isLoaded) {
+      UnloadFont(f.font);
+      f.font = {0};
+      f.isLoaded = false;
+    }
+  }
+
+  if (defaultFont.texture.id != 0) {
+    UnloadFont(defaultFont);
+    defaultFont = {0};
+  }
+}
+
 /*!***************************************************
  * @brief    Loads Thumbnail of icon
  * @details  Creates the icons thumbnail as a preview
@@ -439,6 +477,12 @@ void AssetManager::RefreshFonts(
 
   fonts.insert(fonts.end(), userFonts.begin(), userFonts.end());
   fonts.insert(fonts.end(), systemFonts.begin(), systemFonts.end());
+
+  // Re-build fast lookup map
+  fontMap.clear();
+  for (auto &f : fonts) {
+    fontMap[f.name] = &f;
+  }
 }
 
 void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
@@ -491,16 +535,17 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
 Font AssetManager::GetFont(const std::string &name) {
   if (name.empty())
     return defaultFont;
-  for (auto &f : fonts) {
-    if (f.name == name) {
-      if (!f.isLoaded) {
-        f.font = LoadFontEx(f.path.c_str(), 96, 0, 0); // Load Big for quality
-        GenTextureMipmaps(&f.font.texture);
-        SetTextureFilter(f.font.texture, TEXTURE_FILTER_BILINEAR);
-        f.isLoaded = true;
-      }
-      return f.font;
+
+  auto it = fontMap.find(name);
+  if (it != fontMap.end()) {
+    FontAsset *f = it->second;
+    if (!f->isLoaded) {
+      f->font = LoadFontEx(f->path.c_str(), 96, 0, 0); // Load Big for quality
+      GenTextureMipmaps(&f->font.texture);
+      SetTextureFilter(f->font.texture, TEXTURE_FILTER_BILINEAR);
+      f->isLoaded = true;
     }
+    return f->font;
   }
   return GetFontDefault();
 }

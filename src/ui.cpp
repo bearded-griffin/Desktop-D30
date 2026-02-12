@@ -42,8 +42,8 @@ namespace UI {
 namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
-void DrawIconLibraryPopup(Project &project, UIState &uiState);
-void DrawBorderLibraryPopup(Project &project, UIState &uiState);
+void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
+void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
 void DrawLibraryManager(UIState &uiState);
 void DrawBorderManager(UIState &uiState);
 } // namespace
@@ -59,7 +59,6 @@ void DrawBorderManager(UIState &uiState);
 void InitializeUI() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Desktop-D30");
-  SetTargetFPS(60);
 
   rlImGuiSetup(true);
 }
@@ -228,7 +227,6 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
 }
 
 void DrawSplashScreen() {
-  BeginDrawing();
   ClearBackground(RAYWHITE);
 
   int screenW = GetScreenWidth();
@@ -275,8 +273,6 @@ void DrawSplashScreen() {
   DrawTextEx(f, percentStr.c_str(),
              {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
              percentFontSize, 2.0f, GRAY);
-
-  EndDrawing();
 }
 
 namespace {
@@ -373,7 +369,7 @@ void DrawBatchPrintPopup(Project &project, UIState &uiState) {
   }
 }
 
-void DrawIconLibraryPopup(Project &project, UIState &uiState) {
+void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
   if (uiState.triggerIconPopup) {
     ImGui::OpenPopup("IconLibraryPopup");
     uiState.triggerIconPopup = false;
@@ -472,16 +468,20 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
           }
 
           ImGui::PushID(icon.path.c_str());
-          if (ImGui::ImageButton("icon_btn",
-                                 (ImTextureID)(intptr_t)icon.thumbnail.id,
-                                 ImVec2(48, 48))) {
-            LabelObject obj = {ObjectType::Image, 0,  0,  60, 60,
-                               icon.path,         "", "", 0,  0xFFFFFFFF};
-            obj.data = icon.path;
-            project.objects.push_back(obj);
-            project.isDirty = true;
-            ImGui::CloseCurrentPopup();
-          }
+                    if (ImGui::ImageButton("icon_btn",
+                                           (ImTextureID)(intptr_t)icon.thumbnail.id,
+                                           ImVec2(48, 48))) {
+                      LabelObject obj = {ObjectType::Image, 0, 0, 60, 60,
+                                         icon.path, "", "", 0, 0xFFFFFFFF};
+                      obj.data = icon.path;
+                      project.objects.push_back(obj);
+                      project.isDirty = true;
+                      
+                      selectedIndices.clear();
+                      selectedIndices.push_back(project.objects.size() - 1);
+                      
+                      ImGui::CloseCurrentPopup();
+                    }
           if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s\n(Category: %s)",
                               icon.customName.empty() ? icon.name.c_str()
@@ -508,7 +508,7 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState) {
   }
 }
 
-void DrawBorderLibraryPopup(Project &project, UIState &uiState) {
+void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
   if (uiState.triggerBorderPopup) {
     ImGui::OpenPopup("BorderLibraryPopup");
     uiState.triggerBorderPopup = false;
@@ -540,25 +540,22 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState) {
       for (size_t i = 0; i < currentCat.icons.size(); i++) {
         Icon &icon = currentCat.icons[i];
         ImGui::PushID(i);
-        if (ImGui::ImageButton("border",
-                               (ImTextureID)(intptr_t)icon.thumbnail.id,
-                               ImVec2(48, 48))) {
-          LabelObject obj = {ObjectType::Image,
-                             0,
-                             0,
-                             (float)sz.width,
-                             (float)sz.height,
-                             icon.path,
-                             "",
-                             "",
-                             0,
-                             0xFFFFFFFF};
-          obj.data = icon.path;
-          project.objects.push_back(obj);
-          project.isDirty = true;
-          ImGui::CloseCurrentPopup();
-        }
-        if (ImGui::IsItemHovered()) {
+                if (ImGui::ImageButton(
+                        "border",
+                        (ImTextureID)(intptr_t)icon.thumbnail.id,
+                        ImVec2(48, 48))) {
+                  LabelObject obj = {ObjectType::Image, 0, 0, (float)sz.width,
+                                     (float)sz.height, icon.path,
+                                     "", "", 0, 0xFFFFFFFF};
+                  obj.data = icon.path;
+                            project.objects.insert(project.objects.begin(), obj);
+                            project.isDirty = true;
+                            
+                            selectedIndices.clear();
+                            selectedIndices.push_back(0); // It was inserted at the front
+                            
+                            ImGui::CloseCurrentPopup();
+                          }        if (ImGui::IsItemHovered()) {
           ImGui::SetTooltip("%s", icon.customName.empty()
                                       ? icon.name.c_str()
                                       : icon.customName.c_str());
@@ -963,7 +960,7 @@ void DrawBorderManager(UIState &uiState) {
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
-void DrawMainMenu(Project &project, UIState &uiState) {
+void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
 
   if (ImGui::BeginMainMenuBar()) {
 
@@ -1071,10 +1068,11 @@ void DrawMainMenu(Project &project, UIState &uiState) {
   }
 
   // Draw Popups
+  int primaryIdx = OBJECTS::GetPrimarySelection(selectedIndices);
   DrawDeviceScanPopup(uiState);
   DrawBatchPrintPopup(project, uiState);
-  DrawIconLibraryPopup(project, uiState);
-  DrawBorderLibraryPopup(project, uiState);
+  DrawIconLibraryPopup(project, uiState, selectedIndices);
+  DrawBorderLibraryPopup(project, uiState, selectedIndices);
   DrawLibraryManager(uiState);
   DrawBorderManager(uiState);
 }
@@ -1092,7 +1090,7 @@ void DrawMainMenu(Project &project, UIState &uiState) {
 namespace {
 // Add a forward declaration for DrawPropertiesPanel since it's used in this
 // file.
-void DrawPropertiesPanel(Project &project, int &selectedIndex,
+void DrawPropertiesPanel(Project &project, std::vector<int> &selectedIndices,
                          UIState &uiState);
 
 void DrawProjectSettings(Project &project) {
@@ -1161,7 +1159,7 @@ void DrawDataSource(Project &project) {
   }
 }
 
-void DrawObjectTree(Project &project, int &selectedIndex) {
+void DrawObjectTree(Project &project, std::vector<int> &selectedIndices) {
   ImGui::Spacing();
   ImGui::Text("Objects Tree");
   ImGui::Separator();
@@ -1207,25 +1205,48 @@ void DrawObjectTree(Project &project, int &selectedIndex) {
 
     std::string id = displayName + "##" + std::to_string(i);
 
-    if (ImGui::Selectable(id.c_str(), selectedIndex == (int)i)) {
-      selectedIndex = i;
+    bool isSelected = OBJECTS::IsObjectSelected(selectedIndices, i);
+    if (ImGui::Selectable(id.c_str(), isSelected)) {
+      if (ImGui::GetIO().KeyShift) {
+        if (isSelected) {
+          selectedIndices.erase(std::find(selectedIndices.begin(), selectedIndices.end(), (int)i));
+        } else {
+          selectedIndices.push_back((int)i);
+        }
+      } else {
+        selectedIndices.clear();
+        selectedIndices.push_back((int)i);
+      }
     }
   }
 }
 
-void DrawPropertiesPanel(Project &project, int &selectedIndex,
+void DrawPropertiesPanel(Project &project, std::vector<int> &selectedIndices,
                          UIState &uiState) {
   ImGui::Spacing();
   ImGui::Separator();
 
+  int selectedIndex = OBJECTS::GetPrimarySelection(selectedIndices);
   if (selectedIndex >= 0 && selectedIndex < (int)project.objects.size()) {
     LabelObject &obj = project.objects[selectedIndex];
-    ImGui::Text("Properties");
+    ImGui::Text("Properties (%zu selected)", selectedIndices.size());
 
-    if (ImGui::DragFloat("X", &obj.x))
+    float currentX = obj.x;
+    if (ImGui::DragFloat("X", &currentX)) {
+      float delta = currentX - obj.x;
+      for (int idx : selectedIndices) {
+        project.objects[idx].x += delta;
+      }
       project.isDirty = true;
-    if (ImGui::DragFloat("Y", &obj.y))
+    }
+    float currentY = obj.y;
+    if (ImGui::DragFloat("Y", &currentY)) {
+      float delta = currentY - obj.y;
+      for (int idx : selectedIndices) {
+        project.objects[idx].y += delta;
+      }
       project.isDirty = true;
+    }
 
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
@@ -1236,11 +1257,27 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
         if (!selection.empty())
           AssetManager::Get().ImportFont(selection[0]);
       }
-      if (ImGui::SliderFloat("Font Size", &obj.fontSize, 10.0f, 100.0f))
+      float currentSize = obj.fontSize;
+      if (ImGui::SliderFloat("Font Size", &currentSize, 10.0f, 100.0f)) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Text ||
+              project.objects[idx].type == ObjectType::Field) {
+            project.objects[idx].fontSize = currentSize;
+          }
+        }
         project.isDirty = true;
-      if (ImGui::DragFloat("Box Width", &obj.width, 1.0f, 0.0f, 1000.0f,
-                           "%.1f"))
+      }
+      float currentWidth = obj.width;
+      if (ImGui::DragFloat("Box Width", &currentWidth, 1.0f, 0.0f, 1000.0f,
+                           "%.1f")) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Text ||
+              project.objects[idx].type == ObjectType::Field) {
+            project.objects[idx].width = currentWidth;
+          }
+        }
         project.isDirty = true;
+      }
       if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Set > 0 to enable text wrapping");
 
@@ -1249,7 +1286,12 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
       if (ImGui::BeginCombo("Font", currentFont.c_str(),
                             ImGuiComboFlags_HeightLarge)) {
         if (ImGui::Selectable("Default", obj.fontName.empty())) {
-          obj.fontName = "";
+          for (int idx : selectedIndices) {
+            if (project.objects[idx].type == ObjectType::Text ||
+                project.objects[idx].type == ObjectType::Field) {
+              project.objects[idx].fontName = "";
+            }
+          }
           project.isDirty = true;
         }
 
@@ -1262,7 +1304,12 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
               hasUser = true;
             }
             if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name)) {
-              obj.fontName = f.name;
+              for (int idx : selectedIndices) {
+                if (project.objects[idx].type == ObjectType::Text ||
+                    project.objects[idx].type == ObjectType::Field) {
+                  project.objects[idx].fontName = f.name;
+                }
+              }
               project.isDirty = true;
             }
           }
@@ -1276,7 +1323,12 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
               hasSystem = true;
             }
             if (ImGui::Selectable(f.name.c_str(), obj.fontName == f.name)) {
-              obj.fontName = f.name;
+              for (int idx : selectedIndices) {
+                if (project.objects[idx].type == ObjectType::Text ||
+                    project.objects[idx].type == ObjectType::Field) {
+                  project.objects[idx].fontName = f.name;
+                }
+              }
               project.isDirty = true;
             }
           }
@@ -1285,14 +1337,46 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
       }
     } else if (obj.type == ObjectType::Border ||
                obj.type == ObjectType::ShapeRect) {
-      if (ImGui::SliderFloat("Thickness", &obj.fontSize, 1, 20))
+      float currentThick = obj.fontSize;
+      if (ImGui::SliderFloat("Thickness", &currentThick, 1, 20)) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Border ||
+              project.objects[idx].type == ObjectType::ShapeRect) {
+            project.objects[idx].fontSize = currentThick;
+          }
+        }
         project.isDirty = true;
-      if (ImGui::SliderFloat("Radius", &obj.cornerRadius, 0, 50))
+      }
+      float currentRadius = obj.cornerRadius;
+      if (ImGui::SliderFloat("Radius", &currentRadius, 0, 50)) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Border ||
+              project.objects[idx].type == ObjectType::ShapeRect) {
+            project.objects[idx].cornerRadius = currentRadius;
+          }
+        }
         project.isDirty = true;
-      if (ImGui::DragFloat("W", &obj.width))
+      }
+      float currentW = obj.width;
+      if (ImGui::DragFloat("W", &currentW)) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Border ||
+              project.objects[idx].type == ObjectType::ShapeRect) {
+            project.objects[idx].width = currentW;
+          }
+        }
         project.isDirty = true;
-      if (ImGui::DragFloat("H", &obj.height))
+      }
+      float currentH = obj.height;
+      if (ImGui::DragFloat("H", &currentH)) {
+        for (int idx : selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Border ||
+              project.objects[idx].type == ObjectType::ShapeRect) {
+            project.objects[idx].height = currentH;
+          }
+        }
         project.isDirty = true;
+      }
     } else if (obj.type == ObjectType::ShapeCircle ||
                obj.type == ObjectType::Line) {
       if (ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f))
@@ -1351,22 +1435,26 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
           obj.linkedColumn.empty() ? "[None]" : obj.linkedColumn;
       if (ImGui::BeginCombo("Link Column", currentLink.c_str())) {
         if (ImGui::Selectable("[None]", obj.linkedColumn.empty())) {
-          obj.linkedColumn = "";
+          for (int idx : selectedIndices) {
+            project.objects[idx].linkedColumn = "";
+          }
           project.isDirty = true;
         }
         for (const auto &header : project.csvHeaders) {
           bool isSelected = (obj.linkedColumn == header);
           if (ImGui::Selectable(header.c_str(), isSelected)) {
-            obj.linkedColumn = header;
-            project.isDirty = true;
-            if (!project.csvRows.empty()) {
-              for (size_t i = 0; i < project.csvHeaders.size(); i++) {
-                if (project.csvHeaders[i] == header) {
-                  obj.data = project.csvRows[0][i];
-                  break;
+            for (int idx : selectedIndices) {
+              project.objects[idx].linkedColumn = header;
+              if (!project.csvRows.empty()) {
+                for (size_t i = 0; i < project.csvHeaders.size(); i++) {
+                  if (project.csvHeaders[i] == header) {
+                    project.objects[idx].data = project.csvRows[0][i];
+                    break;
+                  }
                 }
               }
             }
+            project.isDirty = true;
           }
           if (isSelected)
             ImGui::SetItemDefaultFocus();
@@ -1384,7 +1472,9 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
                         : (obj.type == ObjectType::Image) ? "File Path"
                                                           : "Text";
     if (ImGui::InputText(label, buffer, sizeof(buffer))) {
-      obj.data = buffer;
+      for (int idx : selectedIndices) {
+        project.objects[idx].data = buffer;
+      }
       project.isDirty = true;
     }
   }
@@ -1395,13 +1485,13 @@ void DrawPropertiesPanel(Project &project, int &selectedIndex,
  * @brief    Draws the side bar
  * @details  It draws the side "Inspector" bar on the left side.
  * @param    project Project&
- * @param    selectedIndex int&
+ * @param    selectedIndices std::vector<int>&
  * @return   void
  * @note
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
-void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
+void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &uiState) {
   ImGui::Begin("Inspector", nullptr,
                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
   ImGui::SetWindowPos({0, 20}, ImGuiCond_FirstUseEver);
@@ -1409,8 +1499,28 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 
   DrawProjectSettings(project);
   DrawDataSource(project);
-  DrawObjectTree(project, selectedIndex);
-  DrawPropertiesPanel(project, selectedIndex, uiState);
+  DrawObjectTree(project, selectedIndices);
+  DrawPropertiesPanel(project, selectedIndices, uiState);
+
+  // --- Alignment Tools ---
+  if (!selectedIndices.empty()) {
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Text("Alignment");
+    ImGui::Checkbox("Align to Canvas", &uiState.alignToCanvas);
+    
+    if (ImGui::Button("L", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_LEFT, uiState.alignToCanvas);
+    ImGui::SameLine();
+    if (ImGui::Button("CH", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_CENTER_H, uiState.alignToCanvas);
+    ImGui::SameLine();
+    if (ImGui::Button("R", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_RIGHT, uiState.alignToCanvas);
+    
+    if (ImGui::Button("T", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_TOP, uiState.alignToCanvas);
+    ImGui::SameLine();
+    if (ImGui::Button("CV", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_CENTER_V, uiState.alignToCanvas);
+    ImGui::SameLine();
+    if (ImGui::Button("B", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_BOTTOM, uiState.alignToCanvas);
+  }
 
   // --- 4. Add Buttons (Grid Layout) ---
   ImGui::Spacing();
@@ -1425,14 +1535,16 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
     LabelObject obj = OBJECTS::CreateTextObject(0, 0, "Text", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
     LabelObject obj = OBJECTS::CreateFieldObject(0, 0, "{Col}", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
 
   // --- Row 2: Media ---
@@ -1440,14 +1552,16 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
     LabelObject obj = OBJECTS::CreateQRCodeObject(0, 0, 60, "www.example.com");
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
     LabelObject obj = OBJECTS::CreateBarcodeObject(50, 50, 100, 60, "12345678");
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
 
   // --- Row 3: Graphics ---
@@ -1461,9 +1575,6 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
       // Immediately load and constrain image for display
       Image img = LoadImage(obj.data.c_str());
       if (img.data != NULL) {
-        // --- CONSTRAIN IMAGE SIZE ---
-        // If image is huge, downscale it before creating a texture
-        // This prevents crashes and saves GPU memory
         const int MAX_IMPORT_SIZE = 512;
         if (img.width > MAX_IMPORT_SIZE || img.height > MAX_IMPORT_SIZE) {
           float aspect = (float)img.width / (float)img.height;
@@ -1478,15 +1589,15 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
           ImageResize(&img, newW, newH);
         }
 
-        // Set initial logical dimensions to match constrained image
         obj.width = (float)img.width;
         obj.height = (float)img.height;
 
         project.objects.push_back(obj);
         project.isDirty = true;
-        selectedIndex = project.objects.size() - 1;
+        selectedIndices.clear();
+        selectedIndices.push_back(project.objects.size() - 1);
 
-        project.objects[selectedIndex].texture = LoadTextureFromImage(img);
+        project.objects[selectedIndices.back()].texture = LoadTextureFromImage(img);
         UnloadImage(img);
       }
     }
@@ -1501,21 +1612,24 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
     LabelObject obj = OBJECTS::CreateLineObject(0, 0, 100, 0, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
     LabelObject obj = OBJECTS::CreateRectangleObject(0, 0, 50, 50, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
     LabelObject obj = OBJECTS::CreateCircleObject(0, 0, 25);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndex = project.objects.size() - 1;
+    selectedIndices.clear();
+    selectedIndices.push_back(project.objects.size() - 1);
   }
 
   // --- Row 5: Decor ---
@@ -1525,7 +1639,8 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
     LabelObject obj = OBJECTS::CreateBorderObject(4, 4, sz);
     project.objects.insert(project.objects.begin(), obj);
     project.isDirty = true;
-    selectedIndex = 0;
+    selectedIndices.clear();
+    selectedIndices.push_back(0);
   }
 
   if (ImGui::Button("Deco Border", btnSize)) {
@@ -1535,15 +1650,11 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
   ImGui::End();
 }
 
-void Draw(Project &project, int &selectedIndex, UIState &uiState) {
-  rlImGuiBegin();
-  DrawMainMenu(project, uiState);
-  DrawSidebar(project, selectedIndex, uiState);
+void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState) {
+  DrawMainMenu(project, uiState, selectedIndices);
+  DrawSidebar(project, selectedIndices, uiState);
   DrawExitConfirmation(project, uiState);
   DrawLoadConfirmation(project, uiState);
-  rlImGuiEnd();
-
-  EndDrawing();
 }
 
 /*!***************************************************
@@ -1557,11 +1668,8 @@ void Draw(Project &project, int &selectedIndex, UIState &uiState) {
  ****************************************************/
 void CleanupApplication(Project &currentProject) {
   // Cleanup
-  for (auto &obj : currentProject.objects) {
-    if (obj.texture.id != 0) {
-      UnloadTexture(obj.texture);
-    }
-  }
+  OBJECTS::UnloadProjectObjects(currentProject);
+  AssetManager::Get().UnloadAssets();
 
   rlImGuiShutdown();
   CloseWindow();

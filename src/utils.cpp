@@ -32,6 +32,7 @@
 
 #include "assets.h"
 #include "barcode.h"
+#include "objects.h"
 #include "portable-file-dialogs.h" // Native dialogs
 #include "protocol.h"
 #include "rendering.h"
@@ -106,6 +107,10 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
     try {
       nlohmann::json j;
       file >> j;
+      
+      // Clean up current textures before overwriting the project
+      OBJECTS::UnloadProjectObjects(outProject);
+
       outProject = j.get<Project>();
       outProject.isDirty = false; // A fresh load means no dirty state
       // The csvFilePath should only be set if an actual CSV is loaded, not

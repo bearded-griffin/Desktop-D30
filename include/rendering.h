@@ -33,12 +33,12 @@ struct UIState;
 namespace RENDERING {
 void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected);
-void RenderQRCode(const LabelObject &obj, const Color &col);
+void RenderQRCode(LabelObject &obj, const Color &col);
 void RenderImageObject(LabelObject &obj);
 void RenderLineObject(const LabelObject &obj, const Color &col);
 void RenderShapeRect(const LabelObject &obj, const Color &col);
 void RenderShapeCircle(const LabelObject &obj, const Color &col);
-void RenderBarcode(const LabelObject &obj, const Color &col);
+void RenderBarcode(LabelObject &obj, const Color &col);
 void RenderObject(LabelObject &obj, const bool isSelected,
                   const Camera2D &camera);
 void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera);
@@ -52,6 +52,6 @@ void DrawGrid(const LabelSize &currentSize);
 Image RenderProjectToImage(const Project &project);
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera, const int &selectedIndex);
+                 const Camera2D &camera, const std::vector<int> &selectedIndices);
 
 } // namespace RENDERING

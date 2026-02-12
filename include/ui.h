@@ -33,13 +33,14 @@ struct UIState {
   bool triggerLoadConfirmation = false;
   bool triggerLibraryManager = false;
   bool triggerBorderManager = false;
+  bool alignToCanvas = false;
   bool exitRequested = false;
   bool forceQuit = false;
 };
 
-void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState);
-void DrawMainMenu(Project &project, UIState &uiState);
-void Draw(Project &project, int &selectedIndex, UIState &uiState);
+void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
+void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
+void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
 void RequestExit(UIState &uiState);
 bool ShouldClose(const UIState &uiState);
 void ClearExitRequest(UIState &uiState);

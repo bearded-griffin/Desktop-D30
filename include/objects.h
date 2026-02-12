@@ -26,17 +26,20 @@
 
 // Object manipulation functions
 namespace OBJECTS {
-void HandleObjectSelection(Project &project, int &selectedIndex,
+void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
                            bool &isDraggingObject, Vector2 &dragOffset,
                            const Vector2 &mouseWorld, const Camera2D &camera);
 
-void HandleObjectResize(Project &project, const int &selectedIndex,
+void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera);
 
-void HandleObjectDrag(Project &project, const int &selectedIndex,
+void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
                       const Vector2 &mouseWorld, const Vector2 &dragOffset,
                       const Camera2D &camera);
+
+void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
+                  AlignmentType type, bool relativeToCanvas = false);
 
 // Object creation functions
 LabelObject CreateTextObject(const float &x, const float &y,
@@ -68,8 +71,10 @@ LabelObject CreateImageObject(const float &x, const float &y,
                               const std::string &filePath);
 
 // Object utility functions
-bool IsObjectSelected(const Project &project, int index);
+bool IsObjectSelected(const std::vector<int> &selectedIndices, int index);
+int GetPrimarySelection(const std::vector<int> &selectedIndices);
 Rectangle GetObjectBounds(const LabelObject &obj);
 void ClampObjectPosition(LabelObject &obj, const LabelSize &canvasSize);
 void ValidateObjectSize(LabelObject &obj);
+void UnloadProjectObjects(Project &project);
 } // namespace OBJECTS

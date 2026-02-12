@@ -49,8 +49,9 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
     state.isResizing = false;
     state.activeHandle = HANDLE_NONE;
 
-    if (state.selectedIndex != -1) {
-      const auto &obj = project.objects[state.selectedIndex];
+    int primaryIdx = OBJECTS::GetPrimarySelection(state.selectedIndices);
+    if (primaryIdx != -1) {
+      const auto &obj = project.objects[primaryIdx];
       if (obj.type == ObjectType::Line) {
         float handleRadius = HANDLE_RADIUS / camera.zoom;
         Vector2 start = {obj.x, obj.y};
@@ -76,9 +77,13 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
         for (int i = 0; i < 4; i++) {
           if (CheckCollisionPointCircle(mouseWorld, handlePositions[i], handleRadius)) {
             if (i == 0) { // Top-Left: Delete
-              project.objects.erase(project.objects.begin() + state.selectedIndex);
+              auto &objToDelete = project.objects[primaryIdx];
+              if (objToDelete.texture.id != 0) UnloadTexture(objToDelete.texture);
+              project.objects.erase(project.objects.begin() + primaryIdx);
               project.isDirty = true;
-              state.selectedIndex = -1;
+              
+              // Remove from selection and fix other indices
+              state.selectedIndices.clear();
               state.isDraggingObject = false;
               return; 
             }
@@ -91,7 +96,7 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
     }
 
     if (!state.isResizing) {
-      OBJECTS::HandleObjectSelection(project, state.selectedIndex,
+      OBJECTS::HandleObjectSelection(project, state.selectedIndices,
                                      state.isDraggingObject, state.dragOffset,
                                      mouseWorld, camera);
     }
@@ -104,11 +109,11 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
   }
 
-  if (state.isResizing && state.selectedIndex != -1) {
-    OBJECTS::HandleObjectResize(project, state.selectedIndex,
+  if (state.isResizing && !state.selectedIndices.empty()) {
+    OBJECTS::HandleObjectResize(project, state.selectedIndices.back(),
                                 state.activeHandle, mouseWorld, camera);
-  } else if (state.isDraggingObject && state.selectedIndex != -1) {
-    OBJECTS::HandleObjectDrag(project, state.selectedIndex, mouseWorld,
+  } else if (state.isDraggingObject && !state.selectedIndices.empty()) {
+    OBJECTS::HandleObjectDrag(project, state.selectedIndices, mouseWorld,
                               state.dragOffset, camera);
   }
 }
@@ -131,12 +136,22 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
   if (mouseHandledByUI)
     return;
 
-  // Delete object
-  if (state.selectedIndex != -1 &&
+  // Delete objects
+  if (!state.selectedIndices.empty() &&
       (IsKeyPressed(KEY_DELETE) || IsKeyPressed(KEY_BACKSPACE))) {
-    project.objects.erase(project.objects.begin() + state.selectedIndex);
+    
+    // Sort indices in descending order to delete without shifting issues
+    std::vector<int> sortedIndices = state.selectedIndices;
+    std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+
+    for (int idx : sortedIndices) {
+      auto &objToDelete = project.objects[idx];
+      if (objToDelete.texture.id != 0) UnloadTexture(objToDelete.texture);
+      project.objects.erase(project.objects.begin() + idx);
+    }
+
     project.isDirty = true;
-    state.selectedIndex = -1;
+    state.selectedIndices.clear();
     state.isDraggingObject = false;
     return;
   }

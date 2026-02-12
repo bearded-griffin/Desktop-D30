@@ -23,6 +23,7 @@ float GetLastDrawRingRadiusOuter();
 int GetDrawRectangleCount();
 int GetDrawRectangleLinesCount();
 int GetDrawCircleCount();
+int GetDrawTextureProCount();
 
 
 class RenderingTest : public ::testing::Test {
@@ -93,8 +94,9 @@ TEST_F(RenderingTest, RenderBarcode_DrawsBars) {
     
     RENDERING::RenderObject(obj, false, camera);
     
-    // Barcode drawing involves multiple DrawRectangle calls
-    EXPECT_GT(GetDrawRectangleCount(), 0);
+    // Barcode drawing now uses a cached texture
+    // We'll update mocks to track DrawTexturePro
+    EXPECT_EQ(GetDrawTextureProCount(), 1);
     // And an outline
     EXPECT_EQ(GetDrawRectangleLinesCount(), 1);
 }
