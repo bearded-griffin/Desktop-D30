@@ -439,6 +439,12 @@ void AssetManager::RefreshFonts(
 
   fonts.insert(fonts.end(), userFonts.begin(), userFonts.end());
   fonts.insert(fonts.end(), systemFonts.begin(), systemFonts.end());
+
+  // Re-build fast lookup map
+  fontMap.clear();
+  for (auto &f : fonts) {
+    fontMap[f.name] = &f;
+  }
 }
 
 void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
@@ -491,16 +497,17 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
 Font AssetManager::GetFont(const std::string &name) {
   if (name.empty())
     return defaultFont;
-  for (auto &f : fonts) {
-    if (f.name == name) {
-      if (!f.isLoaded) {
-        f.font = LoadFontEx(f.path.c_str(), 96, 0, 0); // Load Big for quality
-        GenTextureMipmaps(&f.font.texture);
-        SetTextureFilter(f.font.texture, TEXTURE_FILTER_BILINEAR);
-        f.isLoaded = true;
-      }
-      return f.font;
+
+  auto it = fontMap.find(name);
+  if (it != fontMap.end()) {
+    FontAsset *f = it->second;
+    if (!f->isLoaded) {
+      f->font = LoadFontEx(f->path.c_str(), 96, 0, 0); // Load Big for quality
+      GenTextureMipmaps(&f->font.texture);
+      SetTextureFilter(f->font.texture, TEXTURE_FILTER_BILINEAR);
+      f->isLoaded = true;
     }
+    return f->font;
   }
   return GetFontDefault();
 }

@@ -59,7 +59,6 @@ void DrawBorderManager(UIState &uiState);
 void InitializeUI() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Desktop-D30");
-  SetTargetFPS(60);
 
   rlImGuiSetup(true);
 }
@@ -228,7 +227,6 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
 }
 
 void DrawSplashScreen() {
-  BeginDrawing();
   ClearBackground(RAYWHITE);
 
   int screenW = GetScreenWidth();
@@ -275,8 +273,6 @@ void DrawSplashScreen() {
   DrawTextEx(f, percentStr.c_str(),
              {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
              percentFontSize, 2.0f, GRAY);
-
-  EndDrawing();
 }
 
 namespace {
@@ -1536,14 +1532,10 @@ void DrawSidebar(Project &project, int &selectedIndex, UIState &uiState) {
 }
 
 void Draw(Project &project, int &selectedIndex, UIState &uiState) {
-  rlImGuiBegin();
   DrawMainMenu(project, uiState);
   DrawSidebar(project, selectedIndex, uiState);
   DrawExitConfirmation(project, uiState);
   DrawLoadConfirmation(project, uiState);
-  rlImGuiEnd();
-
-  EndDrawing();
 }
 
 /*!***************************************************

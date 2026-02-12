@@ -94,6 +94,8 @@ struct LabelObject {
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
+  std::string lastData = "";      // For cache tracking
+  unsigned int lastColor = 0;     // For cache tracking
 };
 
 struct AppSettings {
