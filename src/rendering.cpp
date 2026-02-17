@@ -14,9 +14,7 @@
 /*!***************************************************
  * @file     src/rendering.cpp
  * @brief    Handles all rendering functionality
- * @details  Has an Object factory to draw the different
- * objects and the ability to render the entire canvas
- * to the format that is needed to print the label.
+ * @details
  * @note
  * @date     2026.02.03
  * @author   bearded.griffin
@@ -26,12 +24,16 @@
 #include "assets.h"
 #include "barcode.h"
 #include "objects.h"
-#include "qrcodegen.hpp"
+#include "raylib.h"
+#include "types.h"
 #include "utils.h"
 #include <algorithm>
+#include <cmath>
+#include <qrcodegen.hpp>
+#include <sstream>
+#include <vector>
 
-using namespace qrcodegen;
-
+using qrcodegen::QrCode;
 
 namespace RENDERING {
 
@@ -70,14 +72,17 @@ void RenderTextObject(const LabelObject &obj, const Color &col,
  * @author   bearded.griffin
  ****************************************************/
 void RenderQRCode(LabelObject &obj, const Color &col) {
-  if (obj.texture.id == 0 || obj.data != obj.lastData || obj.colorHex != obj.lastColor) {
-    if (obj.texture.id != 0) UnloadTexture(obj.texture);
-    
+  if (obj.texture.id == 0 || obj.data != obj.lastData ||
+      obj.colorHex != obj.lastColor) {
+    if (obj.texture.id != 0)
+      UnloadTexture(obj.texture);
+
     // Generate a high-quality QR image for the UI
     // We use a fixed size for the cache texture to keep it sharp
-    int cacheSize = 256; 
+    int cacheSize = 256;
+
     Image qrImg = GenImageColor(cacheSize, cacheSize, BLANK);
-    
+
     // Manual QR Drawing to the Image
     QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
     int gridSize = qr.getSize();
@@ -86,8 +91,9 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
       for (int yModule = 0; yModule < gridSize; yModule++) {
         for (int xModule = 0; xModule < gridSize; xModule++) {
           if (qr.getModule(xModule, yModule)) {
-            ImageDrawRectangle(&qrImg, (int)(xModule * moduleSize), (int)(yModule * moduleSize), 
-                               (int)moduleSize + 1, (int)moduleSize + 1, col);
+            ImageDrawRectangle(&qrImg, (int)(xModule * moduleSize),
+                               (int)(yModule * moduleSize), (int)moduleSize + 1,
+                               (int)moduleSize + 1, col);
           }
         }
       }
@@ -97,8 +103,8 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
     obj.lastData = obj.data;
     obj.lastColor = obj.colorHex;
   }
-
-  DrawTexturePro(obj.texture, {0, 0, (float)obj.texture.width, (float)obj.texture.height},
+  DrawTexturePro(obj.texture,
+                 {0, 0, (float)obj.texture.width, (float)obj.texture.height},
                  {obj.x, obj.y, obj.width, obj.width}, {0, 0}, 0.0f, WHITE);
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.width, Fade(GRAY, 0.3f));
 }
@@ -163,24 +169,15 @@ void RenderLineObject(const LabelObject &obj, const Color &col) {
  * @author   bearded.griffin
  ****************************************************/
 void RenderShapeRect(const LabelObject &obj, const Color &col) {
-  Rectangle rec = {obj.x, obj.y, obj.width, obj.height};
-  float minDim = std::min(rec.width, rec.height);
-  float roundness = (minDim > 0) ? (obj.cornerRadius / (minDim / 2.0f)) : 0.0f;
-  roundness = std::clamp(roundness, 0.0f, 1.0f);
+  DrawRectangleRounded({obj.x, obj.y, obj.width, obj.height},
+                       obj.cornerRadius / (obj.width / 2.0f), 10, col);
 
-  DrawRectangleRounded(rec, roundness, 10, col);
-
-  if (obj.type == ObjectType::Border) {
-    float thick = obj.fontSize;
-    if (thick * 2 < rec.width && thick * 2 < rec.height) {
-      Rectangle inner = {rec.x + thick, rec.y + thick, rec.width - (thick * 2),
-                         rec.height - (thick * 2)};
-      float innerRadius = std::max(0.0f, obj.cornerRadius - thick);
-      float innerMin = std::min(inner.width, inner.height);
-      float innerRoundness =
-          (innerMin > 0) ? (innerRadius / (innerMin / 2.0f)) : 0.0f;
-      DrawRectangleRounded(inner, innerRoundness, 10, WHITE);
-    }
+  float thick = obj.fontSize;
+  if (thick > 0) {
+    DrawRectangleRounded(
+        {obj.x + thick, obj.y + thick, obj.width - (thick * 2),
+         obj.height - (thick * 2)},
+        obj.cornerRadius / ((obj.width - thick * 2) / 2.0f), 10, WHITE);
   }
 }
 
@@ -211,29 +208,37 @@ void RenderShapeCircle(const LabelObject &obj, const Color &col) {
  * @author   bearded.griffin
  ****************************************************/
 void RenderBarcode(LabelObject &obj, const Color &col) {
-  if (obj.texture.id == 0 || obj.data != obj.lastData || obj.colorHex != obj.lastColor) {
-    if (obj.texture.id != 0) UnloadTexture(obj.texture);
+  if (obj.texture.id == 0 || obj.data != obj.lastData ||
+      obj.colorHex != obj.lastColor) {
+    if (obj.texture.id != 0)
+      UnloadTexture(obj.texture);
 
     std::string code = Barcode::Encode128(obj.data);
-    int cacheW = 512;
-    int cacheH = 128;
-    Image barImg = GenImageColor(cacheW, cacheH, BLANK);
-    
-    float moduleWidth = (float)cacheW / (float)code.length();
-    for (int i = 0; i < code.length(); i++) {
-      if (code[i] == '1') {
-        ImageDrawRectangle(&barImg, (int)(i * moduleWidth), 0, 
-                           (int)moduleWidth + 1, cacheH, col);
+    if (!code.empty()) {
+      // Use a high-resolution cache for the barcode
+      int cacheWidth = 512;
+      int cacheHeight = 64;
+      Image barImg = GenImageColor(cacheWidth, cacheHeight, BLANK);
+
+      float moduleWidth = (float)cacheWidth / (float)code.length();
+      for (int i = 0; i < code.length(); i++) {
+        if (code[i] == '1') {
+          ImageDrawRectangle(&barImg, (int)(i * moduleWidth), 0,
+                             (int)moduleWidth + 1, cacheHeight, col);
+        }
       }
+      obj.texture = LoadTextureFromImage(barImg);
+      UnloadImage(barImg);
     }
-    obj.texture = LoadTextureFromImage(barImg);
-    UnloadImage(barImg);
     obj.lastData = obj.data;
     obj.lastColor = obj.colorHex;
   }
 
-  DrawTexturePro(obj.texture, {0, 0, (float)obj.texture.width, (float)obj.texture.height},
-                 {obj.x, obj.y, obj.width, obj.height}, {0, 0}, 0.0f, WHITE);
+  if (obj.texture.id != 0) {
+    DrawTexturePro(obj.texture,
+                   {0, 0, (float)obj.texture.width, (float)obj.texture.height},
+                   {obj.x, obj.y, obj.width, obj.height}, {0, 0}, 0.0f, WHITE);
+  }
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
 }
 
@@ -308,10 +313,10 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
 
     float handleRadius = HANDLE_RADIUS / camera.zoom;
     Vector2 handles[] = {
-        {bounds.x, bounds.y},                                       // Top-Left
-        {bounds.x + bounds.width, bounds.y},                        // Top-Right
-        {bounds.x, bounds.y + bounds.height},                       // Bottom-Left
-        {bounds.x + bounds.width, bounds.y + bounds.height}         // Bottom-Right
+        {bounds.x, bounds.y},                                // Top-Left
+        {bounds.x + bounds.width, bounds.y},                 // Top-Right
+        {bounds.x, bounds.y + bounds.height},                // Bottom-Left
+        {bounds.x + bounds.width, bounds.y + bounds.height}  // Bottom-Right
     };
 
     for (int i = 0; i < 4; i++) {
@@ -321,24 +326,31 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
       if (i == 0) { // Top-Left: Delete (X)
         float xSize = handleRadius * 0.6f;
         DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
-                   {handles[i].x + xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x + xSize, handles[i].y + xSize},
+                   2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
-                   {handles[i].x - xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x - xSize, handles[i].y + xSize},
+                   2.0f / camera.zoom, WHITE);
       } else if (i == 3) { // Bottom-Right: Resize (Arrows)
         float aSize = handleRadius * 0.6f;
         // Main diagonal line
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x + aSize, handles[i].y + aSize},
+                   2.0f / camera.zoom, WHITE);
         // Arrow heads
         DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize - aSize/2, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
+                   2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize - aSize/2}, 2.0f / camera.zoom, WHITE);
-        
+                   {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
+                   2.0f / camera.zoom, WHITE);
+
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize + aSize/2, handles[i].y - aSize}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x - aSize + aSize / 2, handles[i].y - aSize},
+                   2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize, handles[i].y - aSize + aSize/2}, 2.0f / camera.zoom, WHITE);
+                   {handles[i].x - aSize, handles[i].y - aSize + aSize / 2},
+                   2.0f / camera.zoom, WHITE);
       }
     }
   }
@@ -372,7 +384,6 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
   if (gridSize <= 0)
     return;
 
-  // Size of one little square (module)
   float moduleSize = size / (float)gridSize;
 
   // 3. Draw the modules
@@ -380,12 +391,15 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
   for (int yModule = 0; yModule < gridSize; yModule++) {
     for (int xModule = 0; xModule < gridSize; xModule++) {
       if (qr.getModule(xModule, yModule)) {
-        DrawRectangle(
-            (int)(x + (xModule * moduleSize)),
-            (int)(y + (yModule * moduleSize)),
-            (int)(moduleSize +
-                  1), // +1 to fix tiny gaps between floating point rects
-            (int)(moduleSize + 1), color);
+        float fx = x + (xModule * moduleSize);
+        float fy = y + (yModule * moduleSize);
+
+        int xStart = (int)roundf(fx);
+        int yStart = (int)roundf(fy);
+        int xEnd = (int)roundf(fx + moduleSize);
+        int yEnd = (int)roundf(fy + moduleSize);
+
+        DrawRectangle(xStart, yStart, xEnd - xStart, yEnd - yStart, color);
       }
     }
   }
@@ -418,9 +432,6 @@ Image RenderProjectToImage(const Project &project) {
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
-      if (obj.data.empty())
-        continue;
-
       // Manual QR Drawing for Image Buffer
       QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
       int gridSize = qr.getSize();
@@ -430,12 +441,21 @@ Image RenderProjectToImage(const Project &project) {
         for (int yModule = 0; yModule < gridSize; yModule++) {
           for (int xModule = 0; xModule < gridSize; xModule++) {
             if (qr.getModule(xModule, yModule)) {
-              int px = (int)(obj.x + (xModule * moduleSize));
-              int py = (int)(obj.y + (yModule * moduleSize));
-              int pSize = (int)(moduleSize + 1);
+              // Calculate module bounds in float for precision, then
+              // floor/ceil for integer buffer
+              float fx = obj.x + (xModule * moduleSize);
+              float fy = obj.y + (yModule * moduleSize);
 
-              // Use ImageDrawRectangle (CPU) not DrawRectangle (GPU)
-              ImageDrawRectangle(&canvas, px, py, pSize, pSize, BLACK);
+              // We want to avoid gaps, but also avoid over-bleeding.
+              // Rounding to nearest integer for the start/end positions is
+              // safer for a pixel buffer.
+              int xStart = (int)roundf(fx);
+              int yStart = (int)roundf(fy);
+              int xEnd = (int)roundf(fx + moduleSize);
+              int yEnd = (int)roundf(fy + moduleSize);
+
+              ImageDrawRectangle(&canvas, xStart, yStart, xEnd - xStart,
+                                 yEnd - yStart, BLACK);
             }
           }
         }
@@ -450,14 +470,15 @@ Image RenderProjectToImage(const Project &project) {
         // Manual Grayscale and Thresholding with Alpha support
         Color *pixels = (Color *)srcImg.data;
         for (int i = 0; i < srcImg.width * srcImg.height; i++) {
-          // If the pixel is transparent, treat it as the white label background
+          // If the pixel is transparent, treat it as the white label
+          // background
           if (pixels[i].a < 128) {
             pixels[i] = WHITE;
           } else {
             // Grayscale conversion (weighted for better perception)
-            unsigned char gray = (unsigned char)(0.299f * pixels[i].r +
-                                                 0.587f * pixels[i].g +
-                                                 0.114f * pixels[i].b);
+            unsigned char gray =
+                (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
+                                0.114f * pixels[i].b);
 
             // Apply thresholding
             if (gray < 128) {
@@ -515,8 +536,8 @@ Image RenderProjectToImage(const Project &project) {
       // Raylib doesn't have ImageDrawCircleLines with thickness easily.
       // We can simulate it or just use a filled circle for now,
       // but let's stick to Rectangle and Line for v1 as they are most useful
-      // for labels. If you really want circles, we can use ImageDrawCircle but
-      // it's filled.
+      // for labels. If you really want circles, we can use ImageDrawCircle
+      // but it's filled.
 
       // Workaround: Draw Circle (filled black) then smaller Circle (filled
       // white)
@@ -536,18 +557,18 @@ Image RenderProjectToImage(const Project &project) {
 
       for (int i = 0; i < code.length(); i++) {
         if (code[i] == '1') {
-          Rectangle bar = {obj.x + (i * moduleWidth), obj.y,
-                           moduleWidth +
-                               0.5f, // +0.5 to fix floating point gaps
-                           obj.height};
-          ImageDrawRectangle(&canvas, (int)bar.x, (int)bar.y, (int)bar.width,
-                             (int)bar.height, BLACK);
+          float fx = obj.x + (i * moduleWidth);
+          int xStart = (int)roundf(fx);
+          int xEnd = (int)roundf(fx + moduleWidth);
+
+          ImageDrawRectangle(&canvas, xStart, (int)obj.y, xEnd - xStart,
+                             (int)obj.height, BLACK);
         }
       }
 
       // Optional: Draw text below it?
-      // Usually we just draw the bars, user can add a Text object below if they
-      // want.
+      // Usually we just draw the bars, user can add a Text object below if
+      // they want.
     }
   }
   return canvas;
@@ -576,100 +597,74 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
     return;
   }
 
-  // 1. Draw 4 Corner Circles
-  int r = (int)radius;
-  ImageDrawCircle(dst, (int)(x + r), (int)(y + r), r, col);     // Top-Left
-  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + r), r, col); // Top-Right
-  ImageDrawCircle(dst, (int)(x + r), (int)(y + h - r), r, col); // Bottom-Left
-  ImageDrawCircle(dst, (int)(x + w - r), (int)(y + h - r), r,
-                  col); // Bottom-Right
+  // Draw the main rectangles (center, top/bottom, left/right)
+  ImageDrawRectangle(dst, (int)(x + radius), (int)y, (int)(w - 2 * radius),
+                     (int)h, col);
+  ImageDrawRectangle(dst, (int)x, (int)(y + radius), (int)radius,
+                     (int)(h - 2 * radius), col);
+  ImageDrawRectangle(dst, (int)(x + w - radius), (int)(y + radius), (int)radius,
+                     (int)(h - 2 * radius), col);
 
-  // 2. Draw 2 Crossing Rectangles
-  // Horizontal bar (covers left to right, inset by radius height)
-  ImageDrawRectangle(dst, (int)x, (int)(y + r), (int)w, (int)(h - 2 * r), col);
-  // Vertical bar (covers top to bottom, inset by radius width)
-  ImageDrawRectangle(dst, (int)(x + r), (int)y, (int)(w - 2 * r), (int)h, col);
+  // Draw the 4 rounded corners
+  ImageDrawCircle(dst, (int)(x + radius), (int)(y + radius), (int)radius, col);
+  ImageDrawCircle(dst, (int)(x + w - radius), (int)(y + radius), (int)radius,
+                  col);
+  ImageDrawCircle(dst, (int)(x + radius), (int)(y + h - radius), (int)radius,
+                  col);
+  ImageDrawCircle(dst, (int)(x + w - radius), (int)(y + h - radius), (int)radius,
+                  col);
 }
 
 /*!***************************************************
- * @brief    Handles word wrapping
- * @details  Draws text inside a specific width. If width <= 0, draws normally
- * (one line). Returns the total height used (so we can auto-size the box if
- * needed).
+ * @brief    Draws a text box
+ * @details  Draws a text box and handles the word
+ * wrapping so that the text doesn't go off the canvas.
  * @param    target Image*
  * @param    font Font
  * @param    text const char*
  * @param    x float
  * @param    y float
- * @param    fontsize float
+ * @param    fontSize float
  * @param    spacing float
  * @param    tint Color
  * @param    maxWidth float
  * @return   float
  * @note
- * @date     2026.01.24
+ * @date     2026.01.20
  * @author   bearded.griffin
  ****************************************************/
 float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
                   float fontSize, float spacing, Color tint, float maxWidth) {
-  if (maxWidth <= 0) {
-    // Legacy Mode: No wrapping
-    if (target)
-      ImageDrawTextEx(target, font, text, {x, y}, fontSize, spacing, tint);
-    else
-      DrawTextEx(font, text, {x, y}, fontSize, spacing,
-                 tint); // <--- Screen Draw
-    return fontSize;
-  }
+  if (text == nullptr || strlen(text) == 0)
+    return 0;
 
-  // Wrapping Logic
-  std::string textStr = text;
+  std::string content(text);
   std::vector<std::string> words;
   std::string currentWord;
+  std::stringstream ss(content);
+  std::string word;
 
-  // 1. Split into words
-  for (char c : textStr) {
-    if (c == ' ' || c == '\n') {
-      if (!currentWord.empty())
-        words.push_back(currentWord);
-      if (c == '\n')
-        words.push_back("\n");
-      currentWord = "";
-    } else {
-      currentWord += c;
-    }
+  while (ss >> word) {
+    words.push_back(word);
   }
-  if (!currentWord.empty())
-    words.push_back(currentWord);
 
-  // 2. Build Lines
   float currentX = 0;
   float currentY = 0;
   float spaceWidth = MeasureTextEx(font, " ", fontSize, spacing).x;
 
-  for (const auto &word : words) {
-    if (word == "\n") {
-      currentY += fontSize;
-      currentX = 0;
-      continue;
-    }
-
+  for (size_t i = 0; i < words.size(); i++) {
+    std::string word = words[i];
     Vector2 wordSize = MeasureTextEx(font, word.c_str(), fontSize, spacing);
 
-    // Check if word fits
     if (currentX + wordSize.x > maxWidth && currentX > 0) {
-      // New Line
-      currentY += fontSize;
       currentX = 0;
+      currentY += fontSize;
     }
 
-    // Draw
     if (target) {
-      // Draw to Image (Printer)
       ImageDrawTextEx(target, font, word.c_str(), {x + currentX, y + currentY},
                       fontSize, spacing, tint);
     } else {
-      // Draw to Screen (Editor)
       DrawTextEx(font, word.c_str(), {x + currentX, y + currentY}, fontSize,
                  spacing, tint);
     }
@@ -695,7 +690,8 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
  ****************************************************/
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera, const std::vector<int> &selectedIndices) {
+                 const Camera2D &camera,
+                 const std::vector<int> &selectedIndices) {
 
   BeginMode2D(camera);
 
@@ -734,6 +730,5 @@ void DrawGrid(const LabelSize &currentSize) {
     DrawLine(0, y, currentSize.width, y, LIGHTGRAY);
   }
 }
-
 
 } // namespace RENDERING

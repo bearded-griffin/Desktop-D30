@@ -63,16 +63,20 @@ TEST_F(RenderingTest, RenderLineObject_DrawsLine) {
 }
 
 TEST_F(RenderingTest, RenderShapeRect_DrawsRoundedRect) {
+    // cornerRadius=5, width=50, height=40. CreateRectangleObject sets fontSize=4 (thickness)
     LabelObject obj = OBJECTS::CreateRectangleObject(20, 20, 50, 40, 5);
     
     RENDERING::RenderObject(obj, false, camera);
     
-    EXPECT_EQ(GetDrawRectangleRoundedCount(), 1);
-    Rectangle rec = GetLastDrawRectangleRoundedRec();
-    EXPECT_FLOAT_EQ(rec.x, 20);
-    EXPECT_FLOAT_EQ(rec.y, 20);
-    EXPECT_FLOAT_EQ(rec.width, 50);
-    EXPECT_FLOAT_EQ(rec.height, 40);
+    // It draws the outer rect then the inner rect (to make it hollow)
+    EXPECT_EQ(GetDrawRectangleRoundedCount(), 2);
+    Rectangle rec = GetLastDrawRectangleRoundedRec(); // This will be the inner rect
+    // Outer: {20, 20, 50, 40}
+    // Inner: {20+4, 20+4, 50-8, 40-8} -> {24, 24, 42, 32}
+    EXPECT_FLOAT_EQ(rec.x, 24);
+    EXPECT_FLOAT_EQ(rec.y, 24);
+    EXPECT_FLOAT_EQ(rec.width, 42);
+    EXPECT_FLOAT_EQ(rec.height, 32);
 }
 
 TEST_F(RenderingTest, RenderShapeCircle_DrawsRing) {
