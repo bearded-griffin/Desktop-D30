@@ -32,6 +32,7 @@
 
 using namespace qrcodegen;
 
+
 namespace RENDERING {
 
 /*!***************************************************
@@ -69,16 +70,14 @@ void RenderTextObject(const LabelObject &obj, const Color &col,
  * @author   bearded.griffin
  ****************************************************/
 void RenderQRCode(LabelObject &obj, const Color &col) {
-  if (obj.texture.id == 0 || obj.data != obj.lastData ||
-      obj.colorHex != obj.lastColor) {
-    if (obj.texture.id != 0)
-      UnloadTexture(obj.texture);
-
+  if (obj.texture.id == 0 || obj.data != obj.lastData || obj.colorHex != obj.lastColor) {
+    if (obj.texture.id != 0) UnloadTexture(obj.texture);
+    
     // Generate a high-quality QR image for the UI
     // We use a fixed size for the cache texture to keep it sharp
-    int cacheSize = 256;
+    int cacheSize = 256; 
     Image qrImg = GenImageColor(cacheSize, cacheSize, BLANK);
-
+    
     // Manual QR Drawing to the Image
     QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
     int gridSize = qr.getSize();
@@ -87,9 +86,8 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
       for (int yModule = 0; yModule < gridSize; yModule++) {
         for (int xModule = 0; xModule < gridSize; xModule++) {
           if (qr.getModule(xModule, yModule)) {
-            ImageDrawRectangle(&qrImg, (int)(xModule * moduleSize),
-                               (int)(yModule * moduleSize), (int)moduleSize + 1,
-                               (int)moduleSize + 1, col);
+            ImageDrawRectangle(&qrImg, (int)(xModule * moduleSize), (int)(yModule * moduleSize), 
+                               (int)moduleSize + 1, (int)moduleSize + 1, col);
           }
         }
       }
@@ -100,8 +98,7 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
     obj.lastColor = obj.colorHex;
   }
 
-  DrawTexturePro(obj.texture,
-                 {0, 0, (float)obj.texture.width, (float)obj.texture.height},
+  DrawTexturePro(obj.texture, {0, 0, (float)obj.texture.width, (float)obj.texture.height},
                  {obj.x, obj.y, obj.width, obj.width}, {0, 0}, 0.0f, WHITE);
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.width, Fade(GRAY, 0.3f));
 }
@@ -213,19 +210,30 @@ void RenderShapeCircle(const LabelObject &obj, const Color &col) {
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-void RenderBarcode(const LabelObject &obj, const Color &col) {
-  std::string code = Barcode::Encode128(obj.data);
-  float moduleWidth = obj.width / (float)code.length();
+void RenderBarcode(LabelObject &obj, const Color &col) {
+  if (obj.texture.id == 0 || obj.data != obj.lastData || obj.colorHex != obj.lastColor) {
+    if (obj.texture.id != 0) UnloadTexture(obj.texture);
 
-  for (int i = 0; i < code.length(); i++) {
-    if (code[i] == '1') {
-      float fx = obj.x + (i * moduleWidth);
-      int xStart = (int)roundf(fx);
-      int xEnd = (int)roundf(fx + moduleWidth);
-
-      DrawRectangle(xStart, (int)obj.y, xEnd - xStart, (int)obj.height, col);
+    std::string code = Barcode::Encode128(obj.data);
+    int cacheW = 512;
+    int cacheH = 128;
+    Image barImg = GenImageColor(cacheW, cacheH, BLANK);
+    
+    float moduleWidth = (float)cacheW / (float)code.length();
+    for (int i = 0; i < code.length(); i++) {
+      if (code[i] == '1') {
+        ImageDrawRectangle(&barImg, (int)(i * moduleWidth), 0, 
+                           (int)moduleWidth + 1, cacheH, col);
+      }
     }
+    obj.texture = LoadTextureFromImage(barImg);
+    UnloadImage(barImg);
+    obj.lastData = obj.data;
+    obj.lastColor = obj.colorHex;
   }
+
+  DrawTexturePro(obj.texture, {0, 0, (float)obj.texture.width, (float)obj.texture.height},
+                 {obj.x, obj.y, obj.width, obj.height}, {0, 0}, 0.0f, WHITE);
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
 }
 
@@ -300,10 +308,10 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
 
     float handleRadius = HANDLE_RADIUS / camera.zoom;
     Vector2 handles[] = {
-        {bounds.x, bounds.y},                               // Top-Left
-        {bounds.x + bounds.width, bounds.y},                // Top-Right
-        {bounds.x, bounds.y + bounds.height},               // Bottom-Left
-        {bounds.x + bounds.width, bounds.y + bounds.height} // Bottom-Right
+        {bounds.x, bounds.y},                                       // Top-Left
+        {bounds.x + bounds.width, bounds.y},                        // Top-Right
+        {bounds.x, bounds.y + bounds.height},                       // Bottom-Left
+        {bounds.x + bounds.width, bounds.y + bounds.height}         // Bottom-Right
     };
 
     for (int i = 0; i < 4; i++) {
@@ -313,31 +321,24 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
       if (i == 0) { // Top-Left: Delete (X)
         float xSize = handleRadius * 0.6f;
         DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
-                   {handles[i].x + xSize, handles[i].y + xSize},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x + xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
-                   {handles[i].x - xSize, handles[i].y + xSize},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x - xSize, handles[i].y + xSize}, 2.0f / camera.zoom, WHITE);
       } else if (i == 3) { // Bottom-Right: Resize (Arrows)
         float aSize = handleRadius * 0.6f;
         // Main diagonal line
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x + aSize, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
         // Arrow heads
         DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x + aSize - aSize/2, handles[i].y + aSize}, 2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
-                   2.0f / camera.zoom, WHITE);
-
+                   {handles[i].x + aSize, handles[i].y + aSize - aSize/2}, 2.0f / camera.zoom, WHITE);
+        
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize + aSize / 2, handles[i].y - aSize},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x - aSize + aSize/2, handles[i].y - aSize}, 2.0f / camera.zoom, WHITE);
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize, handles[i].y - aSize + aSize / 2},
-                   2.0f / camera.zoom, WHITE);
+                   {handles[i].x - aSize, handles[i].y - aSize + aSize/2}, 2.0f / camera.zoom, WHITE);
       }
     }
   }
@@ -379,15 +380,12 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
   for (int yModule = 0; yModule < gridSize; yModule++) {
     for (int xModule = 0; xModule < gridSize; xModule++) {
       if (qr.getModule(xModule, yModule)) {
-        float fx = x + (xModule * moduleSize);
-        float fy = y + (yModule * moduleSize);
-
-        int xStart = (int)roundf(fx);
-        int yStart = (int)roundf(fy);
-        int xEnd = (int)roundf(fx + moduleSize);
-        int yEnd = (int)roundf(fy + moduleSize);
-
-        DrawRectangle(xStart, yStart, xEnd - xStart, yEnd - yStart, color);
+        DrawRectangle(
+            (int)(x + (xModule * moduleSize)),
+            (int)(y + (yModule * moduleSize)),
+            (int)(moduleSize +
+                  1), // +1 to fix tiny gaps between floating point rects
+            (int)(moduleSize + 1), color);
       }
     }
   }
@@ -420,6 +418,9 @@ Image RenderProjectToImage(const Project &project) {
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width);
     } else if (obj.type == ObjectType::QRCode) {
+      if (obj.data.empty())
+        continue;
+
       // Manual QR Drawing for Image Buffer
       QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
       int gridSize = qr.getSize();
@@ -429,21 +430,12 @@ Image RenderProjectToImage(const Project &project) {
         for (int yModule = 0; yModule < gridSize; yModule++) {
           for (int xModule = 0; xModule < gridSize; xModule++) {
             if (qr.getModule(xModule, yModule)) {
-              // Calculate module bounds in float for precision, then floor/ceil
-              // for integer buffer
-              float fx = obj.x + (xModule * moduleSize);
-              float fy = obj.y + (yModule * moduleSize);
+              int px = (int)(obj.x + (xModule * moduleSize));
+              int py = (int)(obj.y + (yModule * moduleSize));
+              int pSize = (int)(moduleSize + 1);
 
-              // We want to avoid gaps, but also avoid over-bleeding.
-              // Rounding to nearest integer for the start/end positions is
-              // safer for a pixel buffer.
-              int xStart = (int)roundf(fx);
-              int yStart = (int)roundf(fy);
-              int xEnd = (int)roundf(fx + moduleSize);
-              int yEnd = (int)roundf(fy + moduleSize);
-
-              ImageDrawRectangle(&canvas, xStart, yStart, xEnd - xStart,
-                                 yEnd - yStart, BLACK);
+              // Use ImageDrawRectangle (CPU) not DrawRectangle (GPU)
+              ImageDrawRectangle(&canvas, px, py, pSize, pSize, BLACK);
             }
           }
         }
@@ -463,9 +455,9 @@ Image RenderProjectToImage(const Project &project) {
             pixels[i] = WHITE;
           } else {
             // Grayscale conversion (weighted for better perception)
-            unsigned char gray =
-                (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
-                                0.114f * pixels[i].b);
+            unsigned char gray = (unsigned char)(0.299f * pixels[i].r +
+                                                 0.587f * pixels[i].g +
+                                                 0.114f * pixels[i].b);
 
             // Apply thresholding
             if (gray < 128) {
@@ -544,12 +536,12 @@ Image RenderProjectToImage(const Project &project) {
 
       for (int i = 0; i < code.length(); i++) {
         if (code[i] == '1') {
-          float fx = obj.x + (i * moduleWidth);
-          int xStart = (int)roundf(fx);
-          int xEnd = (int)roundf(fx + moduleWidth);
-
-          ImageDrawRectangle(&canvas, xStart, (int)obj.y, xEnd - xStart,
-                             (int)obj.height, BLACK);
+          Rectangle bar = {obj.x + (i * moduleWidth), obj.y,
+                           moduleWidth +
+                               0.5f, // +0.5 to fix floating point gaps
+                           obj.height};
+          ImageDrawRectangle(&canvas, (int)bar.x, (int)bar.y, (int)bar.width,
+                             (int)bar.height, BLACK);
         }
       }
 
@@ -703,8 +695,7 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
  ****************************************************/
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera,
-                 const std::vector<int> &selectedIndices) {
+                 const Camera2D &camera, const std::vector<int> &selectedIndices) {
 
   BeginMode2D(camera);
 
@@ -743,5 +734,6 @@ void DrawGrid(const LabelSize &currentSize) {
     DrawLine(0, y, currentSize.width, y, LIGHTGRAY);
   }
 }
+
 
 } // namespace RENDERING
