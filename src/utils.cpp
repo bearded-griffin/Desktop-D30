@@ -112,6 +112,7 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
       OBJECTS::UnloadProjectObjects(outProject);
 
       outProject = j.get<Project>();
+      outProject.projectFilePath = dest[0]; // Update path to actual file loaded
       outProject.isDirty = false; // A fresh load means no dirty state
       // The csvFilePath should only be set if an actual CSV is loaded, not
       // by loading the project file itself.

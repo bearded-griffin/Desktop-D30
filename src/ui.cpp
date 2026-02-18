@@ -139,10 +139,10 @@ void DrawExitConfirmation(Project &project, UIState &uiState) {
 
     if (ImGui::Button("Save and Exit", ImVec2(120, 0))) {
       bool saveSuccess = false;
-      if (project.csvFilePath.empty()) {
+      if (project.projectFilePath.empty()) {
         saveSuccess = Utils::SaveProject(project);
       } else {
-        saveSuccess = Utils::SaveProject(project, project.csvFilePath);
+        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
       }
 
       if (saveSuccess) {
@@ -195,10 +195,10 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
 
     if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
       bool saveSuccess = false;
-      if (project.csvFilePath.empty()) {
+      if (project.projectFilePath.empty()) {
         saveSuccess = Utils::SaveProject(project);
       } else {
-        saveSuccess = Utils::SaveProject(project, project.csvFilePath);
+        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
       }
 
       if (saveSuccess) {
@@ -968,13 +968,13 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Save")) {
         // If no file path is set, open a save dialog
-        if (project.csvFilePath.empty()) {
+        if (project.projectFilePath.empty()) {
           if (Utils::SaveProject(project)) {
             project.isDirty = false;
           }
         } else {
           // Otherwise, save to the existing path
-          if (Utils::SaveProject(project, project.csvFilePath)) {
+          if (Utils::SaveProject(project, project.projectFilePath)) {
             project.isDirty = false;
           }
         }
