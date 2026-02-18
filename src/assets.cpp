@@ -56,8 +56,8 @@ void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
   if (!providedBasePath.empty()) {
     searchPaths.push_back(providedBasePath);
   } else {
-    searchPaths.push_back("assets/icons/built-in");
-    searchPaths.push_back("assets/icons/user");
+    searchPaths.push_back(appBasePath + "assets/icons/built-in");
+    searchPaths.push_back(appBasePath + "assets/icons/user");
   }
 
   for (const auto &basePath : searchPaths) {
@@ -199,12 +199,12 @@ bool AssetManager::MoveAsset(Icon &asset, const std::string &newCategory) {
   // Determine root
   std::string root;
   if (asset.type == AssetType::Icon) {
-    root = "assets/icons/user";
+    root = appBasePath + "assets/icons/user";
     if (asset.path.find("assets/icons/built-in") != std::string::npos) {
-      root = "assets/icons/built-in";
+      root = appBasePath + "assets/icons/built-in";
     }
   } else {
-    root = "assets/borders";
+    root = appBasePath + "assets/borders";
   }
 
   fs::path newDirPath = fs::path(root) / newCategory;
@@ -429,7 +429,7 @@ void AssetManager::RefreshFonts(
       userScanPaths.push_back("assets/fonts");
     }
 #else
-    userScanPaths.push_back("assets/fonts");
+    userScanPaths.push_back(appBasePath + "assets/fonts");
 #endif
   }
 
@@ -571,7 +571,7 @@ Font AssetManager::GetFont(const std::string &name) {
 bool AssetManager::ImportFont(const std::string &sourcePath) {
   if (!fs::exists(sourcePath))
     return false;
-  std::string destDir = "assets/fonts";
+  std::string destDir = appBasePath + "assets/fonts";
   if (!fs::exists(destDir))
     fs::create_directories(destDir);
   std::string filename = fs::path(sourcePath).filename().string();
@@ -595,7 +595,7 @@ int AssetManager::ImportUserIcons(const std::vector<std::string> &sourcePaths) {
   if (sourcePaths.empty())
     return 0;
 
-  std::string destDir = "assets/icons/user/Imports";
+  std::string destDir = appBasePath + "assets/icons/user/Imports";
   if (!fs::exists(destDir)) {
     fs::create_directories(destDir);
   }
@@ -644,7 +644,7 @@ int AssetManager::ImportUserBorders(
   if (sourcePaths.empty())
     return 0;
 
-  std::string destDir = "assets/borders/Imports";
+  std::string destDir = appBasePath + "assets/borders/Imports";
   if (!fs::exists(destDir)) {
     fs::create_directories(destDir);
   }
@@ -694,7 +694,7 @@ int AssetManager::ImportUserBorders(
 void AssetManager::RefreshBorders(const std::string &providedBasePath) {
   borderCategories.clear();
   std::string basePath =
-      providedBasePath.empty() ? "assets/borders" : providedBasePath;
+      providedBasePath.empty() ? appBasePath + "assets/borders" : providedBasePath;
   if (!fs::exists(basePath)) {
     fs::create_directories(basePath);
     return;

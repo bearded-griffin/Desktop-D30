@@ -37,6 +37,7 @@ protected:
                                          {systemFontsDir.string()});
     AssetManager::Get().SetTestIconPath(iconsBaseDir.string());
     AssetManager::Get().SetTestBorderPath(bordersBaseDir.string());
+    AssetManager::Get().SetTestAppBasePath("./");
 
     // Clear any previous AssetManager state (singleton) and rescan with test
     // paths Refresh methods effectively clear and re-scan.

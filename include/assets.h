@@ -123,14 +123,24 @@ public:
     testBordersBasePath = path;
   }
 
+  void SetTestAppBasePath(const std::string &path) {
+    appBasePath = path;
+  }
+
 #endif
 
 private:
   AssetManager() {
+#ifdef UNIT_TESTING
+    appBasePath = "";
+#else
+    appBasePath = GetApplicationDirectory();
+#endif
     RefreshLibrary("");
     RefreshBorders("");
     RefreshFonts({}, {}); // System fonts will be added in RefreshFonts
   }
+  std::string appBasePath;
   std::vector<IconCategory> categories;
   std::vector<IconCategory> borderCategories;
   Font defaultFont = {0};
