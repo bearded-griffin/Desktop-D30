@@ -397,6 +397,9 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &
 
       // --- LEFT COLUMN: Categories ---
       ImGui::BeginChild("Categories", ImVec2(150, 0), true);
+      if (selectedCategory >= (int)categories.size())
+        selectedCategory = 0;
+
       for (size_t i = 0; i < categories.size(); i++) {
         if (ImGui::Selectable(categories[i].name.c_str(),
                               selectedCategory == (int)i)) {
@@ -524,6 +527,9 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int>
         ImGui::CloseCurrentPopup();
     } else {
       ImGui::BeginChild("BCats", ImVec2(150, 0), true);
+      if (selectedBCat >= (int)categories.size())
+        selectedBCat = 0;
+
       for (size_t i = 0; i < categories.size(); i++) {
         if (ImGui::Selectable(categories[i].name.c_str(),
                               selectedBCat == (int)i))
@@ -612,11 +618,18 @@ void DrawLibraryManager(UIState &uiState) {
 
     // --- LEFT COLUMN: Categories ---
     ImGui::BeginChild("LibraryCategories", ImVec2(200, 0), true);
-    for (size_t i = 0; i < categories.size(); i++) {
-      if (ImGui::Selectable(categories[i].name.c_str(),
-                            selectedCatIdx == (int)i)) {
-        selectedCatIdx = i;
-        selectedIcon = nullptr;
+    if (categories.empty()) {
+      ImGui::Text("No icons found.");
+    } else {
+      if (selectedCatIdx >= (int)categories.size())
+        selectedCatIdx = 0;
+
+      for (size_t i = 0; i < categories.size(); i++) {
+        if (ImGui::Selectable(categories[i].name.c_str(),
+                              selectedCatIdx == (int)i)) {
+          selectedCatIdx = i;
+          selectedIcon = nullptr;
+        }
       }
     }
     ImGui::EndChild();
@@ -626,77 +639,81 @@ void DrawLibraryManager(UIState &uiState) {
     // --- MIDDLE COLUMN: Icon Grid ---
     ImGui::BeginChild("LibraryGrid", ImVec2(500, 0), true);
 
-    bool isSearching = (searchBuf[0] != '\0');
-    std::string searchStr = searchBuf;
-    if (isSearching) {
-      std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
-                     ::tolower);
-    }
+    if (categories.empty()) {
+      ImGui::Text("Please import icons or check assets folder.");
+    } else {
+      bool isSearching = (searchBuf[0] != '\0');
+      std::string searchStr = searchBuf;
+      if (isSearching) {
+        std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                       ::tolower);
+      }
 
-    int startCat = isSearching ? 0 : selectedCatIdx;
-    int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
+      int startCat = isSearching ? 0 : selectedCatIdx;
+      int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
 
-    for (int catIdx = startCat; catIdx < endCat; catIdx++) {
-      auto &cat = categories[catIdx];
-      bool catTexturesLoaded = false;
+      for (int catIdx = startCat; catIdx < endCat; catIdx++) {
+        auto &cat = categories[catIdx];
+        bool catTexturesLoaded = false;
 
-      float windowVisibleX2 =
-          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+        float windowVisibleX2 =
+            ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
-      for (size_t i = 0; i < cat.icons.size(); i++) {
-        Icon &icon = cat.icons[i];
+        for (size_t i = 0; i < cat.icons.size(); i++) {
+          Icon &icon = cat.icons[i];
 
-        // Filter by search
-        if (isSearching) {
-          std::string iconName = icon.name;
-          std::transform(iconName.begin(), iconName.end(), iconName.begin(),
-                         ::tolower);
-          std::string custName = icon.customName;
-          std::transform(custName.begin(), custName.end(), custName.begin(),
-                         ::tolower);
+          // Filter by search
+          if (isSearching) {
+            std::string iconName = icon.name;
+            std::transform(iconName.begin(), iconName.end(), iconName.begin(),
+                           ::tolower);
+            std::string custName = icon.customName;
+            std::transform(custName.begin(), custName.end(), custName.begin(),
+                           ::tolower);
 
-          bool match = (iconName.find(searchStr) != std::string::npos ||
-                        custName.find(searchStr) != std::string::npos);
-          if (!match) {
-            for (const auto &t : icon.tags) {
-              std::string tag = t;
-              std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
-              if (tag.find(searchStr) != std::string::npos) {
-                match = true;
-                break;
+            bool match = (iconName.find(searchStr) != std::string::npos ||
+                          custName.find(searchStr) != std::string::npos);
+            if (!match) {
+              for (const auto &t : icon.tags) {
+                std::string tag = t;
+                std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+                if (tag.find(searchStr) != std::string::npos) {
+                  match = true;
+                  break;
+                }
               }
             }
+            if (!match)
+              continue;
           }
-          if (!match)
-            continue;
+
+          if (!catTexturesLoaded) {
+            AssetManager::Get().LoadCategoryTextures(catIdx);
+            catTexturesLoaded = true;
+          }
+
+          ImGui::PushID(icon.path.c_str());
+          bool isSelected = (selectedIcon == &icon);
+          if (isSelected)
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                                  ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
+
+          if (ImGui::ImageButton("lib_icon",
+                                 (ImTextureID)(intptr_t)icon.thumbnail.id,
+                                 ImVec2(64, 64))) {
+            selectedIcon = &icon;
+            strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
+          }
+
+          if (isSelected)
+            ImGui::PopStyleColor();
+          ImGui::PopID();
+
+          float lastX2 = ImGui::GetItemRectMax().x;
+          float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
+          if (nextX2 < windowVisibleX2)
+            ImGui::SameLine();
         }
-
-        if (!catTexturesLoaded) {
-          AssetManager::Get().LoadCategoryTextures(catIdx);
-          catTexturesLoaded = true;
-        }
-
-        ImGui::PushID(icon.path.c_str());
-        bool isSelected = (selectedIcon == &icon);
-        if (isSelected)
-          ImGui::PushStyleColor(ImGuiCol_Button,
-                                ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
-
-        if (ImGui::ImageButton("lib_icon",
-                               (ImTextureID)(intptr_t)icon.thumbnail.id,
-                               ImVec2(64, 64))) {
-          selectedIcon = &icon;
-          strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
-        }
-
-        if (isSelected)
-          ImGui::PopStyleColor();
-        ImGui::PopID();
-
-        float lastX2 = ImGui::GetItemRectMax().x;
-        float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
-        if (nextX2 < windowVisibleX2)
-          ImGui::SameLine();
       }
     }
     ImGui::EndChild();
@@ -743,18 +760,25 @@ void DrawLibraryManager(UIState &uiState) {
       ImGui::Separator();
       ImGui::Text("Move to Category:");
       static int moveCatIdx = 0;
-      if (ImGui::BeginCombo("##MoveCombo",
-                            categories[moveCatIdx].name.c_str())) {
-        for (int n = 0; n < (int)categories.size(); n++) {
-          if (ImGui::Selectable(categories[n].name.c_str(), moveCatIdx == n))
-            moveCatIdx = n;
+      if (moveCatIdx >= (int)categories.size())
+        moveCatIdx = 0;
+
+      if (!categories.empty()) {
+        if (ImGui::BeginCombo("##MoveCombo",
+                              categories[moveCatIdx].name.c_str())) {
+          for (int n = 0; n < (int)categories.size(); n++) {
+            if (ImGui::Selectable(categories[n].name.c_str(), moveCatIdx == n))
+              moveCatIdx = n;
+          }
+          ImGui::EndCombo();
         }
-        ImGui::EndCombo();
-      }
-      if (ImGui::Button("Perform Move")) {
-        AssetManager::Get().MoveAsset(*selectedIcon,
-                                      categories[moveCatIdx].name);
-        selectedIcon = nullptr; // Reset selection as pointers might change
+        if (ImGui::Button("Perform Move")) {
+          AssetManager::Get().MoveAsset(*selectedIcon,
+                                        categories[moveCatIdx].name);
+          selectedIcon = nullptr; // Reset selection as pointers might change
+        }
+      } else {
+        ImGui::TextDisabled("No categories available.");
       }
     } else {
       ImGui::TextDisabled("Select an icon to edit metadata.");
@@ -798,89 +822,101 @@ void DrawBorderManager(UIState &uiState) {
     ImGui::Separator();
 
     ImGui::BeginChild("BorderCategories", ImVec2(200, 0), true);
-    for (size_t i = 0; i < categories.size(); i++) {
-      if (ImGui::Selectable(categories[i].name.c_str(),
-                            selectedCatIdx == (int)i)) {
-        selectedCatIdx = i;
-        selectedIcon = nullptr;
+    if (categories.empty()) {
+      ImGui::Text("No borders found.");
+    } else {
+      if (selectedCatIdx >= (int)categories.size())
+        selectedCatIdx = 0;
+
+      for (size_t i = 0; i < categories.size(); i++) {
+        if (ImGui::Selectable(categories[i].name.c_str(),
+                              selectedCatIdx == (int)i)) {
+          selectedCatIdx = i;
+          selectedIcon = nullptr;
+        }
       }
     }
     ImGui::EndChild();
 
     ImGui::SameLine();
 
+    // --- MIDDLE COLUMN: Border Grid ---
     ImGui::BeginChild("BorderGrid", ImVec2(500, 0), true);
 
-    bool isSearching = (searchBuf[0] != '\0');
-    std::string searchStr = searchBuf;
-    if (isSearching) {
-      std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
-                     ::tolower);
-    }
+    if (categories.empty()) {
+      ImGui::Text("Please import borders or check assets folder.");
+    } else {
+      bool isSearching = (searchBuf[0] != '\0');
+      std::string searchStr = searchBuf;
+      if (isSearching) {
+        std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(),
+                       ::tolower);
+      }
 
-    int startCat = isSearching ? 0 : selectedCatIdx;
-    int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
+      int startCat = isSearching ? 0 : selectedCatIdx;
+      int endCat = isSearching ? (int)categories.size() : selectedCatIdx + 1;
 
-    for (int catIdx = startCat; catIdx < endCat; catIdx++) {
-      auto &cat = categories[catIdx];
-      bool catTexturesLoaded = false;
+      for (int catIdx = startCat; catIdx < endCat; catIdx++) {
+        auto &cat = categories[catIdx];
+        bool catTexturesLoaded = false;
 
-      float windowVisibleX2 =
-          ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+        float windowVisibleX2 =
+            ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 
-      for (size_t i = 0; i < cat.icons.size(); i++) {
-        Icon &icon = cat.icons[i];
+        for (size_t i = 0; i < cat.icons.size(); i++) {
+          Icon &icon = cat.icons[i];
 
-        if (isSearching) {
-          std::string iconName = icon.name;
-          std::transform(iconName.begin(), iconName.end(), iconName.begin(),
-                         ::tolower);
-          std::string custName = icon.customName;
-          std::transform(custName.begin(), custName.end(), custName.begin(),
-                         ::tolower);
+          if (isSearching) {
+            std::string iconName = icon.name;
+            std::transform(iconName.begin(), iconName.end(), iconName.begin(),
+                           ::tolower);
+            std::string custName = icon.customName;
+            std::transform(custName.begin(), custName.end(), custName.begin(),
+                           ::tolower);
 
-          bool match = (iconName.find(searchStr) != std::string::npos ||
-                        custName.find(searchStr) != std::string::npos);
-          if (!match) {
-            for (const auto &t : icon.tags) {
-              std::string tag = t;
-              std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
-              if (tag.find(searchStr) != std::string::npos) {
-                match = true;
-                break;
+            bool match = (iconName.find(searchStr) != std::string::npos ||
+                          custName.find(searchStr) != std::string::npos);
+            if (!match) {
+              for (const auto &t : icon.tags) {
+                std::string tag = t;
+                std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+                if (tag.find(searchStr) != std::string::npos) {
+                  match = true;
+                  break;
+                }
               }
             }
+            if (!match)
+              continue;
           }
-          if (!match)
-            continue;
+
+          if (!catTexturesLoaded) {
+            AssetManager::Get().LoadBorderTextures(catIdx);
+            catTexturesLoaded = true;
+          }
+
+          ImGui::PushID(icon.path.c_str());
+          bool isSelected = (selectedIcon == &icon);
+          if (isSelected)
+            ImGui::PushStyleColor(ImGuiCol_Button,
+                                  ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
+
+          if (ImGui::ImageButton("lib_border",
+                                 (ImTextureID)(intptr_t)icon.thumbnail.id,
+                                 ImVec2(64, 64))) {
+            selectedIcon = &icon;
+            strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
+          }
+
+          if (isSelected)
+            ImGui::PopStyleColor();
+          ImGui::PopID();
+
+          float lastX2 = ImGui::GetItemRectMax().x;
+          float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
+          if (nextX2 < windowVisibleX2)
+            ImGui::SameLine();
         }
-
-        if (!catTexturesLoaded) {
-          AssetManager::Get().LoadBorderTextures(catIdx);
-          catTexturesLoaded = true;
-        }
-
-        ImGui::PushID(icon.path.c_str());
-        bool isSelected = (selectedIcon == &icon);
-        if (isSelected)
-          ImGui::PushStyleColor(ImGuiCol_Button,
-                                ImVec4(0.2f, 0.4f, 0.6f, 1.0f));
-
-        if (ImGui::ImageButton("lib_border",
-                               (ImTextureID)(intptr_t)icon.thumbnail.id,
-                               ImVec2(64, 64))) {
-          selectedIcon = &icon;
-          strncpy(nameBuf, icon.customName.c_str(), sizeof(nameBuf));
-        }
-
-        if (isSelected)
-          ImGui::PopStyleColor();
-        ImGui::PopID();
-
-        float lastX2 = ImGui::GetItemRectMax().x;
-        float nextX2 = lastX2 + ImGui::GetStyle().ItemSpacing.x + 64;
-        if (nextX2 < windowVisibleX2)
-          ImGui::SameLine();
       }
     }
     ImGui::EndChild();
@@ -926,19 +962,26 @@ void DrawBorderManager(UIState &uiState) {
       ImGui::Separator();
       ImGui::Text("Move to Category:");
       static int moveBorderCatIdx = 0;
-      if (ImGui::BeginCombo("##MoveBorderCombo",
-                            categories[moveBorderCatIdx].name.c_str())) {
-        for (int n = 0; n < (int)categories.size(); n++) {
-          if (ImGui::Selectable(categories[n].name.c_str(),
-                                moveBorderCatIdx == n))
-            moveBorderCatIdx = n;
+      if (moveBorderCatIdx >= (int)categories.size())
+        moveBorderCatIdx = 0;
+
+      if (!categories.empty()) {
+        if (ImGui::BeginCombo("##MoveBorderCombo",
+                              categories[moveBorderCatIdx].name.c_str())) {
+          for (int n = 0; n < (int)categories.size(); n++) {
+            if (ImGui::Selectable(categories[n].name.c_str(),
+                                  moveBorderCatIdx == n))
+              moveBorderCatIdx = n;
+          }
+          ImGui::EndCombo();
         }
-        ImGui::EndCombo();
-      }
-      if (ImGui::Button("Perform Move")) {
-        AssetManager::Get().MoveAsset(*selectedIcon,
-                                      categories[moveBorderCatIdx].name);
-        selectedIcon = nullptr;
+        if (ImGui::Button("Perform Move")) {
+          AssetManager::Get().MoveAsset(*selectedIcon,
+                                        categories[moveBorderCatIdx].name);
+          selectedIcon = nullptr;
+        }
+      } else {
+        ImGui::TextDisabled("No categories available.");
       }
     } else {
       ImGui::TextDisabled("Select a border to edit metadata.");

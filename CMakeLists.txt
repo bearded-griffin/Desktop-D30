@@ -237,6 +237,14 @@ target_link_libraries(Desktop-D30 PRIVATE
     ${BLUETOOTH_LIB}
 )
 
+# Copy assets to build directory for easier running during development
+add_custom_command(TARGET Desktop-D30 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:Desktop-D30>/assets
+    COMMENT "Copying assets to build directory..."
+)
+
 if (WIN32)
     target_link_libraries(Desktop-D30 PRIVATE winmm)
     # Statically link standard libraries to avoid DLL dependency issues on Windows
