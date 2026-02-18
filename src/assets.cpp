@@ -441,20 +441,28 @@ void AssetManager::RefreshFonts(
       systemScanPaths = testSystemFontPaths;
     } else {
       const char *homeEnv = std::getenv("HOME");
+      if (!homeEnv) homeEnv = std::getenv("USERPROFILE");
+
       if (homeEnv) {
         systemScanPaths.push_back("/usr/share/fonts");
         systemScanPaths.push_back("/usr/local/share/fonts");
         systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
         systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
+        systemScanPaths.push_back("C:\\Windows\\Fonts");
+        systemScanPaths.push_back(std::string(homeEnv) + "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
       }
     }
 #else
     const char *homeEnv = std::getenv("HOME");
+    if (!homeEnv) homeEnv = std::getenv("USERPROFILE");
+
     if (homeEnv) {
       systemScanPaths.push_back("/usr/share/fonts");
       systemScanPaths.push_back("/usr/local/share/fonts");
       systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
       systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
+      systemScanPaths.push_back("C:\\Windows\\Fonts");
+      systemScanPaths.push_back(std::string(homeEnv) + "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
     }
 #endif
   }

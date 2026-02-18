@@ -105,7 +105,11 @@ include(GoogleTest)
 
 
 # --- FIND SYSTEM BLUETOOTH LIBRARY ---
-find_library(BLUETOOTH_LIB bluetooth REQUIRED)
+if(UNIX AND NOT APPLE)
+    find_library(BLUETOOTH_LIB bluetooth REQUIRED)
+else()
+    set(BLUETOOTH_LIB "")
+endif()
 
 # --- MANUAL LIBRARY GENERATION ---
 file(GLOB IMGUI_SOURCES "${imgui_SOURCE_DIR}/*.cpp")
