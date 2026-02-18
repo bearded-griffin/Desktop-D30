@@ -26,6 +26,7 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build/*
+build_win_cross/*
 
 # External projects
 *-prefix/

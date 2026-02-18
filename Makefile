@@ -13,26 +13,51 @@
 
 # Makefile wrapper for CMake
 
+# Detect Operating System
+ifeq ($(OS),Windows_NT)
+    DETECTED_OS := Windows
+    SHELL_RM := rmdir /s /q
+    SHELL_MKDIR := mkdir
+    EXE_EXT := .exe
+    GENERATOR := "MinGW Makefiles"
+else
+    DETECTED_OS := $(shell uname -s)
+    SHELL_RM := rm -rf
+    SHELL_MKDIR := mkdir -p
+    EXE_EXT :=
+    GENERATOR := Ninja
+endif
+
 # Default build type
 TYPE ?= Debug
 
 # Standard CMake build folder
 BUILD_DIR = build
 
-.PHONY: all build clean run re run_tests coverage clean-coverage
+.PHONY: all build clean run re run_tests coverage clean-coverage windows
 
 # Default target: build the project
 all: build
 
-# Configure CMake (Using Ninja)
+# Configure CMake
 configure:
-	cmake -S . -B $(BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=$(TYPE)
+	cmake -S . -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=$(TYPE)
 
 # Compile the project
 build: configure
 	cmake --build $(BUILD_DIR) --config $(TYPE)
-  
-  
+
+# Specific Windows build (can be called from Linux if cross-compiling toolchain is set, 
+# or directly on Windows)
+windows:
+	cmake -S . -B build_win -DCMAKE_BUILD_TYPE=Release
+	cmake --build build_win --config Release
+
+# Cross-compile for Windows from Linux using MinGW
+cross-windows:
+	$(SHELL_RM) build_win_cross
+	cmake -S . -B build_win_cross -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64.cmake -DCMAKE_BUILD_TYPE=Release
+	cmake --build build_win_cross --config Release
 
 # Build a release version
 release:
@@ -40,15 +65,16 @@ release:
 
 # Run the executable
 run: build
-	./$(BUILD_DIR)/Desktop-D30
+	./$(BUILD_DIR)/Desktop-D30$(EXE_EXT)
 
 # Run all tests
 run_tests: build
-	./$(BUILD_DIR)/tests/run_tests
+	./$(BUILD_DIR)/tests/run_tests$(EXE_EXT)
 
 # Nuke the build folder
 clean:
-	rm -rf $(BUILD_DIR)
+	$(SHELL_RM) $(BUILD_DIR)
+	$(SHELL_RM) build_win
 
 # "Re-make": Clean and then build
 re: clean build

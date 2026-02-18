@@ -7,6 +7,7 @@ Desktop-D30 is a professional label design and printing application specifically
 - **Intuitive Design Canvas**: Drag and drop text, shapes, QR codes, and barcodes.
 - **Sharp Printing**: High-resolution rendering ensures scannable codes.
 - **Batch Printing**: Load CSV data to print hundreds of labels in seconds.
+- **Cross-Platform**: Supports Linux and Windows.
 
 ## Getting Started
 
