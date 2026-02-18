@@ -53,6 +53,11 @@ windows:
 	cmake -S . -B build_win -DCMAKE_BUILD_TYPE=Release
 	cmake --build build_win --config Release
 
+# Cross-compile for Windows from Linux using MinGW
+cross-windows:
+	cmake -S . -B build_win_cross -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64.cmake -DCMAKE_BUILD_TYPE=Release
+	cmake --build build_win_cross --config Release
+
 # Build a release version
 release:
 	./build_release.sh
