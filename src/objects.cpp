@@ -82,11 +82,16 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
       }
     }
     
-    if (!selectedIndices.empty()) {
-      isDraggingObject = true;
-      // Use the clicked object for the drag offset base
-      const auto &obj = project.objects[clickedIndex];
-      dragOffset = {mouseWorld.x - obj.x, mouseWorld.y - obj.y};
+    // Only start dragging if shift is NOT down. 
+    // Shift is for selection, we don't want them jumping around.
+    if (!selectedIndices.empty() && !isShiftDown) {
+      // Ensure the clicked index is actually in the selection now
+      if (std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex) != selectedIndices.end()) {
+        isDraggingObject = true;
+        // Use the clicked object for the drag offset base
+        const auto &obj = project.objects[clickedIndex];
+        dragOffset = {mouseWorld.x - obj.x, mouseWorld.y - obj.y};
+      }
     }
   } else if (!isShiftDown) {
     selectedIndices.clear();
