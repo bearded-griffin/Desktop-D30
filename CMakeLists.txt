@@ -183,6 +183,9 @@ target_include_directories(printer PUBLIC
     ${RAYLIB_INCLUDE_DIR}
 )
 target_link_libraries(printer PUBLIC  ${BLUETOOTH_LIB})
+if(WIN32)
+    target_link_libraries(printer PUBLIC ws2_32)
+endif()
 
 add_library(protocol src/protocol.cpp)
 target_include_directories(protocol PUBLIC 
@@ -246,7 +249,7 @@ add_custom_command(TARGET Desktop-D30 POST_BUILD
 )
 
 if (WIN32)
-    target_link_libraries(Desktop-D30 PRIVATE winmm)
+    target_link_libraries(Desktop-D30 PRIVATE winmm ws2_32)
     # Statically link standard libraries to avoid DLL dependency issues on Windows
     target_link_options(Desktop-D30 PRIVATE "-static-libgcc" "-static-libstdc++" "-static")
 elseif (UNIX AND NOT APPLE)
