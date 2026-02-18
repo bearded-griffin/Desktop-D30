@@ -50,4 +50,7 @@ void DrawSplashScreen(); // New!
 void InitializeUI();
 void UpdateWindowTitle(const Project &project);
 void CleanupApplication(Project &project);
+
+void LoadFontPreviews();
+
 } // namespace UI
