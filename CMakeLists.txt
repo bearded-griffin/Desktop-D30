@@ -102,14 +102,6 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 include(GoogleTest)
 
-# check for Cairo and fontconfig
-find_package(PkgConfig REQUIRED)
-
-pkg_check_modules(DEPS REQUIRED
-    cairo
-    fontconfig
-)
-
 
 
 # --- FIND SYSTEM BLUETOOTH LIBRARY ---
@@ -140,25 +132,6 @@ include_directories(
 
 # --- MODULE LIBRARIES ---
 # Create libraries for each module
-
-add_library(font_preview src/font_preview.cpp)
-target_include_directories(font_preview 
-    PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
-    PRIVATE
-        ${DEPS_INCLUDE_DIRS}
-)
-target_link_libraries(font_preview
-    PRIVATE
-        ${DEPS_LIBRARIES}
-)
-target_compile_options(font_preview
-    PRIVATE
-        ${DEPS_CFLAGS_OTHER}
-)
-
-
-
 add_library(input src/input.cpp)
 target_include_directories(input PUBLIC 
     ${CMAKE_SOURCE_DIR}/include
@@ -213,7 +186,7 @@ target_include_directories(ui PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${RAYLIB_INCLUDE_DIR}
 )
-target_link_libraries(ui PUBLIC printer protocol font_preview)
+target_link_libraries(ui PUBLIC printer protocol)
 
 add_library(assets src/assets.cpp)
 target_compile_definitions(assets PUBLIC 
@@ -248,7 +221,6 @@ target_link_libraries(Desktop-D30 PRIVATE
     utils
     printer
     protocol
-    font_preview        
     ui
     assets 
     rlImGui 
@@ -257,7 +229,6 @@ target_link_libraries(Desktop-D30 PRIVATE
     nlohmann_json::nlohmann_json
     qrcodegen
     ${BLUETOOTH_LIB}
-    ${DEPS_LIBRARIES}
 )
 
 if (WIN32)
