@@ -1,0 +1,17 @@
+site_name: Desktop-D30 Documentation
+theme:
+  name: material
+  palette:
+    primary: sky blue
+    accent: indigo
+
+nav:
+  - Welcome: index.md
+  - The Interface: interface.md
+  - Batch Printing: batch-printing.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

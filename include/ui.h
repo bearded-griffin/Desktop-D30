@@ -36,10 +36,12 @@ struct UIState {
   bool alignToCanvas = false;
   bool exitRequested = false;
   bool forceQuit = false;
+  bool showAboutDialog = false;
 };
 
 void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
 void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
+void DrawAboutDialog(UIState &uiState);
 void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
 void RequestExit(UIState &uiState);
 bool ShouldClose(const UIState &uiState);

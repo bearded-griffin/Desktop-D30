@@ -1065,6 +1065,18 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
       ImGui::EndMenu();
     }
 
+    // --- HELP MENU ---
+    if (ImGui::BeginMenu("Help")) {
+      if (ImGui::MenuItem("User Guide")) {
+        Utils::OpenFile("https://bearded-griffin.github.io/Desktop-D30/");
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("About")) {
+        uiState.showAboutDialog = true;
+      }
+      ImGui::EndMenu();
+    }
+
     ImGui::EndMainMenuBar();
   }
 
@@ -1651,11 +1663,38 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
   ImGui::End();
 }
 
+void DrawAboutDialog(UIState &uiState) {
+  if (uiState.showAboutDialog) {
+    ImGui::OpenPopup("About Desktop-D30");
+  }
+
+  if (ImGui::BeginPopupModal("About Desktop-D30", &uiState.showAboutDialog,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("Desktop-D30 - Label Design Software");
+    ImGui::Text("Version 1.0.0");
+    ImGui::Separator();
+    ImGui::Text("Created by Chris Griffin (bearded-griffin)");
+    ImGui::Text("Licensed under GNU GPL v3.0");
+    ImGui::Spacing();
+    ImGui::Text("If you enjoy this app, please consider supporting development:");
+    if (ImGui::Button("Support on Koffi")) {
+      Utils::OpenFile("https://koffi.com/bearded-griffin");
+    }
+    ImGui::Separator();
+    if (ImGui::Button("Close", ImVec2(120, 0))) {
+      uiState.showAboutDialog = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
 void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState) {
   DrawMainMenu(project, uiState, selectedIndices);
   DrawSidebar(project, selectedIndices, uiState);
   DrawExitConfirmation(project, uiState);
   DrawLoadConfirmation(project, uiState);
+  DrawAboutDialog(uiState);
 }
 
 /*!***************************************************
