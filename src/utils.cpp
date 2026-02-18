@@ -37,6 +37,13 @@
 #include "protocol.h"
 #include "rendering.h"
 #include "types.h"
+#include <cstdlib>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 namespace Utils {
 
@@ -171,6 +178,28 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
   // Step 3: Cleanup
   UnloadImage(img);
   std::cout << "Exported Label to: " << finalPath << std::endl;
+}
+
+/*!***************************************************
+ * @brief    Opens a file with the default application
+ * @details  Uses system-specific commands to open the
+ * file in the default viewer (e.g., xdg-open, open, ShellExecute).
+ * @param    filePath const std::string&
+ * @return   void
+ * @note
+ * @date     2026.02.17
+ * @author   gemini-cli
+ ****************************************************/
+void OpenFile(const std::string &filePath) {
+#if defined(_WIN32)
+  ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+  std::string command = "open " + filePath;
+  system(command.c_str());
+#else
+  std::string command = "xdg-open " + filePath;
+  system(command.c_str());
+#endif
 }
 
 /*!***************************************************

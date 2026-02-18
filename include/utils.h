@@ -36,6 +36,7 @@ bool LoadProject(const std::string &filename, Project &outProject);
 void ExportProjectToPNG(const std::string &filename, const Project &project);
 
 bool LoadCSV(const std::string &filename, Project &project);
+void OpenFile(const std::string &filePath);
 
 // Apply the data from project.currentCSVRow to all linked objects
 void ApplyCSVDataToObjects(Project &project);

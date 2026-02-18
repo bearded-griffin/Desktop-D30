@@ -992,6 +992,7 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
 
       if (ImGui::MenuItem("Export to PNG (Test Print)")) {
         Utils::ExportProjectToPNG("test_label.png", project);
+        Utils::OpenFile("test_label.png");
       }
 
       ImGui::Separator();
