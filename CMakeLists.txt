@@ -19,6 +19,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
 
+# Define UNIT_TESTING only in Debug mode
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(UNIT_TESTING)
+endif()
+
 
 # --- DEBUG FLAGS ---
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -193,9 +198,6 @@ target_include_directories(ui PUBLIC
 target_link_libraries(ui PUBLIC printer protocol)
 
 add_library(assets src/assets.cpp)
-target_compile_definitions(assets PUBLIC 
-    $<$<CONFIG:Debug>:UNIT_TESTING>
-)
 target_include_directories(assets PUBLIC 
     ${CMAKE_SOURCE_DIR}/include
     ${RAYLIB_INCLUDE_DIR}
@@ -237,6 +239,8 @@ target_link_libraries(Desktop-D30 PRIVATE
 
 if (WIN32)
     target_link_libraries(Desktop-D30 PRIVATE winmm)
+    # Statically link standard libraries to avoid DLL dependency issues on Windows
+    target_link_options(Desktop-D30 PRIVATE "-static-libgcc" "-static-libstdc++" "-static")
 elseif (UNIX AND NOT APPLE)
     target_link_libraries(Desktop-D30 PRIVATE m pthread dl)
 endif()

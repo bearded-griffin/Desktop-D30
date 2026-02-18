@@ -27,7 +27,7 @@
 #include "utils.h"
 #include <algorithm>
 
-namespace INPUT {
+namespace INPUT_HANDLER {
 
 /*!***************************************************
  * @brief    Handles Mouse Interactions
@@ -189,4 +189,4 @@ Vector2 GetMouseDeltaWorld(Camera2D camera) {
   return Vector2Scale(delta, -1.0f / camera.zoom);
 }
 
-} // namespace INPUT
+} // namespace INPUT_HANDLER

@@ -66,7 +66,7 @@ int main() {
     ClearBackground(Utils::appSettings.darkTheme ? Color{40, 40, 40, 255} : RAYWHITE);
 
     rlImGuiBegin();
-    INPUT::HandleInput(currentProject, state, camera);
+    INPUT_HANDLER::HandleInput(currentProject, state, camera);
     RENDERING::RenderScene(currentProject, state, camera, state.selectedIndices);
     UI::Draw(currentProject, state.selectedIndices, uiState);
     rlImGuiEnd();

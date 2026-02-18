@@ -55,6 +55,7 @@ windows:
 
 # Cross-compile for Windows from Linux using MinGW
 cross-windows:
+	$(SHELL_RM) build_win_cross
 	cmake -S . -B build_win_cross -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64.cmake -DCMAKE_BUILD_TYPE=Release
 	cmake --build build_win_cross --config Release
 

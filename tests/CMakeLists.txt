@@ -11,8 +11,8 @@ else()
     message(STATUS "Found test files: ${TEST_SOURCES}")
 endif()
 
-# Only create test executable if we have test sources
-if(TEST_SOURCES)
+# Only create test executable if we have test sources and not cross-compiling for Windows
+if(TEST_SOURCES AND NOT WIN32)
   include_directories(../include)
     # Create test executable
     add_executable(run_tests ${TEST_SOURCES})

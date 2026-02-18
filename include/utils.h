@@ -22,6 +22,7 @@
  ****************************************************/
 
 #pragma once
+#include "win_fix.h"
 #include <vector>
 
 #include "raylib.h"
