@@ -96,11 +96,13 @@ struct LabelObject {
   bool isLocked = false;
   bool isVisible = true;
   float rotation = 0.0f; // In degrees
+  int threshold = 128; // 0-255 for image binarization
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
   std::string lastData = "";      // For cache tracking
   unsigned int lastColor = 0;     // For cache tracking
+  int lastThreshold = -1;         // For cache tracking
 };
 
 struct AppSettings {
@@ -211,6 +213,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
-                                   cornerRadius, isLocked, isVisible, rotation)
+                                   cornerRadius, isLocked, isVisible, rotation, threshold)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
                                    currentCSVRow, projectFilePath, csvHeaders, csvRows)

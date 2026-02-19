@@ -117,11 +117,33 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
  * @author   bearded.griffin
  ****************************************************/
 void RenderImageObject(LabelObject &obj) {
-  if (obj.texture.id == 0 && !obj.data.empty() &&
-      FileExists(obj.data.c_str())) {
+  if ((obj.texture.id == 0 || obj.lastThreshold != obj.threshold) && 
+      !obj.data.empty() && FileExists(obj.data.c_str())) {
+    
+    if (obj.texture.id != 0) UnloadTexture(obj.texture);
+
     Image img = LoadImage(obj.data.c_str());
+    ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
+    Color *pixels = (Color *)img.data;
+    for (int i = 0; i < img.width * img.height; i++) {
+        if (pixels[i].a < 128) {
+            pixels[i] = WHITE; // Transparent becomes white
+        } else {
+            // Grayscale conversion
+            unsigned char gray = (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g + 0.114f * pixels[i].b);
+            // Apply threshold
+            if (gray < obj.threshold) {
+                pixels[i] = BLACK;
+            } else {
+                pixels[i] = WHITE;
+            }
+        }
+    }
+
     obj.texture = LoadTextureFromImage(img);
     UnloadImage(img);
+    obj.lastThreshold = obj.threshold;
 
     if (obj.width == 0)
       obj.width = (float)obj.texture.width;
@@ -524,7 +546,7 @@ Image RenderProjectToImage(const Project &project) {
                                 0.114f * pixels[i].b);
 
             // Apply thresholding
-            if (gray < 128) {
+            if (gray < obj.threshold) {
               pixels[i] = BLACK;
             } else {
               pixels[i] = WHITE;
