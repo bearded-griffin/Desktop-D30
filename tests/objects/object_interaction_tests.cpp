@@ -1,5 +1,6 @@
 #include "objects.h"
 #include "types.h"
+#include "utils.h"
 #include "raylib.h"
 #include <gtest/gtest.h>
 
@@ -13,23 +14,23 @@ protected:
         project = Project();
         project.selectedLabelIndex = 0; // "12mm x 30mm" (240x96)
         
-        selectedIndices.clear();
-        isDraggingObject = false;
-        dragOffset = {0, 0};
+        state = InteractionState();
         camera = {0};
         camera.zoom = 1.0f;
+
+        // Disable snapping by default for base tests
+        Utils::appSettings.snapToGrid = false;
+        Utils::appSettings.snapToObjects = false;
     }
 
     Project project;
-    std::vector<int> selectedIndices;
-    bool isDraggingObject;
-    Vector2 dragOffset;
+    InteractionState state;
     Camera2D camera;
 };
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_LineObject) {
     project.objects.push_back(OBJECTS::CreateLineObject(10, 10, 100, 0, 4));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     Vector2 mouseWorld = {150, 60};
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_BOTTOM_RIGHT, mouseWorld, camera);
@@ -40,7 +41,7 @@ TEST_F(ObjectInteractionTest, HandleObjectResize_LineObject) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_LineObjectShift) {
     project.objects.push_back(OBJECTS::CreateLineObject(10, 10, 100, 0, 4));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     SetMockShiftDown(true);
     Vector2 mouseWorld = {150, 20}; // Mostly horizontal
     
@@ -55,12 +56,12 @@ TEST_F(ObjectInteractionTest, HandleObjectSelection_SelectsObject) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
     
     Vector2 mouseWorld = {35, 35}; // Middle of the object
-    OBJECTS::HandleObjectSelection(project, selectedIndices, isDraggingObject, dragOffset, mouseWorld, camera);
+    OBJECTS::HandleObjectSelection(project, state.selectedIndices, state.isDraggingObject, state.dragOffset, mouseWorld, camera);
     
-    EXPECT_EQ(OBJECTS::GetPrimarySelection(selectedIndices), 0);
-    EXPECT_TRUE(isDraggingObject);
-    EXPECT_FLOAT_EQ(dragOffset.x, 25); // 35 - 10
-    EXPECT_FLOAT_EQ(dragOffset.y, 25); // 35 - 10
+    EXPECT_EQ(OBJECTS::GetPrimarySelection(state.selectedIndices), 0);
+    EXPECT_TRUE(state.isDraggingObject);
+    EXPECT_FLOAT_EQ(state.dragOffset.x, 25); // 35 - 10
+    EXPECT_FLOAT_EQ(state.dragOffset.y, 25); // 35 - 10
 }
 
 TEST_F(ObjectInteractionTest, HandleObjectSelection_SelectsTopMostObject) {
@@ -68,28 +69,28 @@ TEST_F(ObjectInteractionTest, HandleObjectSelection_SelectsTopMostObject) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(20, 20, 50, 50)); // Index 1 (Top)
     
     Vector2 mouseWorld = {35, 35}; // Overlaps both, but index 1 is on top
-    OBJECTS::HandleObjectSelection(project, selectedIndices, isDraggingObject, dragOffset, mouseWorld, camera);
+    OBJECTS::HandleObjectSelection(project, state.selectedIndices, state.isDraggingObject, state.dragOffset, mouseWorld, camera);
     
-    EXPECT_EQ(OBJECTS::GetPrimarySelection(selectedIndices), 1);
+    EXPECT_EQ(OBJECTS::GetPrimarySelection(state.selectedIndices), 1);
 }
 
 TEST_F(ObjectInteractionTest, HandleObjectSelection_MissesObject) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
     
     Vector2 mouseWorld = {100, 100};
-    OBJECTS::HandleObjectSelection(project, selectedIndices, isDraggingObject, dragOffset, mouseWorld, camera);
+    OBJECTS::HandleObjectSelection(project, state.selectedIndices, state.isDraggingObject, state.dragOffset, mouseWorld, camera);
     
-    EXPECT_TRUE(selectedIndices.empty());
-    EXPECT_FALSE(isDraggingObject);
+    EXPECT_TRUE(state.selectedIndices.empty());
+    EXPECT_FALSE(state.isDraggingObject);
 }
 
 TEST_F(ObjectInteractionTest, HandleObjectDrag_UpdatesPosition) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
-    dragOffset = {25, 25};
+    state.selectedIndices = {0};
+    state.dragOffset = {25, 25};
     Vector2 mouseWorld = {60, 60};
     
-    OBJECTS::HandleObjectDrag(project, selectedIndices, mouseWorld, dragOffset, camera);
+    OBJECTS::HandleObjectDrag(project, state, mouseWorld, camera);
     
     EXPECT_FLOAT_EQ(project.objects[0].x, 35); // 60 - 25
     EXPECT_FLOAT_EQ(project.objects[0].y, 35); // 60 - 25
@@ -98,12 +99,12 @@ TEST_F(ObjectInteractionTest, HandleObjectDrag_UpdatesPosition) {
 
 TEST_F(ObjectInteractionTest, HandleObjectDrag_ClampsToCanvas) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
-    dragOffset = {25, 25};
+    state.selectedIndices = {0};
+    state.dragOffset = {25, 25};
     
     // Drag far outside
     Vector2 mouseWorld = {1000, 1000};
-    OBJECTS::HandleObjectDrag(project, selectedIndices, mouseWorld, dragOffset, camera);
+    OBJECTS::HandleObjectDrag(project, state, mouseWorld, camera);
     
     LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
     EXPECT_FLOAT_EQ(project.objects[0].x, canvasSz.width - 50);
@@ -112,7 +113,7 @@ TEST_F(ObjectInteractionTest, HandleObjectDrag_ClampsToCanvas) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_BottomRight) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     Vector2 mouseWorld = {100, 100};
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_BOTTOM_RIGHT, mouseWorld, camera);
@@ -123,7 +124,7 @@ TEST_F(ObjectInteractionTest, HandleObjectResize_BottomRight) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_TopLeft) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     Vector2 mouseWorld = {5, 5};
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_TOP_LEFT, mouseWorld, camera);
@@ -138,7 +139,7 @@ TEST_F(ObjectInteractionTest, HandleObjectResize_TopLeft) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_ShiftMaintainsAspectRatio) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 100, 50)); // 2:1 ratio
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     SetMockShiftDown(true);
     Vector2 mouseWorld = {210, 110}; // width becomes 200. height should become 100 to maintain 2:1
     
@@ -154,14 +155,14 @@ TEST_F(ObjectInteractionTest, HandleObjectSelection_SelectsLine) {
     
     // Near the line
     Vector2 mouseWorld = {50, 12}; 
-    OBJECTS::HandleObjectSelection(project, selectedIndices, isDraggingObject, dragOffset, mouseWorld, camera);
+    OBJECTS::HandleObjectSelection(project, state.selectedIndices, state.isDraggingObject, state.dragOffset, mouseWorld, camera);
     
-    EXPECT_EQ(OBJECTS::GetPrimarySelection(selectedIndices), 0);
+    EXPECT_EQ(OBJECTS::GetPrimarySelection(state.selectedIndices), 0);
 }
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_TopRight) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     Vector2 mouseWorld = {100, 5};
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_TOP_RIGHT, mouseWorld, camera);
@@ -176,7 +177,7 @@ TEST_F(ObjectInteractionTest, HandleObjectResize_TopRight) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_BottomLeft) {
     project.objects.push_back(OBJECTS::CreateRectangleObject(10, 10, 50, 50));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     Vector2 mouseWorld = {5, 100};
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_BOTTOM_LEFT, mouseWorld, camera);
@@ -191,12 +192,8 @@ TEST_F(ObjectInteractionTest, HandleObjectResize_BottomLeft) {
 
 TEST_F(ObjectInteractionTest, HandleObjectResize_TextObject) {
     project.objects.push_back(OBJECTS::CreateTextObject(10, 10, "Test", 20));
-    selectedIndices = {0};
+    state.selectedIndices = {0};
     SetMockMouseDelta({0, 10}); // Mouse moved down 10 pixels
-    
-    // Note: TEXT_RESIZE_FACTOR is 0.5f in types.h? Let me check.
-    // In src/objects.cpp: obj.fontSize -= (mouseDelta.y * TEXT_RESIZE_FACTOR);
-    // If factor is 0.5, then 20 - (10 * 0.5) = 15.
     
     OBJECTS::HandleObjectResize(project, 0, HANDLE_BOTTOM_RIGHT, {0,0}, camera);
     

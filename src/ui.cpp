@@ -1210,7 +1210,7 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
 namespace {
 // Add a forward declaration for DrawPropertiesPanel since it's used in this
 // file.
-void DrawPropertiesPanel(Project &project, std::vector<int> &selectedIndices,
+void DrawPropertiesPanel(Project &project, InteractionState &state,
                          UIState &uiState);
 
 void DrawProjectSettings(Project &project) {
@@ -1237,6 +1237,16 @@ void DrawProjectSettings(Project &project) {
   }
   ImGui::SameLine();
   if (ImGui::Checkbox("Dark Mode", &Utils::appSettings.darkTheme)) {
+    project.isDirty = true;
+    Utils::SaveSettings(Utils::appSettings);
+  }
+
+  if (ImGui::Checkbox("Snap to Grid", &Utils::appSettings.snapToGrid)) {
+    project.isDirty = true;
+    Utils::SaveSettings(Utils::appSettings);
+  }
+  ImGui::SameLine();
+  if (ImGui::Checkbox("Snap to Objects", &Utils::appSettings.snapToObjects)) {
     project.isDirty = true;
     Utils::SaveSettings(Utils::appSettings);
   }
@@ -1692,7 +1702,7 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   DrawProjectSettings(project);
   DrawDataSource(project);
   DrawObjectTree(project, state);
-  DrawPropertiesPanel(project, state.selectedIndices, uiState);
+  DrawPropertiesPanel(project, state, uiState);
 
   // --- Alignment Tools ---
   if (!state.selectedIndices.empty()) {
