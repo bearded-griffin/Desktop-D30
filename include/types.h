@@ -95,6 +95,7 @@ struct LabelObject {
   // --- State ---
   bool isLocked = false;
   bool isVisible = true;
+  float rotation = 0.0f; // In degrees
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
@@ -210,6 +211,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
-                                   cornerRadius, isLocked, isVisible)
+                                   cornerRadius, isLocked, isVisible, rotation)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
                                    currentCSVRow, projectFilePath, csvHeaders, csvRows)

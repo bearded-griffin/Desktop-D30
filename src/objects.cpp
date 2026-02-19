@@ -27,6 +27,31 @@
 // Object selection handling
 namespace OBJECTS {
 
+namespace {
+bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
+  if (obj.rotation == 0) {
+    return CheckCollisionPointRec(point, GetObjectBounds(obj));
+  }
+
+  // Translate point to origin-relative
+  Vector2 p = {point.x - obj.x, point.y - obj.y};
+  // Rotate point inversely
+  p = Vector2Rotate(p, -obj.rotation * DEG2RAD);
+
+  Rectangle localBounds = {0, 0, obj.width, obj.height};
+  // Handle text/field special cases where height isn't explicitly stored or is 0
+  if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+      if (localBounds.height <= 0) localBounds.height = obj.fontSize * 1.5f;
+      if (localBounds.width <= 0) {
+          Font f = AssetManager::Get().GetFont(obj.fontName);
+          localBounds.width = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
+      }
+  }
+
+  return CheckCollisionPointRec(p, localBounds);
+}
+} // namespace
+
 /*!***************************************************
  * @brief    Handles object selection
  * @details
@@ -59,7 +84,7 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
         clickedIndex = i;
         break;
       }
-    } else if (CheckCollisionPointRec(mouseWorld, GetObjectBounds(obj))) {
+    } else if (CheckCollisionPointRotatedRec(mouseWorld, obj)) {
       clickedIndex = i;
       break;
     }
