@@ -27,7 +27,6 @@
 // Object selection handling
 namespace OBJECTS {
 
-namespace {
 bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
   if (obj.rotation == 0) {
     return CheckCollisionPointRec(point, GetObjectBounds(obj));
@@ -50,7 +49,6 @@ bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
 
   return CheckCollisionPointRec(p, localBounds);
 }
-} // namespace
 
 /*!***************************************************
  * @brief    Handles object selection

@@ -73,6 +73,7 @@ LabelObject CreateImageObject(const float &x, const float &y,
                               const std::string &filePath);
 
 // Object utility functions
+bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj);
 bool IsObjectSelected(const std::vector<int> &selectedIndices, int index);
 int GetPrimarySelection(const std::vector<int> &selectedIndices);
 Rectangle GetObjectBounds(const LabelObject &obj);
