@@ -25,6 +25,7 @@
 #include "assets.h"
 #include "imgui.h"
 #include "objects.h"
+#include "protocol.h"
 #include "utils.h"
 #include <algorithm>
 
@@ -304,6 +305,54 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
       state.selectedIndices.push_back((int)project.objects.size() - 1);
     }
     project.isDirty = true;
+  }
+
+  // --- New Keyboard Power User Shortcuts ---
+  bool alt = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
+
+  // Add Objects (Alt + Key)
+  if (alt && IsKeyPressed(KEY_T)) OBJECTS::AddTextObject(project, state);
+  if (alt && IsKeyPressed(KEY_Q)) OBJECTS::AddQRCodeObject(project, state);
+  if (alt && IsKeyPressed(KEY_B)) OBJECTS::AddBarcodeObject(project, state);
+  if (alt && IsKeyPressed(KEY_L)) OBJECTS::AddLineObject(project, state);
+  if (alt && IsKeyPressed(KEY_R)) OBJECTS::AddRectangleObject(project, state);
+  if (alt && IsKeyPressed(KEY_C)) OBJECTS::AddCircleObject(project, state);
+  if (alt && IsKeyPressed(KEY_D)) OBJECTS::AddBorderObject(project, state);
+  if (alt && IsKeyPressed(KEY_F)) OBJECTS::AddFieldObject(project, state);
+
+  // Rotation (Ctrl + [ / ])
+  if (ctrl && (IsKeyPressed(KEY_LEFT_BRACKET) || IsKeyPressed(KEY_RIGHT_BRACKET))) {
+    state.PushHistory(project);
+    float step = IsKeyPressed(KEY_RIGHT_BRACKET) ? 15.0f : -15.0f;
+    if (IsKeyDown(KEY_LEFT_SHIFT)) step *= 6.0f; // 90 degree jumps
+    
+    for (int idx : state.selectedIndices) {
+        if (!project.objects[idx].isLocked) {
+            project.objects[idx].rotation += step;
+            // Normalize to 0-360
+            while (project.objects[idx].rotation >= 360.0f) project.objects[idx].rotation -= 360.0f;
+            while (project.objects[idx].rotation < 0.0f) project.objects[idx].rotation += 360.0f;
+        }
+    }
+    project.isDirty = true;
+  }
+
+  // Printing (Ctrl + P for Single, Ctrl + Shift + P for Sequence)
+  if (ctrl && IsKeyPressed(KEY_P)) {
+      if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
+          // Trigger Sequence Print - we can't easily trigger the popup from here 
+          // without changing signatures, but we can do a default single increment print
+          // or just let the user use the menu for the specific count.
+      } else {
+          Protocol::PrintLabel(project);
+      }
+  }
+
+  // UI Toggles (Ctrl + G for Grid, Ctrl + H for Snapping)
+  if (ctrl && IsKeyPressed(KEY_G)) Utils::appSettings.showGrid = !Utils::appSettings.showGrid;
+  if (ctrl && IsKeyPressed(KEY_H)) {
+      Utils::appSettings.snapToGrid = !Utils::appSettings.snapToGrid;
+      Utils::appSettings.snapToObjects = Utils::appSettings.snapToGrid;
   }
 }
 
