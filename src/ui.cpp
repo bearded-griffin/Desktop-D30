@@ -42,8 +42,8 @@ namespace UI {
 namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
-void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
-void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
+void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
+void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
 void DrawLibraryManager(UIState &uiState);
 void DrawBorderManager(UIState &uiState);
 } // namespace
@@ -369,7 +369,7 @@ void DrawBatchPrintPopup(Project &project, UIState &uiState) {
   }
 }
 
-void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
+void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &state) {
   if (uiState.triggerIconPopup) {
     ImGui::OpenPopup("IconLibraryPopup");
     uiState.triggerIconPopup = false;
@@ -474,14 +474,15 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &
                     if (ImGui::ImageButton("icon_btn",
                                            (ImTextureID)(intptr_t)icon.thumbnail.id,
                                            ImVec2(48, 48))) {
+                      state.PushHistory(project);
                       LabelObject obj = {ObjectType::Image, 0, 0, 60, 60,
                                          icon.path, "", "", 0, 0xFFFFFFFF};
                       obj.data = icon.path;
                       project.objects.push_back(obj);
                       project.isDirty = true;
                       
-                      selectedIndices.clear();
-                      selectedIndices.push_back(project.objects.size() - 1);
+                      state.selectedIndices.clear();
+                      state.selectedIndices.push_back((int)project.objects.size() - 1);
                       
                       ImGui::CloseCurrentPopup();
                     }
@@ -511,7 +512,7 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState, std::vector<int> &
   }
 }
 
-void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
+void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState &state) {
   if (uiState.triggerBorderPopup) {
     ImGui::OpenPopup("BorderLibraryPopup");
     uiState.triggerBorderPopup = false;
@@ -550,6 +551,7 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int>
                         "border",
                         (ImTextureID)(intptr_t)icon.thumbnail.id,
                         ImVec2(48, 48))) {
+                  state.PushHistory(project);
                   LabelObject obj = {ObjectType::Image, 0, 0, (float)sz.width,
                                      (float)sz.height, icon.path,
                                      "", "", 0, 0xFFFFFFFF};
@@ -557,8 +559,8 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState, std::vector<int>
                             project.objects.insert(project.objects.begin(), obj);
                             project.isDirty = true;
                             
-                            selectedIndices.clear();
-                            selectedIndices.push_back(0); // It was inserted at the front
+                            state.selectedIndices.clear();
+                            state.selectedIndices.push_back(0); // It was inserted at the front
                             
                             ImGui::CloseCurrentPopup();
                           }        if (ImGui::IsItemHovered()) {
@@ -1003,13 +1005,13 @@ void DrawBorderManager(UIState &uiState) {
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
-void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selectedIndices) {
+void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
 
   if (ImGui::BeginMainMenuBar()) {
 
     // --- FILE MENU ---
     if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save")) {
+      if (ImGui::MenuItem("Save", "Ctrl+S")) {
         // If no file path is set, open a save dialog
         if (project.projectFilePath.empty()) {
           if (Utils::SaveProject(project)) {
@@ -1027,7 +1029,7 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
           project.isDirty = false;
         }
       }
-      if (ImGui::MenuItem("Load Project")) {
+      if (ImGui::MenuItem("Load Project", "Ctrl+L")) {
         uiState.triggerLoadConfirmation = true;
       }
 
@@ -1062,9 +1064,72 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
       }
 
       ImGui::Separator();
-      if (ImGui::MenuItem("Exit")) {
+      if (ImGui::MenuItem("Exit", "Alt+F4")) {
         RequestExit(uiState);
       }
+      ImGui::EndMenu();
+    }
+
+    // --- EDIT MENU ---
+    if (ImGui::BeginMenu("Edit")) {
+      if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !state.undoStack.empty())) {
+        state.Undo(project);
+        state.selectedIndices.clear();
+      }
+      if (ImGui::MenuItem("Redo", "Ctrl+Y", false, !state.redoStack.empty())) {
+        state.Redo(project);
+        state.selectedIndices.clear();
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Cut", "Ctrl+X", false, !state.selectedIndices.empty())) {
+        state.PushHistory(project);
+        state.clipboard.clear();
+        std::vector<int> sortedIndices = state.selectedIndices;
+        std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+        for (int idx : sortedIndices) {
+          state.clipboard.push_back(project.objects[idx]);
+          project.objects.erase(project.objects.begin() + idx);
+        }
+        state.selectedIndices.clear();
+        project.isDirty = true;
+      }
+      if (ImGui::MenuItem("Copy", "Ctrl+C", false, !state.selectedIndices.empty())) {
+        state.clipboard.clear();
+        for (int idx : state.selectedIndices) {
+          state.clipboard.push_back(project.objects[idx]);
+        }
+      }
+      if (ImGui::MenuItem("Paste", "Ctrl+V", false, !state.clipboard.empty())) {
+        state.PushHistory(project);
+        state.selectedIndices.clear();
+        for (const auto &obj : state.clipboard) {
+          LabelObject newObj = obj;
+          newObj.x += 10;
+          newObj.y += 10;
+          project.objects.push_back(newObj);
+          state.selectedIndices.push_back((int)project.objects.size() - 1);
+        }
+        project.isDirty = true;
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Delete", "Del", false, !state.selectedIndices.empty())) {
+        state.PushHistory(project);
+        std::vector<int> sortedIndices = state.selectedIndices;
+        std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+        for (int idx : sortedIndices) {
+          auto &objToDelete = project.objects[idx];
+          if (objToDelete.texture.id != 0)
+            UnloadTexture(objToDelete.texture);
+          project.objects.erase(project.objects.begin() + idx);
+        }
+        state.selectedIndices.clear();
+        project.isDirty = true;
+      }
+
       ImGui::EndMenu();
     }
 
@@ -1124,11 +1189,10 @@ void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selected
   }
 
   // Draw Popups
-  int primaryIdx = OBJECTS::GetPrimarySelection(selectedIndices);
   DrawDeviceScanPopup(uiState);
   DrawBatchPrintPopup(project, uiState);
-  DrawIconLibraryPopup(project, uiState, selectedIndices);
-  DrawBorderLibraryPopup(project, uiState, selectedIndices);
+  DrawIconLibraryPopup(project, uiState, state);
+  DrawBorderLibraryPopup(project, uiState, state);
   DrawLibraryManager(uiState);
   DrawBorderManager(uiState);
 }
@@ -1547,7 +1611,7 @@ void DrawPropertiesPanel(Project &project, std::vector<int> &selectedIndices,
  * @date     2026.01.19
  * @author   bearded.griffin
  ****************************************************/
-void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &uiState) {
+void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   ImGui::Begin("Inspector", nullptr,
                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
   ImGui::SetWindowPos({0, 20}, ImGuiCond_FirstUseEver);
@@ -1555,27 +1619,27 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
 
   DrawProjectSettings(project);
   DrawDataSource(project);
-  DrawObjectTree(project, selectedIndices);
-  DrawPropertiesPanel(project, selectedIndices, uiState);
+  DrawObjectTree(project, state.selectedIndices);
+  DrawPropertiesPanel(project, state.selectedIndices, uiState);
 
   // --- Alignment Tools ---
-  if (!selectedIndices.empty()) {
+  if (!state.selectedIndices.empty()) {
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Text("Alignment");
     ImGui::Checkbox("Align to Canvas", &uiState.alignToCanvas);
     
-    if (ImGui::Button("L", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_LEFT, uiState.alignToCanvas);
+    if (ImGui::Button("L", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_LEFT, uiState.alignToCanvas); }
     ImGui::SameLine();
-    if (ImGui::Button("CH", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_CENTER_H, uiState.alignToCanvas);
+    if (ImGui::Button("CH", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_H, uiState.alignToCanvas); }
     ImGui::SameLine();
-    if (ImGui::Button("R", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_RIGHT, uiState.alignToCanvas);
+    if (ImGui::Button("R", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_RIGHT, uiState.alignToCanvas); }
     
-    if (ImGui::Button("T", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_TOP, uiState.alignToCanvas);
+    if (ImGui::Button("T", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_TOP, uiState.alignToCanvas); }
     ImGui::SameLine();
-    if (ImGui::Button("CV", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_CENTER_V, uiState.alignToCanvas);
+    if (ImGui::Button("CV", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_V, uiState.alignToCanvas); }
     ImGui::SameLine();
-    if (ImGui::Button("B", ImVec2(40, 0))) OBJECTS::AlignObjects(project, selectedIndices, ALIGN_BOTTOM, uiState.alignToCanvas);
+    if (ImGui::Button("B", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_BOTTOM, uiState.alignToCanvas); }
   }
 
   // --- 4. Add Buttons (Grid Layout) ---
@@ -1588,36 +1652,40 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
 
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateTextObject(0, 0, "Text", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateFieldObject(0, 0, "{Col}", 20);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateQRCodeObject(0, 0, 60, "www.example.com");
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateBarcodeObject(50, 50, 100, 60, "12345678");
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
 
   // --- Row 3: Graphics ---
@@ -1626,6 +1694,7 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
                                     {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
                          .result();
     if (!selection.empty()) {
+      state.PushHistory(project);
       LabelObject obj = OBJECTS::CreateImageObject(0, 0, 60, 60, selection[0]);
 
       // Immediately load and constrain image for display
@@ -1650,10 +1719,10 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
 
         project.objects.push_back(obj);
         project.isDirty = true;
-        selectedIndices.clear();
-        selectedIndices.push_back(project.objects.size() - 1);
+        state.selectedIndices.clear();
+        state.selectedIndices.push_back((int)project.objects.size() - 1);
 
-        project.objects[selectedIndices.back()].texture = LoadTextureFromImage(img);
+        project.objects[state.selectedIndices.back()].texture = LoadTextureFromImage(img);
         UnloadImage(img);
       }
     }
@@ -1665,38 +1734,42 @@ void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &u
 
   // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateLineObject(0, 0, 100, 0, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateRectangleObject(0, 0, 50, 50, 4);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
 
   if (ImGui::Button("Add Circle", btnSize)) {
+    state.PushHistory(project);
     LabelObject obj = OBJECTS::CreateCircleObject(0, 0, 25);
     project.objects.push_back(obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(project.objects.size() - 1);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back((int)project.objects.size() - 1);
   }
 
   // --- Row 5: Decor ---
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
+    state.PushHistory(project);
     LabelSize sz = LabelSizes[project.selectedLabelIndex];
     LabelObject obj = OBJECTS::CreateBorderObject(4, 4, sz);
     project.objects.insert(project.objects.begin(), obj);
     project.isDirty = true;
-    selectedIndices.clear();
-    selectedIndices.push_back(0);
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back(0);
   }
 
   if (ImGui::Button("Deco Border", btnSize)) {
@@ -1732,9 +1805,9 @@ void DrawAboutDialog(UIState &uiState) {
   }
 }
 
-void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState) {
-  DrawMainMenu(project, uiState, selectedIndices);
-  DrawSidebar(project, selectedIndices, uiState);
+void Draw(Project &project, InteractionState &state, UIState &uiState) {
+  DrawMainMenu(project, uiState, state);
+  DrawSidebar(project, state, uiState);
   DrawExitConfirmation(project, uiState);
   DrawLoadConfirmation(project, uiState);
   DrawAboutDialog(uiState);
