@@ -152,6 +152,35 @@ struct InteractionState {
   Vector2 dragOffset = {0, 0};
   bool isResizing = false;
   ResizeHandle activeHandle = HANDLE_NONE;
+
+  // --- Undo/Redo/Copy/Paste ---
+  std::vector<Project> undoStack;
+  std::vector<Project> redoStack;
+  std::vector<LabelObject> clipboard;
+
+  void PushHistory(const Project &project) {
+    undoStack.push_back(project);
+    if (undoStack.size() > 50) {
+      undoStack.erase(undoStack.begin());
+    }
+    redoStack.clear();
+  }
+
+  void Undo(Project &project) {
+    if (undoStack.empty())
+      return;
+    redoStack.push_back(project);
+    project = undoStack.back();
+    undoStack.pop_back();
+  }
+
+  void Redo(Project &project) {
+    if (redoStack.empty())
+      return;
+    undoStack.push_back(project);
+    project = redoStack.back();
+    redoStack.pop_back();
+  }
 };
 
 // JSON Serialization Macros

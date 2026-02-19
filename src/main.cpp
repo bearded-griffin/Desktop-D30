@@ -68,7 +68,7 @@ int main() {
     rlImGuiBegin();
     INPUT_HANDLER::HandleInput(currentProject, state, camera);
     RENDERING::RenderScene(currentProject, state, camera, state.selectedIndices);
-    UI::Draw(currentProject, state.selectedIndices, uiState);
+    UI::Draw(currentProject, state, uiState);
     rlImGuiEnd();
 
     EndDrawing();

@@ -39,10 +39,10 @@ struct UIState {
   bool showAboutDialog = false;
 };
 
-void DrawSidebar(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
-void DrawMainMenu(Project &project, UIState &uiState, std::vector<int> &selectedIndices);
+void DrawSidebar(Project &project, InteractionState &state, UIState &uiState);
+void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state);
 void DrawAboutDialog(UIState &uiState);
-void Draw(Project &project, std::vector<int> &selectedIndices, UIState &uiState);
+void Draw(Project &project, InteractionState &state, UIState &uiState);
 void RequestExit(UIState &uiState);
 bool ShouldClose(const UIState &uiState);
 void ClearExitRequest(UIState &uiState);

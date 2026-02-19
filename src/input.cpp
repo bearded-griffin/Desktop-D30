@@ -45,7 +45,12 @@ namespace INPUT_HANDLER {
 void HandleMouseInteractions(Project &project, InteractionState &state,
                              const Vector2 &mouseWorld,
                              const Camera2D &camera) {
+  static Project preActionState;
+  static bool potentialChange = false;
+
   if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    preActionState = project;
+    potentialChange = false;
     state.isResizing = false;
     state.activeHandle = HANDLE_NONE;
 
@@ -103,6 +108,9 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
   }
 
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+    if ((state.isDraggingObject || state.isResizing) && potentialChange) {
+      state.PushHistory(preActionState);
+    }
     state.isDraggingObject = false;
     state.isResizing = false;
     state.activeHandle = HANDLE_NONE;
@@ -112,9 +120,11 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
   if (state.isResizing && !state.selectedIndices.empty()) {
     OBJECTS::HandleObjectResize(project, state.selectedIndices.back(),
                                 state.activeHandle, mouseWorld, camera);
+    potentialChange = true;
   } else if (state.isDraggingObject && !state.selectedIndices.empty()) {
     OBJECTS::HandleObjectDrag(project, state.selectedIndices, mouseWorld,
                               state.dragOffset, camera);
+    potentialChange = true;
   }
 }
 
@@ -139,6 +149,8 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
   // Delete objects
   if (!state.selectedIndices.empty() &&
       (IsKeyPressed(KEY_DELETE) || IsKeyPressed(KEY_BACKSPACE))) {
+    
+    state.PushHistory(project);
     
     // Sort indices in descending order to delete without shifting issues
     std::vector<int> sortedIndices = state.selectedIndices;
@@ -171,6 +183,59 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
   if (wheel != 0) {
     camera.zoom += wheel * ZOOM_SPEED;
     camera.zoom = std::max(camera.zoom, MIN_ZOOM);
+  }
+
+  // --- Keyboard Shortcuts ---
+  bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+
+  // Undo (Ctrl+Z)
+  if (ctrl && IsKeyPressed(KEY_Z) && !IsKeyDown(KEY_LEFT_SHIFT)) {
+    state.Undo(project);
+    state.selectedIndices.clear();
+  }
+
+  // Redo (Ctrl+Y or Ctrl+Shift+Z)
+  if ((ctrl && IsKeyPressed(KEY_Y)) || (ctrl && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_Z))) {
+    state.Redo(project);
+    state.selectedIndices.clear();
+  }
+
+  // Copy (Ctrl+C)
+  if (ctrl && IsKeyPressed(KEY_C) && !state.selectedIndices.empty()) {
+    state.clipboard.clear();
+    for (int idx : state.selectedIndices) {
+      state.clipboard.push_back(project.objects[idx]);
+    }
+  }
+
+  // Cut (Ctrl+X)
+  if (ctrl && IsKeyPressed(KEY_X) && !state.selectedIndices.empty()) {
+    state.PushHistory(project);
+    state.clipboard.clear();
+    
+    std::vector<int> sortedIndices = state.selectedIndices;
+    std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+    
+    for (int idx : sortedIndices) {
+      state.clipboard.push_back(project.objects[idx]);
+      project.objects.erase(project.objects.begin() + idx);
+    }
+    state.selectedIndices.clear();
+    project.isDirty = true;
+  }
+
+  // Paste (Ctrl+V)
+  if (ctrl && IsKeyPressed(KEY_V) && !state.clipboard.empty()) {
+    state.PushHistory(project);
+    state.selectedIndices.clear();
+    for (const auto& obj : state.clipboard) {
+      LabelObject newObj = obj;
+      newObj.x += 10;
+      newObj.y += 10;
+      project.objects.push_back(newObj);
+      state.selectedIndices.push_back((int)project.objects.size() - 1);
+    }
+    project.isDirty = true;
   }
 }
 
