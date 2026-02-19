@@ -23,6 +23,10 @@ static int g_DrawTextExCount = 0;
 static std::string g_lastDrawTextExString = "";
 static Vector2 g_lastDrawTextExPos = {0,0};
 
+static int g_DrawTextProCount = 0;
+static std::string g_lastDrawTextProString = "";
+static Vector2 g_lastDrawTextProPos = {0,0};
+
 static int g_DrawLineExCount = 0;
 static Vector2 g_lastDrawLineExStart = {0,0};
 static Vector2 g_lastDrawLineExEnd = {0,0};
@@ -57,6 +61,10 @@ void ResetMockState() {
     g_DrawTextExCount = 0;
     g_lastDrawTextExString = "";
     g_lastDrawTextExPos = {0,0};
+
+    g_DrawTextProCount = 0;
+    g_lastDrawTextProString = "";
+    g_lastDrawTextProPos = {0,0};
     
     g_DrawLineExCount = 0;
     g_lastDrawLineExStart = {0,0};
@@ -93,6 +101,10 @@ std::string GetLastWindowTitle() { return g_lastWindowTitle; }
 int GetDrawTextExCount() { return g_DrawTextExCount; }
 std::string GetLastDrawTextExString() { return g_lastDrawTextExString; }
 Vector2 GetLastDrawTextExPos() { return g_lastDrawTextExPos; }
+
+int GetDrawTextProCount() { return g_DrawTextProCount; }
+std::string GetLastDrawTextProString() { return g_lastDrawTextProString; }
+Vector2 GetLastDrawTextProPos() { return g_lastDrawTextProPos; }
 
 int GetDrawLineExCount() { return g_DrawLineExCount; }
 Vector2 GetLastDrawLineExStart() { return g_lastDrawLineExStart; }
@@ -149,6 +161,12 @@ extern "C" {
         g_DrawTextExCount++;
         if (text) g_lastDrawTextExString = text;
         g_lastDrawTextExPos = position;
+    }
+
+    void __wrap_DrawTextPro(Font font, const char *text, Vector2 position, Vector2 origin, float rotation, float fontSize, float spacing, Color tint) {
+        g_DrawTextProCount++;
+        if (text) g_lastDrawTextProString = text;
+        g_lastDrawTextProPos = position;
     }
     
     void __wrap_DrawText(const char *text, int posX, int posY, int fontSize, Color color) {

@@ -9,6 +9,10 @@ int GetDrawTextExCount();
 std::string GetLastDrawTextExString();
 Vector2 GetLastDrawTextExPos();
 
+int GetDrawTextProCount();
+std::string GetLastDrawTextProString();
+Vector2 GetLastDrawTextProPos();
+
 int GetDrawLineExCount();
 Vector2 GetLastDrawLineExStart();
 Vector2 GetLastDrawLineExEnd();
@@ -43,11 +47,11 @@ TEST_F(RenderingTest, RenderTextObject_DrawsText) {
     
     RENDERING::RenderObject(obj, false, camera);
     
-    EXPECT_EQ(GetDrawTextExCount(), 1);
-    EXPECT_EQ(GetLastDrawTextExString(), "TestRender");
-    // DrawTextEx pos might be offset by wrapping logic, but usually starts at x,y
-    EXPECT_FLOAT_EQ(GetLastDrawTextExPos().x, 10);
-    EXPECT_FLOAT_EQ(GetLastDrawTextExPos().y, 20);
+    EXPECT_EQ(GetDrawTextProCount(), 1);
+    EXPECT_EQ(GetLastDrawTextProString(), "TestRender");
+    // DrawTextPro pos might be offset by wrapping logic, but usually starts at x,y
+    EXPECT_FLOAT_EQ(GetLastDrawTextProPos().x, 10);
+    EXPECT_FLOAT_EQ(GetLastDrawTextProPos().y, 20);
 }
 
 TEST_F(RenderingTest, RenderLineObject_DrawsLine) {
@@ -119,7 +123,7 @@ TEST_F(RenderingTest, DrawTextBox_Wrapping) {
     Font font = {0};
     RENDERING::DrawTextBox(nullptr, font, "Hello World", 0, 0, 12, 1, WHITE, 40);
     
-    EXPECT_EQ(GetDrawTextExCount(), 2);
+    EXPECT_EQ(GetDrawTextProCount(), 2);
     // Logic: First word drawn at 0,0. Second word drawn at 0, 12 (newline).
 }
 
@@ -130,8 +134,8 @@ TEST_F(RenderingTest, RenderSelectionHandles) {
     RENDERING::RenderObject(obj, true, camera);
     
     EXPECT_EQ(GetDrawCircleCount(), 8); // 4 filled + 4 lines
-    EXPECT_EQ(GetDrawLineExCount(), 7);   // 2 for X, 5 for arrows
-    EXPECT_EQ(GetDrawRectangleLinesCount(), 1); // Outline
+    EXPECT_EQ(GetDrawLineExCount(), 9);   // 4 for box + 2 for X + 3 for arrows
+    EXPECT_EQ(GetDrawRectangleLinesCount(), 0); // Outline is now drawn via LineEx for rotation
 }
 
 TEST_F(RenderingTest, RenderProjectToImage_CreatesValidImage) {
