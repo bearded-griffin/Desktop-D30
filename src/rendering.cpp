@@ -300,16 +300,19 @@ void RenderObject(LabelObject &obj, const bool isSelected,
  * @author   bearded.griffin
  ****************************************************/
 void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
+  Color primaryCol = obj.isLocked ? GRAY : SKYBLUE;
+  Color accentCol = obj.isLocked ? DARKGRAY : DARKBLUE;
+
   if (obj.type == ObjectType::Line) {
     float handleRadius = HANDLE_RADIUS / camera.zoom;
     Vector2 start = {obj.x, obj.y};
     Vector2 end = {obj.x + obj.width, obj.y + obj.height};
-    DrawLineEx(start, end, 1.0f / camera.zoom, SKYBLUE);
-    DrawCircleV(start, handleRadius, SKYBLUE);
-    DrawCircleV(end, handleRadius, SKYBLUE);
+    DrawLineEx(start, end, 1.0f / camera.zoom, primaryCol);
+    DrawCircleV(start, handleRadius, primaryCol);
+    DrawCircleV(end, handleRadius, primaryCol);
   } else {
     Rectangle bounds = OBJECTS::GetObjectBounds(obj);
-    DrawRectangleLinesEx(bounds, 1.0f / camera.zoom, SKYBLUE);
+    DrawRectangleLinesEx(bounds, 1.0f / camera.zoom, primaryCol);
 
     float handleRadius = HANDLE_RADIUS / camera.zoom;
     Vector2 handles[] = {
@@ -320,18 +323,27 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     };
 
     for (int i = 0; i < 4; i++) {
-      DrawCircleV(handles[i], handleRadius, SKYBLUE);
-      DrawCircleLinesV(handles[i], handleRadius, DARKBLUE);
+      DrawCircleV(handles[i], handleRadius, primaryCol);
+      DrawCircleLinesV(handles[i], handleRadius, accentCol);
 
-      if (i == 0) { // Top-Left: Delete (X)
-        float xSize = handleRadius * 0.6f;
-        DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
-                   {handles[i].x + xSize, handles[i].y + xSize},
-                   2.0f / camera.zoom, WHITE);
-        DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
-                   {handles[i].x - xSize, handles[i].y + xSize},
-                   2.0f / camera.zoom, WHITE);
+      if (i == 0) { // Top-Left: Delete (X) or Lock Icon
+        if (obj.isLocked) {
+            // Draw a simple lock body
+            float pad = handleRadius * 0.4f;
+            DrawRectangleV({handles[i].x - pad, handles[i].y}, {pad * 2, pad}, WHITE);
+            // Draw a lock shackle
+            DrawCircleLinesV({handles[i].x, handles[i].y}, pad, WHITE);
+        } else {
+            float xSize = handleRadius * 0.6f;
+            DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
+                       {handles[i].x + xSize, handles[i].y + xSize},
+                       2.0f / camera.zoom, WHITE);
+            DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
+                       {handles[i].x - xSize, handles[i].y + xSize},
+                       2.0f / camera.zoom, WHITE);
+        }
       } else if (i == 3) { // Bottom-Right: Resize (Arrows)
+        if (obj.isLocked) continue;
         float aSize = handleRadius * 0.6f;
         // Main diagonal line
         DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
@@ -427,6 +439,7 @@ Image RenderProjectToImage(const Project &project) {
 
   // 3. Draw Objects onto the Image
   for (const auto &obj : project.objects) {
+    if (!obj.isVisible) continue;
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       Font printFont = AssetManager::Get().GetFont(obj.fontName);
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
@@ -706,6 +719,7 @@ void RenderScene(Project &currentProject,
 
   // Object rendering - Use the consolidated RenderObject function
   for (int i = 0; i < currentProject.objects.size(); i++) {
+    if (!currentProject.objects[i].isVisible) continue;
     bool isSelected = OBJECTS::IsObjectSelected(selectedIndices, i);
     RenderObject(currentProject.objects[i], isSelected, camera);
   }

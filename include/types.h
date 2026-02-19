@@ -92,6 +92,10 @@ struct LabelObject {
 
   float cornerRadius = 0.0f; // 0.0 = Sharp corners
 
+  // --- State ---
+  bool isLocked = false;
+  bool isVisible = true;
+
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
   std::string lastData = "";      // For cache tracking
@@ -196,6 +200,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
-                                   cornerRadius)
+                                   cornerRadius, isLocked, isVisible)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
                                    currentCSVRow, projectFilePath, csvHeaders, csvRows)
