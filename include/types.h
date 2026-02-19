@@ -155,6 +155,11 @@ enum AlignmentType {
   ALIGN_BOTTOM
 };
 
+enum DistributionType {
+  DISTRIBUTE_HORIZONTALLY,
+  DISTRIBUTE_VERTICALLY
+};
+
 struct SnapGuide {
   float pos;
   bool isVertical;

@@ -1741,6 +1741,18 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
     if (ImGui::Button("CV", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_V, uiState.alignToCanvas); }
     ImGui::SameLine();
     if (ImGui::Button("B", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_BOTTOM, uiState.alignToCanvas); }
+
+    if (state.selectedIndices.size() >= 3) {
+      if (ImGui::Button("Dist H", ImVec2(60, 0))) {
+        state.PushHistory(project);
+        OBJECTS::DistributeObjects(project, state.selectedIndices, DISTRIBUTE_HORIZONTALLY);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Dist V", ImVec2(60, 0))) {
+        state.PushHistory(project);
+        OBJECTS::DistributeObjects(project, state.selectedIndices, DISTRIBUTE_VERTICALLY);
+      }
+    }
   }
 
   // --- 4. Add Buttons (Grid Layout) ---

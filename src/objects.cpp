@@ -378,6 +378,55 @@ void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
   }
 }
 
+void DistributeObjects(Project &project, const std::vector<int> &selectedIndices,
+                       DistributionType type) {
+  if (selectedIndices.size() < 3) return;
+
+  // 1. Filter out locked objects and store indices
+  std::vector<int> workingIndices;
+  for (int idx : selectedIndices) {
+    if (!project.objects[idx].isLocked) {
+      workingIndices.push_back(idx);
+    }
+  }
+
+  if (workingIndices.size() < 3) return;
+
+  // 2. Sort indices based on position (center)
+  std::sort(workingIndices.begin(), workingIndices.end(),
+            [&](int a, int b) {
+              Rectangle boundsA = GetObjectBounds(project.objects[a]);
+              Rectangle boundsB = GetObjectBounds(project.objects[b]);
+              float centerA = (type == DISTRIBUTE_HORIZONTALLY) ? boundsA.x + boundsA.width / 2.0f : boundsA.y + boundsA.height / 2.0f;
+              float centerB = (type == DISTRIBUTE_HORIZONTALLY) ? boundsB.x + boundsB.width / 2.0f : boundsB.y + boundsB.height / 2.0f;
+              return centerA < centerB;
+            });
+
+  // 3. Calculate spacing
+  Rectangle firstBounds = GetObjectBounds(project.objects[workingIndices.front()]);
+  Rectangle lastBounds = GetObjectBounds(project.objects[workingIndices.back()]);
+
+  float startPos = (type == DISTRIBUTE_HORIZONTALLY) ? firstBounds.x + firstBounds.width / 2.0f : firstBounds.y + firstBounds.height / 2.0f;
+  float endPos = (type == DISTRIBUTE_HORIZONTALLY) ? lastBounds.x + lastBounds.width / 2.0f : lastBounds.y + lastBounds.height / 2.0f;
+  
+  float totalDistance = endPos - startPos;
+  float step = totalDistance / (float)(workingIndices.size() - 1);
+
+  // 4. Apply new positions
+  for (size_t i = 1; i < workingIndices.size() - 1; ++i) {
+    auto &obj = project.objects[workingIndices[i]];
+    Rectangle b = GetObjectBounds(obj);
+    float newCenter = startPos + (step * i);
+    
+    if (type == DISTRIBUTE_HORIZONTALLY) {
+      obj.x = newCenter - (b.width / 2.0f);
+    } else {
+      obj.y = newCenter - (b.height / 2.0f);
+    }
+  }
+  project.isDirty = true;
+}
+
 /*!***************************************************
  * @brief    Creates a Text Object
  * @details
