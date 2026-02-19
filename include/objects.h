@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * @details  Handles object selection, resizing, and dragging
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
@@ -40,7 +39,8 @@ void HandleObjectDrag(Project &project, InteractionState &state,
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
                   AlignmentType type, bool relativeToCanvas = false);
 
-void DistributeObjects(Project &project, const std::vector<int> &selectedIndices,
+void DistributeObjects(Project &project,
+                       const std::vector<int> &selectedIndices,
                        DistributionType type);
 
 // Object creation functions
@@ -72,17 +72,69 @@ LabelObject CreateImageObject(const float &x, const float &y,
                               const float &width, const float &height,
                               const std::string &filePath);
 
-// High-level "Add" actions (used by both UI and Shortcuts)
+/*!***************************************************
+ * @brief    Adds a new Text object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddTextObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Data Field object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddFieldObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new QR Code object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddQRCodeObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Barcode object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddBarcodeObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Line object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddLineObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Rectangle object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddRectangleObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Circle object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddCircleObject(Project &project, InteractionState &state);
+
+/*!***************************************************
+ * @brief    Adds a new Border object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ ****************************************************/
 void AddBorderObject(Project &project, InteractionState &state);
 
 // Object utility functions
+/*!***************************************************
+ * @brief    Checks collision against a rotated object
+ * @param    point Vector2
+ * @param    obj const LabelObject&
+ * @return   bool
+ ****************************************************/
 bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj);
 bool IsObjectSelected(const std::vector<int> &selectedIndices, int index);
 int GetPrimarySelection(const std::vector<int> &selectedIndices);

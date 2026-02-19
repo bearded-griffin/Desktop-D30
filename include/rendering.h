@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  * to the format that is needed to print the label.
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
@@ -47,11 +46,13 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
 float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
-                  float fontSize, float spacing, Color tint, float maxWidth, float rotation = 0.0f);
+                  float fontSize, float spacing, Color tint, float maxWidth,
+                  float rotation = 0.0f);
 void DrawGrid(const LabelSize &currentSize);
 Image RenderProjectToImage(const Project &project);
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
-                 const Camera2D &camera, const std::vector<int> &selectedIndices);
+                 const Camera2D &camera,
+                 const std::vector<int> &selectedIndices);
 
 } // namespace RENDERING

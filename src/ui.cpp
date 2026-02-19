@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  * @brief    Handels all UI operations
  * @details  Draws the menus, sidebar, and popups.
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 
 #include "ui.h"
@@ -43,8 +42,10 @@ namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
 void DrawSequencePrintPopup(Project &project, UIState &uiState);
-void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
-void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
+void DrawIconLibraryPopup(Project &project, UIState &uiState,
+                          InteractionState &state);
+void DrawBorderLibraryPopup(Project &project, UIState &uiState,
+                            InteractionState &state);
 void DrawLibraryManager(UIState &uiState);
 void DrawBorderManager(UIState &uiState);
 } // namespace
@@ -55,7 +56,6 @@ void DrawBorderManager(UIState &uiState);
  * @return   void
  * @note
  * @date     2026.02.01
- * @author   bearded.griffin
  ****************************************************/
 void InitializeUI() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
@@ -71,7 +71,6 @@ void InitializeUI() {
  * @return   void
  * @note
  * @date     2026.02.01
- * @author   bearded.griffin
  ****************************************************/
 void UpdateWindowTitle(const Project &project) {
   std::string title = "Desktop-D30";
@@ -91,7 +90,6 @@ void UpdateWindowTitle(const Project &project) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RequestExit(UIState &uiState) { uiState.exitRequested = true; }
 
@@ -101,7 +99,6 @@ void RequestExit(UIState &uiState) { uiState.exitRequested = true; }
  * @return   bool
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 bool ShouldClose(const UIState &uiState) { return uiState.forceQuit; }
 
@@ -111,7 +108,6 @@ bool ShouldClose(const UIState &uiState) { return uiState.forceQuit; }
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void ClearExitRequest(UIState &uiState) { uiState.exitRequested = false; }
 
@@ -122,7 +118,6 @@ void ClearExitRequest(UIState &uiState) { uiState.exitRequested = false; }
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void DrawExitConfirmation(Project &project, UIState &uiState) {
   if (uiState.exitRequested) {
@@ -174,7 +169,6 @@ void DrawExitConfirmation(Project &project, UIState &uiState) {
  * @return   void
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 void DrawLoadConfirmation(Project &project, UIState &uiState) {
   if (uiState.triggerLoadConfirmation) {
@@ -227,6 +221,12 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the loading splash screen
+ * @details  Renders a logo and loading progress bar.
+ * @return   void
+ * @date     2026.02.19
+ ****************************************************/
 void DrawSplashScreen() {
   ClearBackground(RAYWHITE);
 
@@ -277,6 +277,11 @@ void DrawSplashScreen() {
 }
 
 namespace {
+/*!***************************************************
+ * @brief    Draws the Bluetooth device scan popup
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawDeviceScanPopup(UIState &uiState) {
   if (uiState.triggerScanPopup) {
     ImGui::OpenPopup("DeviceScanPopup");
@@ -325,6 +330,12 @@ void DrawDeviceScanPopup(UIState &uiState) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the Batch Print (CSV) popup
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawBatchPrintPopup(Project &project, UIState &uiState) {
   if (uiState.triggerBatchPopup) {
     ImGui::OpenPopup("BatchPrintPopup");
@@ -370,6 +381,12 @@ void DrawBatchPrintPopup(Project &project, UIState &uiState) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the Sequence Print (Auto-Inc) popup
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawSequencePrintPopup(Project &project, UIState &uiState) {
   if (uiState.triggerSequencePopup) {
     ImGui::OpenPopup("SequencePrintPopup");
@@ -382,9 +399,10 @@ void DrawSequencePrintPopup(Project &project, UIState &uiState) {
 
     ImGui::Text("Print Auto-Increment Sequence");
     ImGui::Separator();
-    
+
     ImGui::InputInt("Number of Labels", &labelCount);
-    if (labelCount < 1) labelCount = 1;
+    if (labelCount < 1)
+      labelCount = 1;
 
     ImGui::Separator();
 
@@ -401,7 +419,15 @@ void DrawSequencePrintPopup(Project &project, UIState &uiState) {
   }
 }
 
-void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &state) {
+/*!***************************************************
+ * @brief    Draws the Icon Library picker popup
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawIconLibraryPopup(Project &project, UIState &uiState,
+                          InteractionState &state) {
   if (uiState.triggerIconPopup) {
     ImGui::OpenPopup("IconLibraryPopup");
     uiState.triggerIconPopup = false;
@@ -503,21 +529,21 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &
           }
 
           ImGui::PushID(icon.path.c_str());
-                    if (ImGui::ImageButton("icon_btn",
-                                           (ImTextureID)(intptr_t)icon.thumbnail.id,
-                                           ImVec2(48, 48))) {
-                      state.PushHistory(project);
-                      LabelObject obj = {ObjectType::Image, 0, 0, 60, 60,
-                                         icon.path, "", "", 0, 0xFFFFFFFF};
-                      obj.data = icon.path;
-                      project.objects.push_back(obj);
-                      project.isDirty = true;
-                      
-                      state.selectedIndices.clear();
-                      state.selectedIndices.push_back((int)project.objects.size() - 1);
-                      
-                      ImGui::CloseCurrentPopup();
-                    }
+          if (ImGui::ImageButton("icon_btn",
+                                 (ImTextureID)(intptr_t)icon.thumbnail.id,
+                                 ImVec2(48, 48))) {
+            state.PushHistory(project);
+            LabelObject obj = {ObjectType::Image, 0,  0,  60, 60,
+                               icon.path,         "", "", 0,  0xFFFFFFFF};
+            obj.data = icon.path;
+            project.objects.push_back(obj);
+            project.isDirty = true;
+
+            state.selectedIndices.clear();
+            state.selectedIndices.push_back((int)project.objects.size() - 1);
+
+            ImGui::CloseCurrentPopup();
+          }
           if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s\n(Category: %s)",
                               icon.customName.empty() ? icon.name.c_str()
@@ -544,7 +570,15 @@ void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &
   }
 }
 
-void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState &state) {
+/*!***************************************************
+ * @brief    Draws the Border Library picker popup
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawBorderLibraryPopup(Project &project, UIState &uiState,
+                            InteractionState &state) {
   if (uiState.triggerBorderPopup) {
     ImGui::OpenPopup("BorderLibraryPopup");
     uiState.triggerBorderPopup = false;
@@ -579,23 +613,30 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState
       for (size_t i = 0; i < currentCat.icons.size(); i++) {
         Icon &icon = currentCat.icons[i];
         ImGui::PushID(i);
-                if (ImGui::ImageButton(
-                        "border",
-                        (ImTextureID)(intptr_t)icon.thumbnail.id,
-                        ImVec2(48, 48))) {
-                  state.PushHistory(project);
-                  LabelObject obj = {ObjectType::Image, 0, 0, (float)sz.width,
-                                     (float)sz.height, icon.path,
-                                     "", "", 0, 0xFFFFFFFF};
-                  obj.data = icon.path;
-                            project.objects.insert(project.objects.begin(), obj);
-                            project.isDirty = true;
-                            
-                            state.selectedIndices.clear();
-                            state.selectedIndices.push_back(0); // It was inserted at the front
-                            
-                            ImGui::CloseCurrentPopup();
-                          }        if (ImGui::IsItemHovered()) {
+        if (ImGui::ImageButton("border",
+                               (ImTextureID)(intptr_t)icon.thumbnail.id,
+                               ImVec2(48, 48))) {
+          state.PushHistory(project);
+          LabelObject obj = {ObjectType::Image,
+                             0,
+                             0,
+                             (float)sz.width,
+                             (float)sz.height,
+                             icon.path,
+                             "",
+                             "",
+                             0,
+                             0xFFFFFFFF};
+          obj.data = icon.path;
+          project.objects.insert(project.objects.begin(), obj);
+          project.isDirty = true;
+
+          state.selectedIndices.clear();
+          state.selectedIndices.push_back(0); // It was inserted at the front
+
+          ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsItemHovered()) {
           ImGui::SetTooltip("%s", icon.customName.empty()
                                       ? icon.name.c_str()
                                       : icon.customName.c_str());
@@ -616,6 +657,11 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the Icon Library Management window
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawLibraryManager(UIState &uiState) {
   if (uiState.triggerLibraryManager) {
     ImGui::OpenPopup("Library Manager");
@@ -823,6 +869,11 @@ void DrawLibraryManager(UIState &uiState) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the Border Management window
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawBorderManager(UIState &uiState) {
   if (uiState.triggerBorderManager) {
     ImGui::OpenPopup("Border Manager");
@@ -1035,7 +1086,6 @@ void DrawBorderManager(UIState &uiState) {
  * @return   void
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
 
@@ -1119,11 +1169,13 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
 
       ImGui::Separator();
 
-      if (ImGui::MenuItem("Cut", "Ctrl+X", false, !state.selectedIndices.empty())) {
+      if (ImGui::MenuItem("Cut", "Ctrl+X", false,
+                          !state.selectedIndices.empty())) {
         state.PushHistory(project);
         state.clipboard.clear();
         std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+        std::sort(sortedIndices.begin(), sortedIndices.end(),
+                  std::greater<int>());
         for (int idx : sortedIndices) {
           state.clipboard.push_back(project.objects[idx]);
           project.objects.erase(project.objects.begin() + idx);
@@ -1131,7 +1183,8 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
         state.selectedIndices.clear();
         project.isDirty = true;
       }
-      if (ImGui::MenuItem("Copy", "Ctrl+C", false, !state.selectedIndices.empty())) {
+      if (ImGui::MenuItem("Copy", "Ctrl+C", false,
+                          !state.selectedIndices.empty())) {
         state.clipboard.clear();
         for (int idx : state.selectedIndices) {
           state.clipboard.push_back(project.objects[idx]);
@@ -1152,10 +1205,12 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
 
       ImGui::Separator();
 
-      if (ImGui::MenuItem("Delete", "Del", false, !state.selectedIndices.empty())) {
+      if (ImGui::MenuItem("Delete", "Del", false,
+                          !state.selectedIndices.empty())) {
         state.PushHistory(project);
         std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+        std::sort(sortedIndices.begin(), sortedIndices.end(),
+                  std::greater<int>());
         for (int idx : sortedIndices) {
           auto &objToDelete = project.objects[idx];
           if (objToDelete.texture.id != 0)
@@ -1242,7 +1297,6 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
  * @return   void
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 namespace {
 // Add a forward declaration for DrawPropertiesPanel since it's used in this
@@ -1250,6 +1304,11 @@ namespace {
 void DrawPropertiesPanel(Project &project, InteractionState &state,
                          UIState &uiState);
 
+/*!***************************************************
+ * @brief    Draws the Project Settings panel
+ * @param    project Project&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawProjectSettings(Project &project) {
   ImGui::Text("Project Settings");
   ImGui::Separator();
@@ -1289,6 +1348,11 @@ void DrawProjectSettings(Project &project) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the CSV Data Source navigation panel
+ * @param    project Project&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawDataSource(Project &project) {
   if (!project.csvRows.empty()) {
     ImGui::Spacing();
@@ -1326,6 +1390,12 @@ void DrawDataSource(Project &project) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the object hierarchy (tree) panel
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawObjectTree(Project &project, InteractionState &state) {
   ImGui::Spacing();
   ImGui::Text("Objects Tree");
@@ -1394,7 +1464,9 @@ void DrawObjectTree(Project &project, InteractionState &state) {
     if (ImGui::Selectable(id.c_str(), isSelected)) {
       if (ImGui::GetIO().KeyShift) {
         if (isSelected) {
-          state.selectedIndices.erase(std::find(state.selectedIndices.begin(), state.selectedIndices.end(), (int)i));
+          state.selectedIndices.erase(std::find(state.selectedIndices.begin(),
+                                                state.selectedIndices.end(),
+                                                (int)i));
         } else {
           state.selectedIndices.push_back((int)i);
         }
@@ -1407,6 +1479,13 @@ void DrawObjectTree(Project &project, InteractionState &state) {
   }
 }
 
+/*!***************************************************
+ * @brief    Draws the object properties panel
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawPropertiesPanel(Project &project, InteractionState &state,
                          UIState &uiState) {
   ImGui::Spacing();
@@ -1418,14 +1497,17 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
     ImGui::Text("Properties (%zu selected)", state.selectedIndices.size());
 
     if (ImGui::Checkbox("Visible", &obj.isVisible)) {
-      state.PushHistory(project); // Push state AFTER toggle for simplicity here, or we'd need pre-toggle state
-      for (int idx : state.selectedIndices) project.objects[idx].isVisible = obj.isVisible;
+      state.PushHistory(project); // Push state AFTER toggle for simplicity
+                                  // here, or we'd need pre-toggle state
+      for (int idx : state.selectedIndices)
+        project.objects[idx].isVisible = obj.isVisible;
       project.isDirty = true;
     }
     ImGui::SameLine();
     if (ImGui::Checkbox("Locked", &obj.isLocked)) {
       state.PushHistory(project);
-      for (int idx : state.selectedIndices) project.objects[idx].isLocked = obj.isLocked;
+      for (int idx : state.selectedIndices)
+        project.objects[idx].isLocked = obj.isLocked;
       project.isDirty = true;
     }
 
@@ -1434,36 +1516,42 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
       state.PushHistory(project);
       float delta = currentX - obj.x;
       for (int idx : state.selectedIndices) {
-        if (!project.objects[idx].isLocked) project.objects[idx].x += delta;
+        if (!project.objects[idx].isLocked)
+          project.objects[idx].x += delta;
       }
       project.isDirty = true;
     }
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-        ImGui::SetKeyboardFocusHere(-1);
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+        ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+      ImGui::SetKeyboardFocusHere(-1);
     }
     float currentY = obj.y;
     if (ImGui::DragFloat("Y", &currentY)) {
       state.PushHistory(project);
       float delta = currentY - obj.y;
       for (int idx : state.selectedIndices) {
-        if (!project.objects[idx].isLocked) project.objects[idx].y += delta;
+        if (!project.objects[idx].isLocked)
+          project.objects[idx].y += delta;
       }
       project.isDirty = true;
     }
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-        ImGui::SetKeyboardFocusHere(-1);
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+        ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+      ImGui::SetKeyboardFocusHere(-1);
     }
 
     float currentRot = obj.rotation;
     if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
       state.PushHistory(project);
       for (int idx : state.selectedIndices) {
-        if (!project.objects[idx].isLocked) project.objects[idx].rotation = currentRot;
+        if (!project.objects[idx].isLocked)
+          project.objects[idx].rotation = currentRot;
       }
       project.isDirty = true;
     }
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-        ImGui::SetKeyboardFocusHere(-1);
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+        ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+      ImGui::SetKeyboardFocusHere(-1);
     }
 
     // Type-Specific Properties
@@ -1487,8 +1575,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
       float currentWidth = obj.width;
       if (ImGui::DragFloat("Box Width", &currentWidth, 1.0f, 0.0f, 1000.0f,
@@ -1503,8 +1592,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
       if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Set > 0 to enable text wrapping");
@@ -1598,9 +1688,12 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
           project.isDirty = true;
         }
 
-        if (ImGui::DragInt("Start", &obj.autoStart, 1, 0, 1000000)) project.isDirty = true;
-        if (ImGui::DragInt("Step", &obj.autoStep, 1, -1000, 1000)) project.isDirty = true;
-        if (ImGui::DragInt("Current", &obj.autoCurrent, 1, 0, 1000000)) project.isDirty = true;
+        if (ImGui::DragInt("Start", &obj.autoStart, 1, 0, 1000000))
+          project.isDirty = true;
+        if (ImGui::DragInt("Step", &obj.autoStep, 1, -1000, 1000))
+          project.isDirty = true;
+        if (ImGui::DragInt("Current", &obj.autoCurrent, 1, 0, 1000000))
+          project.isDirty = true;
 
         if (ImGui::Button("Reset to Start")) {
           state.PushHistory(project);
@@ -1623,8 +1716,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       float currentRadius = obj.cornerRadius;
@@ -1639,8 +1733,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
       float currentW = obj.width;
       if (ImGui::DragFloat("W", &currentW)) {
@@ -1654,8 +1749,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       float currentH = obj.height;
@@ -1670,8 +1766,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
     } else if (obj.type == ObjectType::ShapeCircle ||
                obj.type == ObjectType::Line) {
@@ -1679,24 +1776,27 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (ImGui::DragFloat("Width", &obj.width)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
     } else if (obj.type == ObjectType::QRCode) {
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
@@ -1704,38 +1804,44 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         obj.height = obj.width; // Keep Square
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
     } else if (obj.type == ObjectType::Image) {
       int thresh = obj.threshold;
       if (ImGui::SliderInt("Threshold", &thresh, 0, 255)) {
-        state.PushHistory(project); // Note: dragging might spam history, ideally push on release
+        state.PushHistory(project); // Note: dragging might spam history,
+                                    // ideally push on release
         for (int idx : state.selectedIndices) {
-            if (!project.objects[idx].isLocked && project.objects[idx].type == ObjectType::Image) {
-                project.objects[idx].threshold = thresh;
-            }
+          if (!project.objects[idx].isLocked &&
+              project.objects[idx].type == ObjectType::Image) {
+            project.objects[idx].threshold = thresh;
+          }
         }
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (ImGui::DragFloat("Width", &obj.width)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
       ImGui::Spacing();
       if (ImGui::Button("Browse Image...")) {
@@ -1765,16 +1871,18 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
 
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
-      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
-          ImGui::SetKeyboardFocusHere(-1);
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) &&
+          ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
       }
     }
 
@@ -1791,7 +1899,8 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         if (ImGui::Selectable("[None]", obj.linkedColumn.empty())) {
           state.PushHistory(project);
           for (int idx : state.selectedIndices) {
-            if (!project.objects[idx].isLocked) project.objects[idx].linkedColumn = "";
+            if (!project.objects[idx].isLocked)
+              project.objects[idx].linkedColumn = "";
           }
           project.isDirty = true;
         }
@@ -1832,7 +1941,8 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
     if (ImGui::InputText(label, buffer, sizeof(buffer))) {
       state.PushHistory(project);
       for (int idx : state.selectedIndices) {
-        if (!project.objects[idx].isLocked) project.objects[idx].data = buffer;
+        if (!project.objects[idx].isLocked)
+          project.objects[idx].data = buffer;
       }
       project.isDirty = true;
     }
@@ -1848,7 +1958,6 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
  * @return   void
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   ImGui::Begin("Inspector", nullptr,
@@ -1867,28 +1976,54 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
     ImGui::Separator();
     ImGui::Text("Alignment");
     ImGui::Checkbox("Align to Canvas", &uiState.alignToCanvas);
-    
-    if (ImGui::Button("L", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_LEFT, uiState.alignToCanvas); }
+
+    if (ImGui::Button("L", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_LEFT,
+                            uiState.alignToCanvas);
+    }
     ImGui::SameLine();
-    if (ImGui::Button("CH", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_H, uiState.alignToCanvas); }
+    if (ImGui::Button("CH", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_H,
+                            uiState.alignToCanvas);
+    }
     ImGui::SameLine();
-    if (ImGui::Button("R", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_RIGHT, uiState.alignToCanvas); }
-    
-    if (ImGui::Button("T", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_TOP, uiState.alignToCanvas); }
+    if (ImGui::Button("R", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_RIGHT,
+                            uiState.alignToCanvas);
+    }
+
+    if (ImGui::Button("T", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_TOP,
+                            uiState.alignToCanvas);
+    }
     ImGui::SameLine();
-    if (ImGui::Button("CV", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_V, uiState.alignToCanvas); }
+    if (ImGui::Button("CV", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_V,
+                            uiState.alignToCanvas);
+    }
     ImGui::SameLine();
-    if (ImGui::Button("B", ImVec2(40, 0))) { state.PushHistory(project); OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_BOTTOM, uiState.alignToCanvas); }
+    if (ImGui::Button("B", ImVec2(40, 0))) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_BOTTOM,
+                            uiState.alignToCanvas);
+    }
 
     if (state.selectedIndices.size() >= 3) {
       if (ImGui::Button("Dist H", ImVec2(60, 0))) {
         state.PushHistory(project);
-        OBJECTS::DistributeObjects(project, state.selectedIndices, DISTRIBUTE_HORIZONTALLY);
+        OBJECTS::DistributeObjects(project, state.selectedIndices,
+                                   DISTRIBUTE_HORIZONTALLY);
       }
       ImGui::SameLine();
       if (ImGui::Button("Dist V", ImVec2(60, 0))) {
         state.PushHistory(project);
-        OBJECTS::DistributeObjects(project, state.selectedIndices, DISTRIBUTE_VERTICALLY);
+        OBJECTS::DistributeObjects(project, state.selectedIndices,
+                                   DISTRIBUTE_VERTICALLY);
       }
     }
   }
@@ -1905,23 +2040,27 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   if (ImGui::Button("Add Text", btnSize)) {
     OBJECTS::AddTextObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+T");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+T");
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
     OBJECTS::AddFieldObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+F");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+F");
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
     OBJECTS::AddQRCodeObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+Q");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+Q");
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
     OBJECTS::AddBarcodeObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+B");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+B");
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
@@ -1957,7 +2096,8 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
         state.selectedIndices.clear();
         state.selectedIndices.push_back((int)project.objects.size() - 1);
 
-        project.objects[state.selectedIndices.back()].texture = LoadTextureFromImage(img);
+        project.objects[state.selectedIndices.back()].texture =
+            LoadTextureFromImage(img);
         UnloadImage(img);
       }
     }
@@ -1971,24 +2111,28 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   if (ImGui::Button("Add Line", btnSize)) {
     OBJECTS::AddLineObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+L");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+L");
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
     OBJECTS::AddRectangleObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+R");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+R");
 
   if (ImGui::Button("Add Circle", btnSize)) {
     OBJECTS::AddCircleObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+C");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+C");
 
   // --- Row 5: Decor ---
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
     OBJECTS::AddBorderObject(project, state);
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+D");
+  if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Alt+D");
 
   if (ImGui::Button("Deco Border", btnSize)) {
     uiState.triggerBorderPopup = true;
@@ -1997,6 +2141,11 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
   ImGui::End();
 }
 
+/*!***************************************************
+ * @brief    Draws the About dialog
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void DrawAboutDialog(UIState &uiState) {
   if (uiState.showAboutDialog) {
     ImGui::OpenPopup("About Desktop-D30");
@@ -2007,12 +2156,13 @@ void DrawAboutDialog(UIState &uiState) {
     ImGui::Text("Desktop-D30 - Label Design Software");
     ImGui::Text("Version 1.0.0");
     ImGui::Separator();
-    ImGui::Text("Created by Chris Griffin (bearded-griffin)");
+    ImGui::Text("Created by bearded-griffin");
     ImGui::Text("Licensed under GNU GPL v3.0");
     ImGui::Spacing();
-    ImGui::Text("If you enjoy this app, please consider supporting development:");
-    if (ImGui::Button("Support on Koffi")) {
-      Utils::OpenFile("https://koffi.com/bearded-griffin");
+    ImGui::Text(
+        "If you enjoy this app, please consider supporting development:");
+    if (ImGui::Button("Support on Ko-fi")) {
+      Utils::OpenFile("https://ko-fi.com/beardedgriffin");
     }
     ImGui::Separator();
     if (ImGui::Button("Close", ImVec2(120, 0))) {
@@ -2023,6 +2173,13 @@ void DrawAboutDialog(UIState &uiState) {
   }
 }
 
+/*!***************************************************
+ * @brief    Main UI draw call
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
 void Draw(Project &project, InteractionState &state, UIState &uiState) {
   DrawMainMenu(project, uiState, state);
   DrawSidebar(project, state, uiState);
@@ -2038,7 +2195,6 @@ void Draw(Project &project, InteractionState &state, UIState &uiState) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void CleanupApplication(Project &currentProject) {
   // Cleanup

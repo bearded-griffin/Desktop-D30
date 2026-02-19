@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
  *  loading, and other general functions.
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 
 #include "win_fix.h"
@@ -57,7 +56,6 @@ AppSettings appSettings; // Global instance definition
  * @return   bool if the save was successful
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 bool SaveProject(Project &project, const std::string &filePath) {
   std::string destPath = filePath;
@@ -98,7 +96,6 @@ bool SaveProject(Project &project, const std::string &filePath) {
  * @return   bool if the load was successful
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 bool LoadProject(const std::string &defaultName, Project &outProject) {
   auto dest = pfd::open_file("Open Project", defaultName,
@@ -160,7 +157,6 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
  * @return   void
  * @note
  * @date     2026.01.20
- * @author   bearded.griffin
  ****************************************************/
 void ExportProjectToPNG(const std::string &filename, const Project &project) {
   // Step 1: Generate the pixels
@@ -186,7 +182,6 @@ void ExportProjectToPNG(const std::string &filename, const Project &project) {
  * @return   void
  * @note
  * @date     2026.02.17
- * @author   gemini-cli
  ****************************************************/
 void OpenFile(const std::string &filePath) {
 #if defined(_WIN32)
@@ -210,7 +205,6 @@ void OpenFile(const std::string &filePath) {
  * @return   bool If it loaded or not
  * @note
  * @date     2026.01.22
- * @author   bearded.griffin
  ****************************************************/
 bool LoadCSV(const std::string &filename, Project &project) {
   std::ifstream file(filename);
@@ -258,7 +252,6 @@ bool LoadCSV(const std::string &filename, Project &project) {
  * @return   void
  * @note
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 void ApplyCSVDataToObjects(Project &project) {
   if (project.csvRows.empty() || project.currentCSVRow < 0 ||
@@ -305,6 +298,13 @@ void ApplyCSVDataToObjects(Project &project) {
   }
 }
 
+/*!***************************************************
+ * @brief    Prints a range of rows from the loaded CSV
+ * @param    project const Project&
+ * @param    startRow int
+ * @param    endRow int
+ * @date     2026.02.19
+ ****************************************************/
 void BatchPrint(const Project &project, int startRow, int endRow) {
   for (int i = startRow - 1; i < endRow; i++) {
     // 1. Get Data
@@ -336,6 +336,12 @@ void BatchPrint(const Project &project, int startRow, int endRow) {
   }
 }
 
+/*!***************************************************
+ * @brief    Prints labels with auto-incrementing fields
+ * @param    project Project&
+ * @param    count int
+ * @date     2026.02.19
+ ****************************************************/
 void SequencePrint(Project &project, int count) {
   for (int i = 0; i < count; i++) {
     std::cout << "[Sequence] Printing Copy " << (i + 1) << "..." << std::endl;
@@ -363,7 +369,6 @@ void SequencePrint(Project &project, int count) {
  * @return   void
  * @note
  * @date     2026.02.02
- * @author   bearded.griffin
  ****************************************************/
 void SaveSettings(const AppSettings &settings, const std::string &filename) {
   nlohmann::json j;
@@ -384,7 +389,6 @@ void SaveSettings(const AppSettings &settings, const std::string &filename) {
  * @return   void
  * @note
  * @date     2026.02.02
- * @author   bearded.griffin
  ****************************************************/
 void LoadSettings(AppSettings &settings, const std::string &filename) {
   std::ifstream file(filename);

@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * @details
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 
 #include "rendering.h"
@@ -46,22 +45,22 @@ namespace RENDERING {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected) {
   Font displayFont = AssetManager::Get().GetFont(obj.fontName);
-  
+
   std::string displayText = obj.data;
   if (obj.isAutoIncrement) {
-    displayText = obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
+    displayText =
+        obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
   }
 
   DrawTextBox(nullptr, displayFont, displayText.c_str(), obj.x, obj.y,
               obj.fontSize, 2.0f, col, obj.width, obj.rotation);
 
   if (isSelected && obj.width > 0) {
-    // Note: Bounding box for selection remains axis-aligned for now, 
+    // Note: Bounding box for selection remains axis-aligned for now,
     // or we'd need DrawRectangleLinesPro
   }
 }
@@ -74,7 +73,6 @@ void RenderTextObject(const LabelObject &obj, const Color &col,
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderQRCode(LabelObject &obj, const Color &col) {
   if (obj.texture.id == 0 || obj.data != obj.lastData ||
@@ -108,9 +106,9 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
     obj.lastData = obj.data;
     obj.lastColor = obj.colorHex;
   }
-  DrawTexturePro(obj.texture,
-                 {0, 0, (float)obj.texture.width, (float)obj.texture.height},
-                 {obj.x, obj.y, obj.width, obj.width}, {0, 0}, obj.rotation, WHITE);
+  DrawTexturePro(
+      obj.texture, {0, 0, (float)obj.texture.width, (float)obj.texture.height},
+      {obj.x, obj.y, obj.width, obj.width}, {0, 0}, obj.rotation, WHITE);
 }
 
 /*!***************************************************
@@ -120,31 +118,33 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderImageObject(LabelObject &obj) {
-  if ((obj.texture.id == 0 || obj.lastThreshold != obj.threshold) && 
+  if ((obj.texture.id == 0 || obj.lastThreshold != obj.threshold) &&
       !obj.data.empty() && FileExists(obj.data.c_str())) {
-    
-    if (obj.texture.id != 0) UnloadTexture(obj.texture);
+
+    if (obj.texture.id != 0)
+      UnloadTexture(obj.texture);
 
     Image img = LoadImage(obj.data.c_str());
     ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 
     Color *pixels = (Color *)img.data;
     for (int i = 0; i < img.width * img.height; i++) {
-        if (pixels[i].a < 128) {
-            pixels[i] = WHITE; // Transparent becomes white
+      if (pixels[i].a < 128) {
+        pixels[i] = WHITE; // Transparent becomes white
+      } else {
+        // Grayscale conversion
+        unsigned char gray =
+            (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
+                            0.114f * pixels[i].b);
+        // Apply threshold
+        if (gray < obj.threshold) {
+          pixels[i] = BLACK;
         } else {
-            // Grayscale conversion
-            unsigned char gray = (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g + 0.114f * pixels[i].b);
-            // Apply threshold
-            if (gray < obj.threshold) {
-                pixels[i] = BLACK;
-            } else {
-                pixels[i] = WHITE;
-            }
+          pixels[i] = WHITE;
         }
+      }
     }
 
     obj.texture = LoadTextureFromImage(img);
@@ -176,7 +176,6 @@ void RenderImageObject(LabelObject &obj) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderLineObject(const LabelObject &obj, const Color &col) {
   Vector2 start = {obj.x, obj.y};
@@ -192,7 +191,6 @@ void RenderLineObject(const LabelObject &obj, const Color &col) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderShapeRect(const LabelObject &obj, const Color &col) {
   if (obj.rotation == 0) {
@@ -201,21 +199,20 @@ void RenderShapeRect(const LabelObject &obj, const Color &col) {
 
     float thick = obj.fontSize;
     if (thick > 0) {
-      DrawRectangleRounded(
-          {obj.x + thick, obj.y + thick, obj.width - (thick * 2),
-           obj.height - (thick * 2)},
-          obj.cornerRadius / ((obj.width - thick * 2) / 2.0f), 10, WHITE);
+      DrawRectangleRounded({obj.x + thick, obj.y + thick,
+                            obj.width - (thick * 2), obj.height - (thick * 2)},
+                           obj.cornerRadius / ((obj.width - thick * 2) / 2.0f),
+                           10, WHITE);
     }
   } else {
-    DrawRectanglePro({obj.x, obj.y, obj.width, obj.height}, {0, 0}, obj.rotation,
-                     col);
+    DrawRectanglePro({obj.x, obj.y, obj.width, obj.height}, {0, 0},
+                     obj.rotation, col);
     float thick = obj.fontSize;
     if (thick > 0) {
       Vector2 innerPos = Vector2Rotate({thick, thick}, obj.rotation * DEG2RAD);
-      DrawRectanglePro(
-          {obj.x + innerPos.x, obj.y + innerPos.y, obj.width - (thick * 2),
-           obj.height - (thick * 2)},
-          {0, 0}, obj.rotation, WHITE);
+      DrawRectanglePro({obj.x + innerPos.x, obj.y + innerPos.y,
+                        obj.width - (thick * 2), obj.height - (thick * 2)},
+                       {0, 0}, obj.rotation, WHITE);
     }
   }
 }
@@ -228,7 +225,6 @@ void RenderShapeRect(const LabelObject &obj, const Color &col) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderShapeCircle(const LabelObject &obj, const Color &col) {
   float radius = obj.width / 2.0f;
@@ -244,7 +240,6 @@ void RenderShapeCircle(const LabelObject &obj, const Color &col) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderBarcode(LabelObject &obj, const Color &col) {
   if (obj.texture.id == 0 || obj.data != obj.lastData ||
@@ -276,7 +271,8 @@ void RenderBarcode(LabelObject &obj, const Color &col) {
   if (obj.texture.id != 0) {
     DrawTexturePro(obj.texture,
                    {0, 0, (float)obj.texture.width, (float)obj.texture.height},
-                   {obj.x, obj.y, obj.width, obj.height}, {0, 0}, obj.rotation, WHITE);
+                   {obj.x, obj.y, obj.width, obj.height}, {0, 0}, obj.rotation,
+                   WHITE);
   }
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
 }
@@ -291,7 +287,6 @@ void RenderBarcode(LabelObject &obj, const Color &col) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void RenderObject(LabelObject &obj, const bool isSelected,
                   const Camera2D &camera) {
@@ -336,7 +331,6 @@ void RenderObject(LabelObject &obj, const bool isSelected,
  * @return   void
  * @note
  * @date     2026.02.01
- * @author   bearded.griffin
  ****************************************************/
 void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
   Color primaryCol = obj.isLocked ? GRAY : SKYBLUE;
@@ -352,11 +346,13 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
   } else {
     Rectangle localBounds = {0, 0, obj.width, obj.height};
     if ((obj.type == ObjectType::Text || obj.type == ObjectType::Field)) {
-        if (localBounds.height <= 0) localBounds.height = obj.fontSize * 1.5f;
-        if (localBounds.width <= 0) {
-            Font f = AssetManager::Get().GetFont(obj.fontName);
-            localBounds.width = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
-        }
+      if (localBounds.height <= 0)
+        localBounds.height = obj.fontSize * 1.5f;
+      if (localBounds.width <= 0) {
+        Font f = AssetManager::Get().GetFont(obj.fontName);
+        localBounds.width =
+            MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
+      }
     }
 
     Vector2 p1 = {0, 0};
@@ -365,10 +361,10 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     Vector2 p4 = {0, localBounds.height};
 
     if (obj.rotation != 0) {
-        p1 = Vector2Rotate(p1, obj.rotation * DEG2RAD);
-        p2 = Vector2Rotate(p2, obj.rotation * DEG2RAD);
-        p3 = Vector2Rotate(p3, obj.rotation * DEG2RAD);
-        p4 = Vector2Rotate(p4, obj.rotation * DEG2RAD);
+      p1 = Vector2Rotate(p1, obj.rotation * DEG2RAD);
+      p2 = Vector2Rotate(p2, obj.rotation * DEG2RAD);
+      p3 = Vector2Rotate(p3, obj.rotation * DEG2RAD);
+      p4 = Vector2Rotate(p4, obj.rotation * DEG2RAD);
     }
 
     p1 = Vector2Add(p1, {obj.x, obj.y});
@@ -382,7 +378,8 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     DrawLineEx(p4, p1, 1.0f / camera.zoom, primaryCol);
 
     float handleRadius = HANDLE_RADIUS / camera.zoom;
-    Vector2 handles[] = {p1, p2, p4, p3}; // Top-Left, Top-Right, Bottom-Left, Bottom-Right
+    Vector2 handles[] = {p1, p2, p4,
+                         p3}; // Top-Left, Top-Right, Bottom-Left, Bottom-Right
 
     for (int i = 0; i < 4; i++) {
       DrawCircleV(handles[i], handleRadius, primaryCol);
@@ -390,36 +387,38 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
 
       if (i == 0) { // Top-Left: Delete (X) or Lock Icon
         if (obj.isLocked) {
-            // Draw a simple lock body
-            float pad = handleRadius * 0.4f;
-            DrawRectangleV({handles[i].x - pad, handles[i].y}, {pad * 2, pad}, WHITE);
-            // Draw a lock shackle
-            DrawCircleLinesV({handles[i].x, handles[i].y}, pad, WHITE);
+          // Draw a simple lock body
+          float pad = handleRadius * 0.4f;
+          DrawRectangleV({handles[i].x - pad, handles[i].y}, {pad * 2, pad},
+                         WHITE);
+          // Draw a lock shackle
+          DrawCircleLinesV({handles[i].x, handles[i].y}, pad, WHITE);
         } else {
-            float xSize = handleRadius * 0.6f;
-            DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
-                       {handles[i].x + xSize, handles[i].y + xSize},
-                       2.0f / camera.zoom, WHITE);
-            DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
-                       {handles[i].x - xSize, handles[i].y + xSize},
-                       2.0f / camera.zoom, WHITE);
+          float xSize = handleRadius * 0.6f;
+          DrawLineEx({handles[i].x - xSize, handles[i].y - xSize},
+                     {handles[i].x + xSize, handles[i].y + xSize},
+                     2.0f / camera.zoom, WHITE);
+          DrawLineEx({handles[i].x + xSize, handles[i].y - xSize},
+                     {handles[i].x - xSize, handles[i].y + xSize},
+                     2.0f / camera.zoom, WHITE);
         }
       } else if (i == 3) { // Bottom-Right: Resize (Arrows)
-        if (obj.isLocked) continue;
+        if (obj.isLocked)
+          continue;
         float aSize = handleRadius * 0.6f;
         // Simple dot for now if rotated to avoid complex arrow math
         if (obj.rotation == 0) {
-            DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                       {handles[i].x + aSize, handles[i].y + aSize},
-                       2.0f / camera.zoom, WHITE);
-            DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                       {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
-                       2.0f / camera.zoom, WHITE);
-            DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                       {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
-                       2.0f / camera.zoom, WHITE);
+          DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
+                     {handles[i].x + aSize, handles[i].y + aSize},
+                     2.0f / camera.zoom, WHITE);
+          DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                     {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
+                     2.0f / camera.zoom, WHITE);
+          DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                     {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
+                     2.0f / camera.zoom, WHITE);
         } else {
-            DrawCircleV(handles[i], handleRadius * 0.4f, WHITE);
+          DrawCircleV(handles[i], handleRadius * 0.4f, WHITE);
         }
       }
     }
@@ -438,7 +437,6 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
  * @return   void
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color) {
@@ -484,7 +482,6 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
  * @return   Image
  * @note
  * @date     2026.01.20
- * @author   bearded.griffin
  ****************************************************/
 Image RenderProjectToImage(const Project &project) {
   // 1. Get Canvas Dimensions
@@ -497,13 +494,15 @@ Image RenderProjectToImage(const Project &project) {
 
   // 3. Draw Objects onto the Image
   for (const auto &obj : project.objects) {
-    if (!obj.isVisible) continue;
+    if (!obj.isVisible)
+      continue;
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       Font printFont = AssetManager::Get().GetFont(obj.fontName);
-      
+
       std::string printText = obj.data;
       if (obj.isAutoIncrement) {
-        printText = obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
+        printText =
+            obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
       }
 
       DrawTextBox(&canvas, printFont, printText.c_str(), obj.x, obj.y,
@@ -610,12 +609,6 @@ Image RenderProjectToImage(const Project &project) {
             obj.cornerRadius > thick ? obj.cornerRadius - thick : 0, WHITE);
       }
     } else if (obj.type == ObjectType::ShapeCircle) {
-      // Raylib doesn't have ImageDrawCircleLines with thickness easily.
-      // We can simulate it or just use a filled circle for now,
-      // but let's stick to Rectangle and Line for v1 as they are most useful
-      // for labels. If you really want circles, we can use ImageDrawCircle
-      // but it's filled.
-
       // Workaround: Draw Circle (filled black) then smaller Circle (filled
       // white)
       int radius = (int)(obj.width / 2.0f);
@@ -643,7 +636,7 @@ Image RenderProjectToImage(const Project &project) {
         }
       }
 
-      // Optional: Draw text below it?
+      // TODO: Optional: Draw text below it?
       // Usually we just draw the bars, user can add a Text object below if
       // they want.
     }
@@ -665,7 +658,6 @@ Image RenderProjectToImage(const Project &project) {
  * @return   void
  * @note
  * @date     2026.01.26
- * @author   bearded.griffin
  ****************************************************/
 void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
                                 float radius, Color col) {
@@ -688,8 +680,8 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
                   col);
   ImageDrawCircle(dst, (int)(x + radius), (int)(y + h - radius), (int)radius,
                   col);
-  ImageDrawCircle(dst, (int)(x + w - radius), (int)(y + h - radius), (int)radius,
-                  col);
+  ImageDrawCircle(dst, (int)(x + w - radius), (int)(y + h - radius),
+                  (int)radius, col);
 }
 
 /*!***************************************************
@@ -708,10 +700,10 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
  * @return   float
  * @note
  * @date     2026.01.20
- * @author   bearded.griffin
  ****************************************************/
 float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
-                  float fontSize, float spacing, Color tint, float maxWidth, float rotation) {
+                  float fontSize, float spacing, Color tint, float maxWidth,
+                  float rotation) {
   if (text == nullptr || strlen(text) == 0)
     return 0;
 
@@ -739,18 +731,19 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
 
     Vector2 pos = {currentX, currentY};
     if (rotation != 0) {
-        pos = Vector2Rotate(pos, rotation * DEG2RAD);
+      pos = Vector2Rotate(pos, rotation * DEG2RAD);
     }
 
     if (target) {
       // Note: ImageDrawTextEx does not support rotation directly.
-      // For printing, rotation would require a more complex approach (rendering to a separate image then rotating that).
-      // For now, we only support 0-degree rotation for printing text boxes.
+      // For printing, rotation would require a more complex approach (rendering
+      // to a separate image then rotating that). For now, we only support
+      // 0-degree rotation for printing text boxes.
       ImageDrawTextEx(target, font, word.c_str(), {x + pos.x, y + pos.y},
                       fontSize, spacing, tint);
     } else {
-      DrawTextPro(font, word.c_str(), {x + pos.x, y + pos.y}, {0, 0}, rotation, fontSize,
-                 spacing, tint);
+      DrawTextPro(font, word.c_str(), {x + pos.x, y + pos.y}, {0, 0}, rotation,
+                  fontSize, spacing, tint);
     }
 
     currentX += wordSize.x + spaceWidth;
@@ -770,7 +763,6 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
  * @return   void
  * @note
  * @date     2026.02.01
- * @author   bearded.griffin
  ****************************************************/
 void RenderScene(Project &currentProject,
                  const InteractionState &interactionState,
@@ -790,7 +782,8 @@ void RenderScene(Project &currentProject,
 
   // Object rendering - Use the consolidated RenderObject function
   for (int i = 0; i < currentProject.objects.size(); i++) {
-    if (!currentProject.objects[i].isVisible) continue;
+    if (!currentProject.objects[i].isVisible)
+      continue;
     bool isSelected = OBJECTS::IsObjectSelected(selectedIndices, i);
     RenderObject(currentProject.objects[i], isSelected, camera);
   }
@@ -798,9 +791,11 @@ void RenderScene(Project &currentProject,
   // Draw Snapping Guides
   for (const auto &guide : interactionState.activeGuides) {
     if (guide.isVertical) {
-      DrawLineEx({guide.pos, 0}, {guide.pos, currentSize.height}, 1.0f / camera.zoom, ORANGE);
+      DrawLineEx({guide.pos, 0}, {guide.pos, currentSize.height},
+                 1.0f / camera.zoom, ORANGE);
     } else {
-      DrawLineEx({0, guide.pos}, {currentSize.width, guide.pos}, 1.0f / camera.zoom, ORANGE);
+      DrawLineEx({0, guide.pos}, {currentSize.width, guide.pos},
+                 1.0f / camera.zoom, ORANGE);
     }
   }
 
@@ -814,7 +809,6 @@ void RenderScene(Project &currentProject,
  * @return   void
  * @note
  * @date     2026.02.01
- * @author   bearded.griffin
  ****************************************************/
 void DrawGrid(const LabelSize &currentSize) {
   for (int x = 0; x <= currentSize.width; x += GRID_SIZE) {

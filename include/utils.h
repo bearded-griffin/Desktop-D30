@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
  *  loading, and other general functions.
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
@@ -46,7 +45,9 @@ void SequencePrint(Project &project, int count);
 
 // --- Local Settings ---
 extern AppSettings appSettings;
-void SaveSettings(const AppSettings &settings, const std::string &filename = "settings.json");
-void LoadSettings(AppSettings &settings, const std::string &filename = "settings.json");
+void SaveSettings(const AppSettings &settings,
+                  const std::string &filename = "settings.json");
+void LoadSettings(AppSettings &settings,
+                  const std::string &filename = "settings.json");
 
 } // namespace Utils

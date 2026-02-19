@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * @details  draws the menus, and canvas.
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once

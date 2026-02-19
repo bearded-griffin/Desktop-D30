@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * @details  All the things...objects atleast.
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
@@ -96,7 +95,7 @@ struct LabelObject {
   bool isLocked = false;
   bool isVisible = true;
   float rotation = 0.0f; // In degrees
-  int threshold = 128; // 0-255 for image binarization
+  int threshold = 128;   // 0-255 for image binarization
 
   // --- Auto-Increment ---
   bool isAutoIncrement = false;
@@ -108,9 +107,9 @@ struct LabelObject {
 
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
-  std::string lastData = "";      // For cache tracking
-  unsigned int lastColor = 0;     // For cache tracking
-  int lastThreshold = -1;         // For cache tracking
+  std::string lastData = "";  // For cache tracking
+  unsigned int lastColor = 0; // For cache tracking
+  int lastThreshold = -1;     // For cache tracking
 };
 
 struct AppSettings {
@@ -120,7 +119,8 @@ struct AppSettings {
   bool snapToObjects = true;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppSettings, darkTheme, showGrid, snapToGrid, snapToObjects)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppSettings, darkTheme, showGrid, snapToGrid,
+                                   snapToObjects)
 
 struct Project {
   int version = 1;
@@ -163,10 +163,7 @@ enum AlignmentType {
   ALIGN_BOTTOM
 };
 
-enum DistributionType {
-  DISTRIBUTE_HORIZONTALLY,
-  DISTRIBUTE_VERTICALLY
-};
+enum DistributionType { DISTRIBUTE_HORIZONTALLY, DISTRIBUTE_VERTICALLY };
 
 struct SnapGuide {
   float pos;
@@ -226,7 +223,10 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
-                                   cornerRadius, isLocked, isVisible, rotation, threshold,
-                                   isAutoIncrement, autoStart, autoStep, autoCurrent, autoPrefix, autoSuffix)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
-                                   currentCSVRow, projectFilePath, csvHeaders, csvRows)
+                                   cornerRadius, isLocked, isVisible, rotation,
+                                   threshold, isAutoIncrement, autoStart,
+                                   autoStep, autoCurrent, autoPrefix,
+                                   autoSuffix)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex,
+                                   objects, csvFilePath, currentCSVRow,
+                                   projectFilePath, csvHeaders, csvRows)

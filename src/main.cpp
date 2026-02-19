@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
  * @details  Handels the input from the user and draws the interface.
  * @note     Updated with Camera Centering, Object Clamping, and Deletion.
  * @date     2026.01.20
- * @author   bearded.griffin
  ****************************************************/
 
+#include "assets.h"
 #include "camera.h"
 #include "input.h"
 #include "rendering.h"
+#include "rlImGui.h"
 #include "ui.h"
 #include "utils.h"
-#include "assets.h"
-#include "rlImGui.h"
 
 int main() {
   Camera2D camera;
@@ -40,16 +39,16 @@ int main() {
 
   // --- SPLASH SCREEN LOADING LOOP ---
   AssetManager::Get().InitializeLoadQueue();
-  
+
   bool loading = true;
   while (!WindowShouldClose() && loading) {
-      // Process a small batch of icons per frame
-      // 10 icons per frame is a good balance between load speed and framerate
-      loading = AssetManager::Get().ProcessLoadQueue(10);
-      
-      BeginDrawing();
-      UI::DrawSplashScreen();
-      EndDrawing();
+    // Process a small batch of icons per frame
+    // 10 icons per frame is a good balance between load speed and framerate
+    loading = AssetManager::Get().ProcessLoadQueue(10);
+
+    BeginDrawing();
+    UI::DrawSplashScreen();
+    EndDrawing();
   }
 
   CAMERA::InitializeCamera(&SCREEN_WIDTH, &SCREEN_HEIGHT, &camera,
@@ -63,11 +62,13 @@ int main() {
     CAMERA::UpdateCamera(camera, currentProject);
 
     BeginDrawing();
-    ClearBackground(Utils::appSettings.darkTheme ? Color{40, 40, 40, 255} : RAYWHITE);
+    ClearBackground(Utils::appSettings.darkTheme ? Color{40, 40, 40, 255}
+                                                 : RAYWHITE);
 
     rlImGuiBegin();
     INPUT_HANDLER::HandleInput(currentProject, state, camera);
-    RENDERING::RenderScene(currentProject, state, camera, state.selectedIndices);
+    RENDERING::RenderScene(currentProject, state, camera,
+                           state.selectedIndices);
     UI::Draw(currentProject, state, uiState);
     rlImGuiEnd();
 

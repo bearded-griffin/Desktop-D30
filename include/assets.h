@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
  * system.
  * @note
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 
 #pragma once
@@ -33,8 +32,8 @@ namespace fs = std::filesystem;
 enum class AssetType { Icon, Border };
 
 struct Icon {
-  std::string name;        // Filename based (Default)
-  std::string customName;  // User-assigned name
+  std::string name;       // Filename based (Default)
+  std::string customName; // User-assigned name
   std::string path;
   std::vector<std::string> tags;
   Texture2D thumbnail = {0}; // Loaded on demand
@@ -95,11 +94,11 @@ public:
                            const std::vector<std::string> &newTags);
 
   // Loading Pipeline
-  void InitializeLoadQueue(); // Call this at startup
+  void InitializeLoadQueue();               // Call this at startup
   bool ProcessLoadQueue(int batchSize = 5); // Returns false when done
-  float GetLoadProgress(); // 0.0f to 1.0f
+  float GetLoadProgress();                  // 0.0f to 1.0f
   std::string GetCurrentLoadItem(); // e.g. "Loading Office/printer.png..."
-  void UnloadAssets(); // Clean up everything
+  void UnloadAssets();              // Clean up everything
 
   // Actions
   bool ImportFont(const std::string &sourcePath);
@@ -123,9 +122,7 @@ public:
     testBordersBasePath = path;
   }
 
-  void SetTestAppBasePath(const std::string &path) {
-    appBasePath = path;
-  }
+  void SetTestAppBasePath(const std::string &path) { appBasePath = path; }
 
 #endif
 

@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * @details  Handles object selection, resizing, and dragging
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 
 #include "objects.h"
@@ -27,6 +26,13 @@
 // Object selection handling
 namespace OBJECTS {
 
+/*!***************************************************
+ * @brief    Checks collision against a rotated object
+ * @param    point Vector2
+ * @param    obj const LabelObject&
+ * @return   bool
+ * @date     2026.02.19
+ ****************************************************/
 bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
   if (obj.rotation == 0) {
     return CheckCollisionPointRec(point, GetObjectBounds(obj));
@@ -38,13 +44,16 @@ bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
   p = Vector2Rotate(p, -obj.rotation * DEG2RAD);
 
   Rectangle localBounds = {0, 0, obj.width, obj.height};
-  // Handle text/field special cases where height isn't explicitly stored or is 0
+  // Handle text/field special cases where height isn't explicitly stored or is
+  // 0
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-      if (localBounds.height <= 0) localBounds.height = obj.fontSize * 1.5f;
-      if (localBounds.width <= 0) {
-          Font f = AssetManager::Get().GetFont(obj.fontName);
-          localBounds.width = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
-      }
+    if (localBounds.height <= 0)
+      localBounds.height = obj.fontSize * 1.5f;
+    if (localBounds.width <= 0) {
+      Font f = AssetManager::Get().GetFont(obj.fontName);
+      localBounds.width =
+          MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
+    }
   }
 
   return CheckCollisionPointRec(p, localBounds);
@@ -62,7 +71,6 @@ bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
                            bool &isDraggingObject, Vector2 &dragOffset,
@@ -72,7 +80,8 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
   // Iterate backwards to select top-most item
   for (int i = project.objects.size() - 1; i >= 0; --i) {
     const auto &obj = project.objects[i];
-    if (obj.isLocked || !obj.isVisible) continue;
+    if (obj.isLocked || !obj.isVisible)
+      continue;
 
     if (obj.type == ObjectType::Line) {
       if (CheckCollisionPointLine(
@@ -93,7 +102,8 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
   if (clickedIndex != -1) {
     if (isShiftDown) {
       // Toggle selection
-      auto it = std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex);
+      auto it = std::find(selectedIndices.begin(), selectedIndices.end(),
+                          clickedIndex);
       if (it != selectedIndices.end()) {
         selectedIndices.erase(it);
       } else {
@@ -101,17 +111,19 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
       }
     } else {
       // If clicked index is already in selection, keep it (allows group drag)
-      if (std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex) == selectedIndices.end()) {
+      if (std::find(selectedIndices.begin(), selectedIndices.end(),
+                    clickedIndex) == selectedIndices.end()) {
         selectedIndices.clear();
         selectedIndices.push_back(clickedIndex);
       }
     }
-    
-    // Only start dragging if shift is NOT down. 
+
+    // Only start dragging if shift is NOT down.
     // Shift is for selection, we don't want them jumping around.
     if (!selectedIndices.empty() && !isShiftDown) {
       // Ensure the clicked index is actually in the selection now
-      if (std::find(selectedIndices.begin(), selectedIndices.end(), clickedIndex) != selectedIndices.end()) {
+      if (std::find(selectedIndices.begin(), selectedIndices.end(),
+                    clickedIndex) != selectedIndices.end()) {
         isDraggingObject = true;
         // Use the clicked object for the drag offset base
         const auto &obj = project.objects[clickedIndex];
@@ -134,13 +146,13 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera) {
   auto &obj = project.objects[primaryIndex];
-  if (obj.isLocked) return;
+  if (obj.isLocked)
+    return;
   project.isDirty = true;
 
   if (obj.type == ObjectType::Line) {
@@ -239,11 +251,11 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void HandleObjectDrag(Project &project, InteractionState &state,
                       const Vector2 &mouseWorld, const Camera2D &camera) {
-  if (state.selectedIndices.empty()) return;
+  if (state.selectedIndices.empty())
+    return;
 
   state.activeGuides.clear();
 
@@ -261,19 +273,23 @@ void HandleObjectDrag(Project &project, InteractionState &state,
   if (Utils::appSettings.snapToObjects) {
     const float SNAP_THRESHOLD = 5.0f;
     Rectangle pb = GetObjectBounds(project.objects[primaryIdx]);
-    
+
     // Points of Interest for the dragged object (relative to its origin x,y)
-    float draggedPOIX[] = { targetX, targetX + pb.width / 2.0f, targetX + pb.width };
-    float draggedPOIY[] = { targetY, targetY + pb.height / 2.0f, targetY + pb.height };
+    float draggedPOIX[] = {targetX, targetX + pb.width / 2.0f,
+                           targetX + pb.width};
+    float draggedPOIY[] = {targetY, targetY + pb.height / 2.0f,
+                           targetY + pb.height};
 
     for (int i = 0; i < (int)project.objects.size(); i++) {
-      if (OBJECTS::IsObjectSelected(state.selectedIndices, i)) continue;
+      if (OBJECTS::IsObjectSelected(state.selectedIndices, i))
+        continue;
       const auto &other = project.objects[i];
-      if (!other.isVisible) continue;
+      if (!other.isVisible)
+        continue;
 
       Rectangle ob = GetObjectBounds(other);
-      float otherPOIX[] = { ob.x, ob.x + ob.width / 2.0f, ob.x + ob.width };
-      float otherPOIY[] = { ob.y, ob.y + ob.height / 2.0f, ob.y + ob.height };
+      float otherPOIX[] = {ob.x, ob.x + ob.width / 2.0f, ob.x + ob.width};
+      float otherPOIY[] = {ob.y, ob.y + ob.height / 2.0f, ob.y + ob.height};
 
       // Check X snapping
       for (int px = 0; px < 3; px++) {
@@ -286,7 +302,7 @@ void HandleObjectDrag(Project &project, InteractionState &state,
           }
         }
       }
-      nextY:
+    nextY:
       // Check Y snapping
       for (int py = 0; py < 3; py++) {
         for (int oy = 0; oy < 3; oy++) {
@@ -298,10 +314,10 @@ void HandleObjectDrag(Project &project, InteractionState &state,
           }
         }
       }
-      nextObject:;
+    nextObject:;
     }
   }
-  
+
   float deltaX = targetX - project.objects[primaryIdx].x;
   float deltaY = targetY - project.objects[primaryIdx].y;
 
@@ -317,22 +333,36 @@ void HandleObjectDrag(Project &project, InteractionState &state,
     maxY = std::max(maxY, b.y + b.height);
   }
 
-  if (minX + deltaX < 0) deltaX = -minX;
-  if (minY + deltaY < 0) deltaY = -minY;
-  if (maxX + deltaX > canvasSz.width) deltaX = canvasSz.width - maxX;
-  if (maxY + deltaY > canvasSz.height) deltaY = canvasSz.height - maxY;
+  if (minX + deltaX < 0)
+    deltaX = -minX;
+  if (minY + deltaY < 0)
+    deltaY = -minY;
+  if (maxX + deltaX > canvasSz.width)
+    deltaX = canvasSz.width - maxX;
+  if (maxY + deltaY > canvasSz.height)
+    deltaY = canvasSz.height - maxY;
 
   for (int idx : state.selectedIndices) {
-    if (project.objects[idx].isLocked) continue;
+    if (project.objects[idx].isLocked)
+      continue;
     project.objects[idx].x += deltaX;
     project.objects[idx].y += deltaY;
   }
   project.isDirty = true;
 }
 
+/*!***************************************************
+ * @brief    Aligns selected objects
+ * @param    project Project&
+ * @param    selectedIndices const std::vector<int>&
+ * @param    type AlignmentType
+ * @param    relativeToCanvas bool
+ * @date     2026.02.19
+ ****************************************************/
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
                   AlignmentType type, bool relativeToCanvas) {
-  if (selectedIndices.empty()) return;
+  if (selectedIndices.empty())
+    return;
 
   LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
   project.isDirty = true;
@@ -341,44 +371,79 @@ void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
     // Align relative to canvas
     for (int idx : selectedIndices) {
       auto &obj = project.objects[idx];
-      if (obj.isLocked) continue;
+      if (obj.isLocked)
+        continue;
       Rectangle b = GetObjectBounds(obj);
       switch (type) {
-        case ALIGN_LEFT:     obj.x = 0; break;
-        case ALIGN_CENTER_H: obj.x = (canvasSz.width - b.width) / 2.0f; break;
-        case ALIGN_RIGHT:    obj.x = canvasSz.width - b.width; break;
-        case ALIGN_TOP:      obj.y = 0; break;
-        case ALIGN_CENTER_V: obj.y = (canvasSz.height - b.height) / 2.0f; break;
-        case ALIGN_BOTTOM:   obj.y = canvasSz.height - b.height; break;
+      case ALIGN_LEFT:
+        obj.x = 0;
+        break;
+      case ALIGN_CENTER_H:
+        obj.x = (canvasSz.width - b.width) / 2.0f;
+        break;
+      case ALIGN_RIGHT:
+        obj.x = canvasSz.width - b.width;
+        break;
+      case ALIGN_TOP:
+        obj.y = 0;
+        break;
+      case ALIGN_CENTER_V:
+        obj.y = (canvasSz.height - b.height) / 2.0f;
+        break;
+      case ALIGN_BOTTOM:
+        obj.y = canvasSz.height - b.height;
+        break;
       }
     }
   } else {
     // Align relative to the first selected object (anchor)
     auto &anchor = project.objects[selectedIndices[0]];
     Rectangle anchorBounds = GetObjectBounds(anchor);
-    
+
     float anchorCenterX = anchorBounds.x + anchorBounds.width / 2.0f;
     float anchorCenterY = anchorBounds.y + anchorBounds.height / 2.0f;
 
     for (int i = 1; i < (int)selectedIndices.size(); ++i) {
       auto &obj = project.objects[selectedIndices[i]];
-      if (obj.isLocked) continue;
+      if (obj.isLocked)
+        continue;
       Rectangle b = GetObjectBounds(obj);
       switch (type) {
-        case ALIGN_LEFT:     obj.x = anchorBounds.x; break;
-        case ALIGN_CENTER_H: obj.x = anchorCenterX - (b.width / 2.0f); break;
-        case ALIGN_RIGHT:    obj.x = anchorBounds.x + anchorBounds.width - b.width; break;
-        case ALIGN_TOP:      obj.y = anchorBounds.y; break;
-        case ALIGN_CENTER_V: obj.y = anchorCenterY - (b.height / 2.0f); break;
-        case ALIGN_BOTTOM:   obj.y = anchorBounds.y + anchorBounds.height - b.height; break;
+      case ALIGN_LEFT:
+        obj.x = anchorBounds.x;
+        break;
+      case ALIGN_CENTER_H:
+        obj.x = anchorCenterX - (b.width / 2.0f);
+        break;
+      case ALIGN_RIGHT:
+        obj.x = anchorBounds.x + anchorBounds.width - b.width;
+        break;
+      case ALIGN_TOP:
+        obj.y = anchorBounds.y;
+        break;
+      case ALIGN_CENTER_V:
+        obj.y = anchorCenterY - (b.height / 2.0f);
+        break;
+      case ALIGN_BOTTOM:
+        obj.y = anchorBounds.y + anchorBounds.height - b.height;
+        break;
       }
     }
   }
 }
 
-void DistributeObjects(Project &project, const std::vector<int> &selectedIndices,
+/*!***************************************************
+ * @brief    Distributes selected objects evenly
+ * @param    project Project&
+ * @param    selectedIndices const std::vector<int>&
+ * @param    type DistributionType
+ * @date     2026.02.19
+ ****************************************************/
+void DistributeObjects(Project &project,
+                       const std::vector<int> &selectedIndices,
                        DistributionType type) {
-  if (selectedIndices.size() < 3) return;
+  if (selectedIndices.size() < 3)
+    return;
 
   // 1. Filter out locked objects and store indices
   std::vector<int> workingIndices;
@@ -388,25 +453,35 @@ void DistributeObjects(Project &project, const std::vector<int> &selectedIndices
     }
   }
 
-  if (workingIndices.size() < 3) return;
+  if (workingIndices.size() < 3)
+    return;
 
   // 2. Sort indices based on position (center)
-  std::sort(workingIndices.begin(), workingIndices.end(),
-            [&](int a, int b) {
-              Rectangle boundsA = GetObjectBounds(project.objects[a]);
-              Rectangle boundsB = GetObjectBounds(project.objects[b]);
-              float centerA = (type == DISTRIBUTE_HORIZONTALLY) ? boundsA.x + boundsA.width / 2.0f : boundsA.y + boundsA.height / 2.0f;
-              float centerB = (type == DISTRIBUTE_HORIZONTALLY) ? boundsB.x + boundsB.width / 2.0f : boundsB.y + boundsB.height / 2.0f;
-              return centerA < centerB;
-            });
+  std::sort(workingIndices.begin(), workingIndices.end(), [&](int a, int b) {
+    Rectangle boundsA = GetObjectBounds(project.objects[a]);
+    Rectangle boundsB = GetObjectBounds(project.objects[b]);
+    float centerA = (type == DISTRIBUTE_HORIZONTALLY)
+                        ? boundsA.x + boundsA.width / 2.0f
+                        : boundsA.y + boundsA.height / 2.0f;
+    float centerB = (type == DISTRIBUTE_HORIZONTALLY)
+                        ? boundsB.x + boundsB.width / 2.0f
+                        : boundsB.y + boundsB.height / 2.0f;
+    return centerA < centerB;
+  });
 
   // 3. Calculate spacing
-  Rectangle firstBounds = GetObjectBounds(project.objects[workingIndices.front()]);
-  Rectangle lastBounds = GetObjectBounds(project.objects[workingIndices.back()]);
+  Rectangle firstBounds =
+      GetObjectBounds(project.objects[workingIndices.front()]);
+  Rectangle lastBounds =
+      GetObjectBounds(project.objects[workingIndices.back()]);
 
-  float startPos = (type == DISTRIBUTE_HORIZONTALLY) ? firstBounds.x + firstBounds.width / 2.0f : firstBounds.y + firstBounds.height / 2.0f;
-  float endPos = (type == DISTRIBUTE_HORIZONTALLY) ? lastBounds.x + lastBounds.width / 2.0f : lastBounds.y + lastBounds.height / 2.0f;
-  
+  float startPos = (type == DISTRIBUTE_HORIZONTALLY)
+                       ? firstBounds.x + firstBounds.width / 2.0f
+                       : firstBounds.y + firstBounds.height / 2.0f;
+  float endPos = (type == DISTRIBUTE_HORIZONTALLY)
+                     ? lastBounds.x + lastBounds.width / 2.0f
+                     : lastBounds.y + lastBounds.height / 2.0f;
+
   float totalDistance = endPos - startPos;
   float step = totalDistance / (float)(workingIndices.size() - 1);
 
@@ -415,7 +490,7 @@ void DistributeObjects(Project &project, const std::vector<int> &selectedIndices
     auto &obj = project.objects[workingIndices[i]];
     Rectangle b = GetObjectBounds(obj);
     float newCenter = startPos + (step * i);
-    
+
     if (type == DISTRIBUTE_HORIZONTALLY) {
       obj.x = newCenter - (b.width / 2.0f);
     } else {
@@ -432,11 +507,9 @@ void DistributeObjects(Project &project, const std::vector<int> &selectedIndices
  * @param    y float
  * @param    text const std::string&
  * @param    fontSize float
- * @param    colorHex unsigned int
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateTextObject(const float &x, const float &y,
                              const std::string &text, const float &fontSize) {
@@ -459,11 +532,9 @@ LabelObject CreateTextObject(const float &x, const float &y,
  * @param    y float
  * @param    text const std::string&
  * @param    fontSize float
- * @param    colorHex unsigned int
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateFieldObject(const float &x, const float &y,
                               const std::string &text, const float &fontSize) {
@@ -490,7 +561,6 @@ LabelObject CreateFieldObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateRectangleObject(const float &x, const float &y,
                                   const float &width, const float &height,
@@ -516,7 +586,6 @@ LabelObject CreateRectangleObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateCircleObject(const float &x, const float &y,
                                const float &radius) {
@@ -544,7 +613,6 @@ LabelObject CreateCircleObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateBorderObject(const float &x, const float &y,
                                const LabelSize &sz, const int &radius) {
@@ -571,7 +639,6 @@ LabelObject CreateBorderObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateLineObject(const float &x, const float &y, const float &width,
                              const float &height, const float &thickness) {
@@ -596,7 +663,6 @@ LabelObject CreateLineObject(const float &x, const float &y, const float &width,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateQRCodeObject(const float &x, const float &y,
                                const float &size, const std::string &data) {
@@ -622,7 +688,6 @@ LabelObject CreateQRCodeObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateBarcodeObject(const float &x, const float &y,
                                 const float &width, const float &height,
@@ -649,7 +714,6 @@ LabelObject CreateBarcodeObject(const float &x, const float &y,
  * @return   LabelObject
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 LabelObject CreateImageObject(const float &x, const float &y,
                               const float &width, const float &height,
@@ -666,6 +730,12 @@ LabelObject CreateImageObject(const float &x, const float &y,
   return obj;
 }
 
+/*!***************************************************
+ * @brief    Adds a new Text object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddTextObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateTextObject(0, 0, "Text", 20);
@@ -675,6 +745,12 @@ void AddTextObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Field object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddFieldObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateFieldObject(0, 0, "{Col}", 20);
@@ -684,6 +760,12 @@ void AddFieldObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new QR Code object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddQRCodeObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateQRCodeObject(0, 0, 60, "www.example.com");
@@ -693,6 +775,12 @@ void AddQRCodeObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Barcode object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddBarcodeObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateBarcodeObject(50, 50, 100, 60, "12345678");
@@ -702,6 +790,12 @@ void AddBarcodeObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Line object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddLineObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateLineObject(0, 0, 100, 0, 4);
@@ -711,6 +805,12 @@ void AddLineObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Rectangle object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddRectangleObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateRectangleObject(0, 0, 50, 50, 4);
@@ -720,6 +820,12 @@ void AddRectangleObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Circle object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddCircleObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelObject obj = CreateCircleObject(0, 0, 25);
@@ -729,6 +835,12 @@ void AddCircleObject(Project &project, InteractionState &state) {
   state.selectedIndices.push_back((int)project.objects.size() - 1);
 }
 
+/*!***************************************************
+ * @brief    Adds a new Border object to the project
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
 void AddBorderObject(Project &project, InteractionState &state) {
   state.PushHistory(project);
   LabelSize sz = LabelSizes[project.selectedLabelIndex];
@@ -742,17 +854,22 @@ void AddBorderObject(Project &project, InteractionState &state) {
 /*!***************************************************
  * @brief    Checks if an object is selected
  * @details
- * @param    project const Project&
+ * @param    selectedIndices const std::vector<int>&
  * @param    index int
  * @return   bool
- * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 bool IsObjectSelected(const std::vector<int> &selectedIndices, int index) {
-  return std::find(selectedIndices.begin(), selectedIndices.end(), index) != selectedIndices.end();
+  return std::find(selectedIndices.begin(), selectedIndices.end(), index) !=
+         selectedIndices.end();
 }
 
+/*!***************************************************
+ * @brief    Gets the primary (last) selection index
+ * @param    selectedIndices const std::vector<int>&
+ * @return   int
+ * @date     2026.02.19
+ ****************************************************/
 int GetPrimarySelection(const std::vector<int> &selectedIndices) {
   return selectedIndices.empty() ? -1 : selectedIndices.back();
 }
@@ -765,7 +882,6 @@ int GetPrimarySelection(const std::vector<int> &selectedIndices) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void ClampObjectPosition(LabelObject &obj, const LabelSize &canvasSize) {
   Rectangle bounds = GetObjectBounds(obj);
@@ -780,7 +896,6 @@ void ClampObjectPosition(LabelObject &obj, const LabelSize &canvasSize) {
  * @return   void
  * @note
  * @date     2026.02.03
- * @author   bearded.griffin
  ****************************************************/
 void ValidateObjectSize(LabelObject &obj) {
   obj.width = std::clamp(obj.width, MIN_OBJECT_SIZE, MAX_OBJECT_SIZE);
@@ -790,6 +905,13 @@ void ValidateObjectSize(LabelObject &obj) {
   }
 }
 
+/*!***************************************************
+ * @brief    Unloads all project objects
+ * @param    project Project&
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
 void UnloadProjectObjects(Project &project) {
   for (auto &obj : project.objects) {
     if (obj.texture.id != 0) {
@@ -808,7 +930,6 @@ void UnloadProjectObjects(Project &project) {
  * @return   Rectangle
  * @note
  * @date     2026.01.19
- * @author   bearded.griffin
  ****************************************************/
 Rectangle GetObjectBounds(const LabelObject &obj) {
   if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {

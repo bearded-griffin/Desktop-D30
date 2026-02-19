@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
  * actually talk to the D30 printer.
  * @note
  * @date     2026.01.20
- * @author   bearded.griffin
  ****************************************************/
 
 #include "protocol.h"
@@ -38,14 +37,26 @@ void DefaultPrintLabel(const Project &project);
 
 PrintLabelFunc printLabelFunc = DefaultPrintLabel;
 
-void SetPrintLabelFunc(PrintLabelFunc func) {
-    printLabelFunc = func;
-}
+/*!***************************************************
+ * @brief    Sets the function used to print labels
+ * @param    func The function to call when printing a label
+ * @return   void
+ * @note
+ * @date     2026.01.21
+ ****************************************************/
+void SetPrintLabelFunc(PrintLabelFunc func) { printLabelFunc = func; }
 
+/*!***************************************************
+ * @brief    Prints a label using the current print function
+ * @param    project The project data to print
+ * @return   void
+ * @note
+ * @date     2026.01.21
+ ****************************************************/
 void PrintLabel(const Project &project) {
-    if (printLabelFunc) {
-        printLabelFunc(project);
-    }
+  if (printLabelFunc) {
+    printLabelFunc(project);
+  }
 }
 
 /*!***************************************************
@@ -56,7 +67,6 @@ void PrintLabel(const Project &project) {
  * @return   void
  * @note
  * @date     2026.01.21
- * @author   bearded.griffin
  ****************************************************/
 void ApplyDithering(Image &image) {
   int w = image.width;
@@ -107,6 +117,16 @@ void ApplyDithering(Image &image) {
   }
 }
 
+/*!***************************************************
+ * @brief    Default label printing function
+ * @details  This is the default implementation of the
+ * label printing function. It converts the project to an
+ * image, applies dithering, and sends it to the printer.
+ * @param    project The project data to print
+ * @return   void
+ * @note
+ * @date     2026.01.21
+ ****************************************************/
 void DefaultPrintLabel(const Project &project) {
   if (!Printer::Get().IsConnected()) {
     std::cout << "[Protocol] Cannot print: Printer not connected." << std::endl;

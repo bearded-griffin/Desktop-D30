@@ -1,5 +1,5 @@
 //  This file is part of Desktop-D30
-//  Copyright (C) 2026 Chris Griffin (bearded-griffin)
+//  Copyright (C) 2026 bearded-griffin
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -12,13 +12,12 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /*!***************************************************
- * @file     assets.cpp
+ * @file     src/assets.cpp
  * @brief    Supporting functions for icons
  * @details  Creates the Icon Library from the file
  * system.
  * @note
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 
 #include "assets.h"
@@ -47,7 +46,6 @@ std::string FormatDisplayName(std::string name) {
  * @return   void
  * @note
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 void AssetManager::RefreshLibrary(const std::string &providedBasePath) {
   categories.clear();
@@ -229,6 +227,12 @@ bool AssetManager::MoveAsset(Icon &asset, const std::string &newCategory) {
   }
 }
 
+/*!***************************************************
+ * @brief    Updates asset custom name and tags
+ * @param    asset Icon&
+ * @param    newName const std::string&
+ * @param    newTags const std::vector<std::string>&
+ ****************************************************/
 void AssetManager::UpdateAssetMetadata(
     Icon &asset, const std::string &newName,
     const std::vector<std::string> &newTags) {
@@ -291,12 +295,20 @@ bool AssetManager::ProcessLoadQueue(int batchSize) {
   return currentLoadIndex < totalToLoad;
 }
 
+/*!***************************************************
+ * @brief    Gets current loading progress (0.0 to 1.0)
+ * @return   float
+ ****************************************************/
 float AssetManager::GetLoadProgress() {
   if (totalToLoad == 0)
     return 1.0f;
   return (float)currentLoadIndex / (float)totalToLoad;
 }
 
+/*!***************************************************
+ * @brief    Gets the display name of the item currently being loaded
+ * @return   std::string
+ ****************************************************/
 std::string AssetManager::GetCurrentLoadItem() {
   if (currentLoadIndex < totalToLoad) {
     fs::path p(loadQueue[currentLoadIndex]->path);
@@ -305,6 +317,10 @@ std::string AssetManager::GetCurrentLoadItem() {
   return "Ready!";
 }
 
+/*!***************************************************
+ * @brief    Unloads all assets from memory
+ * @return   void
+ ****************************************************/
 void AssetManager::UnloadAssets() {
   // Unload Icon Textures
   for (auto &cat : categories) {
@@ -351,7 +367,6 @@ void AssetManager::UnloadAssets() {
  * @return   void
  * @note
  * @date     2026.01.23
- * @author   bearded.griffin
  ****************************************************/
 void AssetManager::LoadCategoryTextures(int categoryIndex) {
   if (categoryIndex < 0 || categoryIndex >= categories.size())
@@ -382,7 +397,6 @@ void AssetManager::LoadCategoryTextures(int categoryIndex) {
  * @return   void
  * @note
  * @date     2026.01.26
- * @author   bearded.griffin
  ****************************************************/
 void AssetManager::RefreshFonts(
     const std::vector<std::string> &providedUserPaths,
@@ -441,7 +455,8 @@ void AssetManager::RefreshFonts(
       systemScanPaths = testSystemFontPaths;
     } else {
       const char *homeEnv = std::getenv("HOME");
-      if (!homeEnv) homeEnv = std::getenv("USERPROFILE");
+      if (!homeEnv)
+        homeEnv = std::getenv("USERPROFILE");
 
       if (homeEnv) {
         systemScanPaths.push_back("/usr/share/fonts");
@@ -449,12 +464,15 @@ void AssetManager::RefreshFonts(
         systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
         systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
         systemScanPaths.push_back("C:\\Windows\\Fonts");
-        systemScanPaths.push_back(std::string(homeEnv) + "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
+        systemScanPaths.push_back(
+            std::string(homeEnv) +
+            "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
       }
     }
 #else
     const char *homeEnv = std::getenv("HOME");
-    if (!homeEnv) homeEnv = std::getenv("USERPROFILE");
+    if (!homeEnv)
+      homeEnv = std::getenv("USERPROFILE");
 
     if (homeEnv) {
       systemScanPaths.push_back("/usr/share/fonts");
@@ -462,7 +480,8 @@ void AssetManager::RefreshFonts(
       systemScanPaths.push_back(std::string(homeEnv) + "/.local/share/fonts");
       systemScanPaths.push_back(std::string(homeEnv) + "/.fonts");
       systemScanPaths.push_back("C:\\Windows\\Fonts");
-      systemScanPaths.push_back(std::string(homeEnv) + "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
+      systemScanPaths.push_back(std::string(homeEnv) +
+                                "\\AppData\\Local\\Microsoft\\Windows\\Fonts");
     }
 #endif
   }
@@ -493,6 +512,12 @@ void AssetManager::RefreshFonts(
   }
 }
 
+/*!***************************************************
+ * @brief    Scans directories for fonts and adds them to a list
+ * @param    ScanPaths std::vector<std::string>&
+ * @param    targetList std::vector<FontAsset>&
+ * @param    type LabelFontType
+ ****************************************************/
 void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
                                   std::vector<FontAsset> &targetList,
                                   LabelFontType type) {
@@ -538,7 +563,6 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
  * @return   Font
  * @note
  * @date     2026.01.26
- * @author   bearded.griffin
  ****************************************************/
 Font AssetManager::GetFont(const std::string &name) {
   if (name.empty())
@@ -566,7 +590,6 @@ Font AssetManager::GetFont(const std::string &name) {
  * @return   bool
  * @note
  * @date     2026.01.26
- * @author   bearded.griffin
  ****************************************************/
 bool AssetManager::ImportFont(const std::string &sourcePath) {
   if (!fs::exists(sourcePath))
@@ -689,12 +712,12 @@ int AssetManager::ImportUserBorders(
  * @return   void
  * @note
  * @date     2026.01.27
- * @author   bearded.griffin
  ****************************************************/
 void AssetManager::RefreshBorders(const std::string &providedBasePath) {
   borderCategories.clear();
-  std::string basePath =
-      providedBasePath.empty() ? appBasePath + "assets/borders" : providedBasePath;
+  std::string basePath = providedBasePath.empty()
+                             ? appBasePath + "assets/borders"
+                             : providedBasePath;
   if (!fs::exists(basePath)) {
     fs::create_directories(basePath);
     return;
@@ -757,7 +780,6 @@ void AssetManager::RefreshBorders(const std::string &providedBasePath) {
  * @return   void
  * @note
  * @date     2026.01.27
- * @author   bearded.griffin
  ****************************************************/
 void AssetManager::LoadBorderTextures(int categoryIndex) {
   if (categoryIndex < 0 || categoryIndex >= borderCategories.size())
