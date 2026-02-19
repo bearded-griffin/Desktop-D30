@@ -1086,7 +1086,7 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
         }
       }
 
-      if (ImGui::MenuItem("Batch Print (CSV)")) {
+      if (ImGui::MenuItem("Batch Print (CSV)", "Ctrl+Shift+B")) {
         if (project.csvRows.empty()) {
           // Could add a toast/error here, but for now we just don't open
           std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
@@ -1095,7 +1095,7 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
         }
       }
 
-      if (ImGui::MenuItem("Sequence Print (Auto-Inc)")) {
+      if (ImGui::MenuItem("Sequence Print (Auto-Inc)", "Ctrl+Shift+P")) {
         uiState.triggerSequencePopup = true;
       }
 
@@ -1193,7 +1193,7 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
         ImGui::Separator();
 
         // Direct Print Action
-        if (ImGui::MenuItem("Print Single Label")) {
+        if (ImGui::MenuItem("Print Single Label", "Ctrl+P")) {
           Protocol::PrintLabel(project);
         }
       } else {
@@ -1903,41 +1903,25 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
 
   // --- Row 1: Basics ---
   if (ImGui::Button("Add Text", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateTextObject(0, 0, "Text", 20);
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddTextObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+T");
   ImGui::SameLine();
   if (ImGui::Button("Add Field", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateFieldObject(0, 0, "{Col}", 20);
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddFieldObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+F");
 
   // --- Row 2: Media ---
   if (ImGui::Button("Add QR", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateQRCodeObject(0, 0, 60, "www.example.com");
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddQRCodeObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+Q");
   ImGui::SameLine();
   if (ImGui::Button("Add Barcode", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateBarcodeObject(50, 50, 100, 60, "12345678");
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddBarcodeObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+B");
 
   // --- Row 3: Graphics ---
   if (ImGui::Button("Add Image", btnSize)) {
@@ -1985,43 +1969,26 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
 
   // --- Row 4: Shapes ---
   if (ImGui::Button("Add Line", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateLineObject(0, 0, 100, 0, 4);
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddLineObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+L");
   ImGui::SameLine();
   if (ImGui::Button("Add Rect", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateRectangleObject(0, 0, 50, 50, 4);
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddRectangleObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+R");
 
   if (ImGui::Button("Add Circle", btnSize)) {
-    state.PushHistory(project);
-    LabelObject obj = OBJECTS::CreateCircleObject(0, 0, 25);
-    project.objects.push_back(obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back((int)project.objects.size() - 1);
+    OBJECTS::AddCircleObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+C");
 
   // --- Row 5: Decor ---
   ImGui::SameLine();
   if (ImGui::Button("Add Border", btnSize)) {
-    state.PushHistory(project);
-    LabelSize sz = LabelSizes[project.selectedLabelIndex];
-    LabelObject obj = OBJECTS::CreateBorderObject(4, 4, sz);
-    project.objects.insert(project.objects.begin(), obj);
-    project.isDirty = true;
-    state.selectedIndices.clear();
-    state.selectedIndices.push_back(0);
+    OBJECTS::AddBorderObject(project, state);
   }
+  if (ImGui::IsItemHovered()) ImGui::SetTooltip("Alt+D");
 
   if (ImGui::Button("Deco Border", btnSize)) {
     uiState.triggerBorderPopup = true;

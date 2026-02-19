@@ -666,6 +666,79 @@ LabelObject CreateImageObject(const float &x, const float &y,
   return obj;
 }
 
+void AddTextObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateTextObject(0, 0, "Text", 20);
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddFieldObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateFieldObject(0, 0, "{Col}", 20);
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddQRCodeObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateQRCodeObject(0, 0, 60, "www.example.com");
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddBarcodeObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateBarcodeObject(50, 50, 100, 60, "12345678");
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddLineObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateLineObject(0, 0, 100, 0, 4);
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddRectangleObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateRectangleObject(0, 0, 50, 50, 4);
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddCircleObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelObject obj = CreateCircleObject(0, 0, 25);
+  project.objects.push_back(obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back((int)project.objects.size() - 1);
+}
+
+void AddBorderObject(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  LabelSize sz = LabelSizes[project.selectedLabelIndex];
+  LabelObject obj = CreateBorderObject(4, 4, sz);
+  project.objects.insert(project.objects.begin(), obj);
+  project.isDirty = true;
+  state.selectedIndices.clear();
+  state.selectedIndices.push_back(0);
+}
+
 /*!***************************************************
  * @brief    Checks if an object is selected
  * @details

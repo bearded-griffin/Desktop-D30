@@ -72,6 +72,16 @@ LabelObject CreateImageObject(const float &x, const float &y,
                               const float &width, const float &height,
                               const std::string &filePath);
 
+// High-level "Add" actions (used by both UI and Shortcuts)
+void AddTextObject(Project &project, InteractionState &state);
+void AddFieldObject(Project &project, InteractionState &state);
+void AddQRCodeObject(Project &project, InteractionState &state);
+void AddBarcodeObject(Project &project, InteractionState &state);
+void AddLineObject(Project &project, InteractionState &state);
+void AddRectangleObject(Project &project, InteractionState &state);
+void AddCircleObject(Project &project, InteractionState &state);
+void AddBorderObject(Project &project, InteractionState &state);
+
 // Object utility functions
 bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj);
 bool IsObjectSelected(const std::vector<int> &selectedIndices, int index);
