@@ -7,8 +7,13 @@ theme:
 
 nav:
   - Welcome: index.md
+  - Installation: installation.md
   - The Interface: interface.md
+  - Managing Assets: assets.md
+  - Bluetooth Printing: printing.md
   - Batch Printing: batch-printing.md
+  - Shortcuts: shortcuts.md
+  - Development Guide: development.md
 
 markdown_extensions:
   - admonition
