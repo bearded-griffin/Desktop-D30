@@ -105,9 +105,11 @@ struct LabelObject {
 struct AppSettings {
   bool darkTheme = false;
   bool showGrid = true;
+  bool snapToGrid = true;
+  bool snapToObjects = true;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppSettings, darkTheme, showGrid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(AppSettings, darkTheme, showGrid, snapToGrid, snapToObjects)
 
 struct Project {
   int version = 1;
@@ -150,12 +152,20 @@ enum AlignmentType {
   ALIGN_BOTTOM
 };
 
+struct SnapGuide {
+  float pos;
+  bool isVertical;
+};
+
 struct InteractionState {
   std::vector<int> selectedIndices;
   bool isDraggingObject = false;
   Vector2 dragOffset = {0, 0};
   bool isResizing = false;
   ResizeHandle activeHandle = HANDLE_NONE;
+
+  // --- Snapping ---
+  std::vector<SnapGuide> activeGuides;
 
   // --- Undo/Redo/Copy/Paste ---
   std::vector<Project> undoStack;

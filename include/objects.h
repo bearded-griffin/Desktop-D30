@@ -34,9 +34,8 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera);
 
-void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
-                      const Vector2 &mouseWorld, const Vector2 &dragOffset,
-                      const Camera2D &camera);
+void HandleObjectDrag(Project &project, InteractionState &state,
+                      const Vector2 &mouseWorld, const Camera2D &camera);
 
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
                   AlignmentType type, bool relativeToCanvas = false);

@@ -114,6 +114,7 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
     state.isDraggingObject = false;
     state.isResizing = false;
     state.activeHandle = HANDLE_NONE;
+    state.activeGuides.clear();
     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
   }
 
@@ -122,8 +123,7 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
                                 state.activeHandle, mouseWorld, camera);
     potentialChange = true;
   } else if (state.isDraggingObject && !state.selectedIndices.empty()) {
-    OBJECTS::HandleObjectDrag(project, state.selectedIndices, mouseWorld,
-                              state.dragOffset, camera);
+    OBJECTS::HandleObjectDrag(project, state, mouseWorld, camera);
     potentialChange = true;
   }
 }

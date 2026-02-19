@@ -218,21 +218,66 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
  * @date     2026.02.03
  * @author   bearded.griffin
  ****************************************************/
-void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
-                      const Vector2 &mouseWorld, const Vector2 &dragOffset,
-                      const Camera2D &camera) {
-  if (selectedIndices.empty()) return;
+void HandleObjectDrag(Project &project, InteractionState &state,
+                      const Vector2 &mouseWorld, const Camera2D &camera) {
+  if (state.selectedIndices.empty()) return;
 
-  // We need to calculate the movement delta based on the object that was actually clicked
-  // For simplicity, we assume the first in list or we'd need to pass 'clickedIndex'
-  // But our selection logic sets dragOffset relative to the 'clickedIndex'.
-  // Let's find which object matches the current dragOffset
-  int primaryIdx = selectedIndices[0];
-  // Actually, we should just calculate the delta from where the mouse is vs where it was.
-  // But dragOffset is [mouse - obj.pos]. So newPos = mouse - dragOffset.
-  
-  float targetX = mouseWorld.x - dragOffset.x;
-  float targetY = mouseWorld.y - dragOffset.y;
+  state.activeGuides.clear();
+
+  int primaryIdx = state.selectedIndices[0];
+  float targetX = mouseWorld.x - state.dragOffset.x;
+  float targetY = mouseWorld.y - state.dragOffset.y;
+
+  // 1. Grid Snapping
+  if (Utils::appSettings.snapToGrid) {
+    targetX = roundf(targetX / (float)GRID_SIZE) * (float)GRID_SIZE;
+    targetY = roundf(targetY / (float)GRID_SIZE) * (float)GRID_SIZE;
+  }
+
+  // 2. Object Snapping (Smart Guides)
+  if (Utils::appSettings.snapToObjects) {
+    const float SNAP_THRESHOLD = 5.0f;
+    Rectangle pb = GetObjectBounds(project.objects[primaryIdx]);
+    
+    // Points of Interest for the dragged object (relative to its origin x,y)
+    float draggedPOIX[] = { targetX, targetX + pb.width / 2.0f, targetX + pb.width };
+    float draggedPOIY[] = { targetY, targetY + pb.height / 2.0f, targetY + pb.height };
+
+    for (int i = 0; i < (int)project.objects.size(); i++) {
+      if (OBJECTS::IsObjectSelected(state.selectedIndices, i)) continue;
+      const auto &other = project.objects[i];
+      if (!other.isVisible) continue;
+
+      Rectangle ob = GetObjectBounds(other);
+      float otherPOIX[] = { ob.x, ob.x + ob.width / 2.0f, ob.x + ob.width };
+      float otherPOIY[] = { ob.y, ob.y + ob.height / 2.0f, ob.y + ob.height };
+
+      // Check X snapping
+      for (int px = 0; px < 3; px++) {
+        for (int ox = 0; ox < 3; ox++) {
+          if (abs(draggedPOIX[px] - otherPOIX[ox]) < SNAP_THRESHOLD) {
+            float snapDelta = otherPOIX[ox] - draggedPOIX[px];
+            targetX += snapDelta;
+            state.activeGuides.push_back({otherPOIX[ox], true});
+            goto nextY; // Only snap X once per drag update
+          }
+        }
+      }
+      nextY:
+      // Check Y snapping
+      for (int py = 0; py < 3; py++) {
+        for (int oy = 0; oy < 3; oy++) {
+          if (abs(draggedPOIY[py] - otherPOIY[oy]) < SNAP_THRESHOLD) {
+            float snapDelta = otherPOIY[oy] - draggedPOIY[py];
+            targetY += snapDelta;
+            state.activeGuides.push_back({otherPOIY[oy], false});
+            goto nextObject;
+          }
+        }
+      }
+      nextObject:;
+    }
+  }
   
   float deltaX = targetX - project.objects[primaryIdx].x;
   float deltaY = targetY - project.objects[primaryIdx].y;
@@ -240,9 +285,8 @@ void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
   LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
 
   // Group movement with boundary check
-  // 1. Calculate combined bounds
   float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-  for (int idx : selectedIndices) {
+  for (int idx : state.selectedIndices) {
     Rectangle b = GetObjectBounds(project.objects[idx]);
     minX = std::min(minX, b.x);
     minY = std::min(minY, b.y);
@@ -250,13 +294,12 @@ void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
     maxY = std::max(maxY, b.y + b.height);
   }
 
-  // 2. Clamp delta to keep entire group inside
   if (minX + deltaX < 0) deltaX = -minX;
   if (minY + deltaY < 0) deltaY = -minY;
   if (maxX + deltaX > canvasSz.width) deltaX = canvasSz.width - maxX;
   if (maxY + deltaY > canvasSz.height) deltaY = canvasSz.height - maxY;
 
-  for (int idx : selectedIndices) {
+  for (int idx : state.selectedIndices) {
     if (project.objects[idx].isLocked) continue;
     project.objects[idx].x += deltaX;
     project.objects[idx].y += deltaY;

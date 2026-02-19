@@ -724,6 +724,15 @@ void RenderScene(Project &currentProject,
     RenderObject(currentProject.objects[i], isSelected, camera);
   }
 
+  // Draw Snapping Guides
+  for (const auto &guide : interactionState.activeGuides) {
+    if (guide.isVertical) {
+      DrawLineEx({guide.pos, 0}, {guide.pos, currentSize.height}, 1.0f / camera.zoom, ORANGE);
+    } else {
+      DrawLineEx({0, guide.pos}, {currentSize.width, guide.pos}, 1.0f / camera.zoom, ORANGE);
+    }
+  }
+
   EndMode2D();
 }
 
