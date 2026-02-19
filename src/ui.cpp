@@ -1438,6 +1438,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
       }
       project.isDirty = true;
     }
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
+    }
     float currentY = obj.y;
     if (ImGui::DragFloat("Y", &currentY)) {
       state.PushHistory(project);
@@ -1447,6 +1450,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
       }
       project.isDirty = true;
     }
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
+    }
 
     float currentRot = obj.rotation;
     if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
@@ -1455,6 +1461,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         if (!project.objects[idx].isLocked) project.objects[idx].rotation = currentRot;
       }
       project.isDirty = true;
+    }
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+        ImGui::SetKeyboardFocusHere(-1);
     }
 
     // Type-Specific Properties
@@ -1478,6 +1487,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
       float currentWidth = obj.width;
       if (ImGui::DragFloat("Box Width", &currentWidth, 1.0f, 0.0f, 1000.0f,
                            "%.1f")) {
@@ -1490,6 +1502,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
           }
         }
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
       if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Set > 0 to enable text wrapping");
@@ -1608,6 +1623,10 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       float currentRadius = obj.cornerRadius;
       if (ImGui::SliderFloat("Radius", &currentRadius, 0, 50)) {
         state.PushHistory(project);
@@ -1619,6 +1638,9 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
           }
         }
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
       float currentW = obj.width;
       if (ImGui::DragFloat("W", &currentW)) {
@@ -1632,6 +1654,10 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       float currentH = obj.height;
       if (ImGui::DragFloat("H", &currentH)) {
         state.PushHistory(project);
@@ -1644,25 +1670,42 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
     } else if (obj.type == ObjectType::ShapeCircle ||
                obj.type == ObjectType::Line) {
       if (ImGui::SliderFloat("Line Thickness", &obj.fontSize, 1.0f, 20.0f)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       if (ImGui::DragFloat("Width", &obj.width)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
     } else if (obj.type == ObjectType::QRCode) {
       if (ImGui::DragFloat("Size", &obj.width, 1.0f, 10.0f, 500.0f)) {
         state.PushHistory(project);
         obj.height = obj.width; // Keep Square
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
     } else if (obj.type == ObjectType::Image) {
       int thresh = obj.threshold;
@@ -1675,13 +1718,24 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         }
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       if (ImGui::DragFloat("Width", &obj.width)) {
         state.PushHistory(project);
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
       ImGui::Spacing();
       if (ImGui::Button("Browse Image...")) {
@@ -1711,9 +1765,16 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         state.PushHistory(project);
         project.isDirty = true;
       }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
+      }
+
       if (ImGui::DragFloat("Height", &obj.height)) {
         state.PushHistory(project);
         project.isDirty = true;
+      }
+      if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 5.0f) {
+          ImGui::SetKeyboardFocusHere(-1);
       }
     }
 
