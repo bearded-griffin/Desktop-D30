@@ -49,6 +49,8 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
   // Iterate backwards to select top-most item
   for (int i = project.objects.size() - 1; i >= 0; --i) {
     const auto &obj = project.objects[i];
+    if (obj.isLocked || !obj.isVisible) continue;
+
     if (obj.type == ObjectType::Line) {
       if (CheckCollisionPointLine(
               mouseWorld, {obj.x, obj.y},
@@ -115,6 +117,7 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera) {
   auto &obj = project.objects[primaryIndex];
+  if (obj.isLocked) return;
   project.isDirty = true;
 
   if (obj.type == ObjectType::Line) {
@@ -254,6 +257,7 @@ void HandleObjectDrag(Project &project, const std::vector<int> &selectedIndices,
   if (maxY + deltaY > canvasSz.height) deltaY = canvasSz.height - maxY;
 
   for (int idx : selectedIndices) {
+    if (project.objects[idx].isLocked) continue;
     project.objects[idx].x += deltaX;
     project.objects[idx].y += deltaY;
   }
@@ -271,6 +275,7 @@ void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
     // Align relative to canvas
     for (int idx : selectedIndices) {
       auto &obj = project.objects[idx];
+      if (obj.isLocked) continue;
       Rectangle b = GetObjectBounds(obj);
       switch (type) {
         case ALIGN_LEFT:     obj.x = 0; break;
@@ -291,6 +296,7 @@ void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
 
     for (int i = 1; i < (int)selectedIndices.size(); ++i) {
       auto &obj = project.objects[selectedIndices[i]];
+      if (obj.isLocked) continue;
       Rectangle b = GetObjectBounds(obj);
       switch (type) {
         case ALIGN_LEFT:     obj.x = anchorBounds.x; break;
