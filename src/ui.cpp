@@ -1588,6 +1588,16 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
         project.isDirty = true;
       }
     } else if (obj.type == ObjectType::Image) {
+      int thresh = obj.threshold;
+      if (ImGui::SliderInt("Threshold", &thresh, 0, 255)) {
+        state.PushHistory(project); // Note: dragging might spam history, ideally push on release
+        for (int idx : state.selectedIndices) {
+            if (!project.objects[idx].isLocked && project.objects[idx].type == ObjectType::Image) {
+                project.objects[idx].threshold = thresh;
+            }
+        }
+        project.isDirty = true;
+      }
       if (ImGui::DragFloat("Width", &obj.width)) {
         state.PushHistory(project);
         project.isDirty = true;

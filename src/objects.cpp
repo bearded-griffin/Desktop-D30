@@ -615,6 +615,7 @@ LabelObject CreateImageObject(const float &x, const float &y,
   obj.height = height;
   obj.data = filePath;
   obj.colorHex = 0x000000FF;
+  obj.threshold = 128;
   return obj;
 }
 
