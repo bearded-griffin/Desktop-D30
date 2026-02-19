@@ -1411,6 +1411,15 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
       project.isDirty = true;
     }
 
+    float currentRot = obj.rotation;
+    if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
+      state.PushHistory(project);
+      for (int idx : state.selectedIndices) {
+        if (!project.objects[idx].isLocked) project.objects[idx].rotation = currentRot;
+      }
+      project.isDirty = true;
+    }
+
     // Type-Specific Properties
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       if (ImGui::Button("Import Font...")) {

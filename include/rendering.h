@@ -47,7 +47,7 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
 void DrawQRCode(const std::string &text, float x, float y, float size,
                 Color color);
 float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
-                  float fontSize, float spacing, Color tint, float maxWidth);
+                  float fontSize, float spacing, Color tint, float maxWidth, float rotation = 0.0f);
 void DrawGrid(const LabelSize &currentSize);
 Image RenderProjectToImage(const Project &project);
 void RenderScene(Project &currentProject,

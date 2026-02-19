@@ -52,12 +52,11 @@ void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected) {
   Font displayFont = AssetManager::Get().GetFont(obj.fontName);
   DrawTextBox(nullptr, displayFont, obj.data.c_str(), obj.x, obj.y,
-              obj.fontSize, 2.0f, col, obj.width);
+              obj.fontSize, 2.0f, col, obj.width, obj.rotation);
 
   if (isSelected && obj.width > 0) {
-    DrawRectangleLines(obj.x, obj.y, obj.width,
-                       obj.height > 0 ? obj.height : obj.fontSize * 2,
-                       Fade(SKYBLUE, 0.5f));
+    // Note: Bounding box for selection remains axis-aligned for now, 
+    // or we'd need DrawRectangleLinesPro
   }
 }
 
@@ -105,8 +104,7 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
   }
   DrawTexturePro(obj.texture,
                  {0, 0, (float)obj.texture.width, (float)obj.texture.height},
-                 {obj.x, obj.y, obj.width, obj.width}, {0, 0}, 0.0f, WHITE);
-  DrawRectangleLines(obj.x, obj.y, obj.width, obj.width, Fade(GRAY, 0.3f));
+                 {obj.x, obj.y, obj.width, obj.width}, {0, 0}, obj.rotation, WHITE);
 }
 
 /*!***************************************************
@@ -134,7 +132,7 @@ void RenderImageObject(LabelObject &obj) {
   if (obj.texture.id != 0) {
     Rectangle src = {0, 0, (float)obj.texture.width, (float)obj.texture.height};
     Rectangle dst = {obj.x, obj.y, obj.width, obj.height};
-    DrawTexturePro(obj.texture, src, dst, {0, 0}, 0.0f, WHITE);
+    DrawTexturePro(obj.texture, src, dst, {0, 0}, obj.rotation, WHITE);
   } else {
     DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, BLACK);
     Font f = AssetManager::Get().GetDefaultFont();
@@ -169,15 +167,28 @@ void RenderLineObject(const LabelObject &obj, const Color &col) {
  * @author   bearded.griffin
  ****************************************************/
 void RenderShapeRect(const LabelObject &obj, const Color &col) {
-  DrawRectangleRounded({obj.x, obj.y, obj.width, obj.height},
-                       obj.cornerRadius / (obj.width / 2.0f), 10, col);
+  if (obj.rotation == 0) {
+    DrawRectangleRounded({obj.x, obj.y, obj.width, obj.height},
+                         obj.cornerRadius / (obj.width / 2.0f), 10, col);
 
-  float thick = obj.fontSize;
-  if (thick > 0) {
-    DrawRectangleRounded(
-        {obj.x + thick, obj.y + thick, obj.width - (thick * 2),
-         obj.height - (thick * 2)},
-        obj.cornerRadius / ((obj.width - thick * 2) / 2.0f), 10, WHITE);
+    float thick = obj.fontSize;
+    if (thick > 0) {
+      DrawRectangleRounded(
+          {obj.x + thick, obj.y + thick, obj.width - (thick * 2),
+           obj.height - (thick * 2)},
+          obj.cornerRadius / ((obj.width - thick * 2) / 2.0f), 10, WHITE);
+    }
+  } else {
+    DrawRectanglePro({obj.x, obj.y, obj.width, obj.height}, {0, 0}, obj.rotation,
+                     col);
+    float thick = obj.fontSize;
+    if (thick > 0) {
+      Vector2 innerPos = Vector2Rotate({thick, thick}, obj.rotation * DEG2RAD);
+      DrawRectanglePro(
+          {obj.x + innerPos.x, obj.y + innerPos.y, obj.width - (thick * 2),
+           obj.height - (thick * 2)},
+          {0, 0}, obj.rotation, WHITE);
+    }
   }
 }
 
@@ -237,7 +248,7 @@ void RenderBarcode(LabelObject &obj, const Color &col) {
   if (obj.texture.id != 0) {
     DrawTexturePro(obj.texture,
                    {0, 0, (float)obj.texture.width, (float)obj.texture.height},
-                   {obj.x, obj.y, obj.width, obj.height}, {0, 0}, 0.0f, WHITE);
+                   {obj.x, obj.y, obj.width, obj.height}, {0, 0}, obj.rotation, WHITE);
   }
   DrawRectangleLines(obj.x, obj.y, obj.width, obj.height, Fade(GRAY, 0.5f));
 }
@@ -311,16 +322,39 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     DrawCircleV(start, handleRadius, primaryCol);
     DrawCircleV(end, handleRadius, primaryCol);
   } else {
-    Rectangle bounds = OBJECTS::GetObjectBounds(obj);
-    DrawRectangleLinesEx(bounds, 1.0f / camera.zoom, primaryCol);
+    Rectangle localBounds = {0, 0, obj.width, obj.height};
+    if ((obj.type == ObjectType::Text || obj.type == ObjectType::Field)) {
+        if (localBounds.height <= 0) localBounds.height = obj.fontSize * 1.5f;
+        if (localBounds.width <= 0) {
+            Font f = AssetManager::Get().GetFont(obj.fontName);
+            localBounds.width = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
+        }
+    }
+
+    Vector2 p1 = {0, 0};
+    Vector2 p2 = {localBounds.width, 0};
+    Vector2 p3 = {localBounds.width, localBounds.height};
+    Vector2 p4 = {0, localBounds.height};
+
+    if (obj.rotation != 0) {
+        p1 = Vector2Rotate(p1, obj.rotation * DEG2RAD);
+        p2 = Vector2Rotate(p2, obj.rotation * DEG2RAD);
+        p3 = Vector2Rotate(p3, obj.rotation * DEG2RAD);
+        p4 = Vector2Rotate(p4, obj.rotation * DEG2RAD);
+    }
+
+    p1 = Vector2Add(p1, {obj.x, obj.y});
+    p2 = Vector2Add(p2, {obj.x, obj.y});
+    p3 = Vector2Add(p3, {obj.x, obj.y});
+    p4 = Vector2Add(p4, {obj.x, obj.y});
+
+    DrawLineEx(p1, p2, 1.0f / camera.zoom, primaryCol);
+    DrawLineEx(p2, p3, 1.0f / camera.zoom, primaryCol);
+    DrawLineEx(p3, p4, 1.0f / camera.zoom, primaryCol);
+    DrawLineEx(p4, p1, 1.0f / camera.zoom, primaryCol);
 
     float handleRadius = HANDLE_RADIUS / camera.zoom;
-    Vector2 handles[] = {
-        {bounds.x, bounds.y},                                // Top-Left
-        {bounds.x + bounds.width, bounds.y},                 // Top-Right
-        {bounds.x, bounds.y + bounds.height},                // Bottom-Left
-        {bounds.x + bounds.width, bounds.y + bounds.height}  // Bottom-Right
-    };
+    Vector2 handles[] = {p1, p2, p4, p3}; // Top-Left, Top-Right, Bottom-Left, Bottom-Right
 
     for (int i = 0; i < 4; i++) {
       DrawCircleV(handles[i], handleRadius, primaryCol);
@@ -345,24 +379,20 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
       } else if (i == 3) { // Bottom-Right: Resize (Arrows)
         if (obj.isLocked) continue;
         float aSize = handleRadius * 0.6f;
-        // Main diagonal line
-        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize},
-                   2.0f / camera.zoom, WHITE);
-        // Arrow heads
-        DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
-                   2.0f / camera.zoom, WHITE);
-        DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
-                   {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
-                   2.0f / camera.zoom, WHITE);
-
-        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize + aSize / 2, handles[i].y - aSize},
-                   2.0f / camera.zoom, WHITE);
-        DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
-                   {handles[i].x - aSize, handles[i].y - aSize + aSize / 2},
-                   2.0f / camera.zoom, WHITE);
+        // Simple dot for now if rotated to avoid complex arrow math
+        if (obj.rotation == 0) {
+            DrawLineEx({handles[i].x - aSize, handles[i].y - aSize},
+                       {handles[i].x + aSize, handles[i].y + aSize},
+                       2.0f / camera.zoom, WHITE);
+            DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                       {handles[i].x + aSize - aSize / 2, handles[i].y + aSize},
+                       2.0f / camera.zoom, WHITE);
+            DrawLineEx({handles[i].x + aSize, handles[i].y + aSize},
+                       {handles[i].x + aSize, handles[i].y + aSize - aSize / 2},
+                       2.0f / camera.zoom, WHITE);
+        } else {
+            DrawCircleV(handles[i], handleRadius * 0.4f, WHITE);
+        }
       }
     }
   }
@@ -443,7 +473,7 @@ Image RenderProjectToImage(const Project &project) {
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       Font printFont = AssetManager::Get().GetFont(obj.fontName);
       DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
-                  obj.fontSize, 2.0f, BLACK, obj.width);
+                  obj.fontSize, 2.0f, BLACK, obj.width, obj.rotation);
     } else if (obj.type == ObjectType::QRCode) {
       // Manual QR Drawing for Image Buffer
       QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
@@ -647,13 +677,12 @@ void ImageDrawRoundedRectFilled(Image *dst, float x, float y, float w, float h,
  * @author   bearded.griffin
  ****************************************************/
 float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
-                  float fontSize, float spacing, Color tint, float maxWidth) {
+                  float fontSize, float spacing, Color tint, float maxWidth, float rotation) {
   if (text == nullptr || strlen(text) == 0)
     return 0;
 
   std::string content(text);
   std::vector<std::string> words;
-  std::string currentWord;
   std::stringstream ss(content);
   std::string word;
 
@@ -669,16 +698,24 @@ float DrawTextBox(Image *target, Font font, const char *text, float x, float y,
     std::string word = words[i];
     Vector2 wordSize = MeasureTextEx(font, word.c_str(), fontSize, spacing);
 
-    if (currentX + wordSize.x > maxWidth && currentX > 0) {
+    if (maxWidth > 0 && currentX + wordSize.x > maxWidth && currentX > 0) {
       currentX = 0;
       currentY += fontSize;
     }
 
+    Vector2 pos = {currentX, currentY};
+    if (rotation != 0) {
+        pos = Vector2Rotate(pos, rotation * DEG2RAD);
+    }
+
     if (target) {
-      ImageDrawTextEx(target, font, word.c_str(), {x + currentX, y + currentY},
+      // Note: ImageDrawTextEx does not support rotation directly.
+      // For printing, rotation would require a more complex approach (rendering to a separate image then rotating that).
+      // For now, we only support 0-degree rotation for printing text boxes.
+      ImageDrawTextEx(target, font, word.c_str(), {x + pos.x, y + pos.y},
                       fontSize, spacing, tint);
     } else {
-      DrawTextEx(font, word.c_str(), {x + currentX, y + currentY}, fontSize,
+      DrawTextPro(font, word.c_str(), {x + pos.x, y + pos.y}, {0, 0}, rotation, fontSize,
                  spacing, tint);
     }
 
