@@ -185,6 +185,61 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
     camera.zoom = std::max(camera.zoom, MIN_ZOOM);
   }
 
+  // --- Arrow Key Nudging ---
+  if (!state.selectedIndices.empty()) {
+    static Project preNudgeState;
+    static bool nudgeActive = false;
+
+    bool up = IsKeyPressed(KEY_UP);
+    bool down = IsKeyPressed(KEY_DOWN);
+    bool left = IsKeyPressed(KEY_LEFT);
+    bool right = IsKeyPressed(KEY_RIGHT);
+
+    if (up || down || left || right) {
+      if (!nudgeActive) {
+        preNudgeState = project;
+        nudgeActive = true;
+      }
+
+      float amount =
+          (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) ? 10.0f : 1.0f;
+      float dx = (right ? amount : 0) - (left ? amount : 0);
+      float dy = (down ? amount : 0) - (up ? amount : 0);
+
+      LabelSize canvasSz = LabelSizes[project.selectedLabelIndex];
+
+      // Boundary check for group nudge
+      float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+      for (int idx : state.selectedIndices) {
+        Rectangle b = OBJECTS::GetObjectBounds(project.objects[idx]);
+        minX = std::min(minX, b.x);
+        minY = std::min(minY, b.y);
+        maxX = std::max(maxX, b.x + b.width);
+        maxY = std::max(maxY, b.y + b.height);
+      }
+
+      if (minX + dx < 0) dx = -minX;
+      if (minY + dy < 0) dy = -minY;
+      if (maxX + dx > canvasSz.width) dx = canvasSz.width - maxX;
+      if (maxY + dy > canvasSz.height) dy = canvasSz.height - maxY;
+
+      if (dx != 0 || dy != 0) {
+        for (int idx : state.selectedIndices) {
+          project.objects[idx].x += dx;
+          project.objects[idx].y += dy;
+        }
+        project.isDirty = true;
+      }
+    }
+
+    // Push history once all arrow keys are released
+    if (nudgeActive && !IsKeyDown(KEY_UP) && !IsKeyDown(KEY_DOWN) &&
+        !IsKeyDown(KEY_LEFT) && !IsKeyDown(KEY_RIGHT)) {
+      state.PushHistory(preNudgeState);
+      nudgeActive = false;
+    }
+  }
+
   // --- Keyboard Shortcuts ---
   bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
