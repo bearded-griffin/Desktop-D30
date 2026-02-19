@@ -49,7 +49,7 @@ if(TEST_SOURCES AND NOT WIN32)
         "SHELL:-Wl,-wrap,GetScreenToWorld2D,-wrap,Vector2Add,-wrap,Vector2Scale"
         "SHELL:-Wl,-wrap,CheckCollisionPointRec,-wrap,CheckCollisionPointCircle"
         "SHELL:-Wl,-wrap,MeasureTextEx"
-        "SHELL:-Wl,-wrap,DrawTextEx,-wrap,DrawText"
+        "SHELL:-Wl,-wrap,DrawTextEx,-wrap,DrawText,-wrap,DrawTextPro"
         "SHELL:-Wl,-wrap,DrawLineEx,-wrap,DrawLine"
         "SHELL:-Wl,-wrap,DrawRectangleRounded,-wrap,DrawRing"
         "SHELL:-Wl,-wrap,DrawRectangle,-wrap,DrawRectangleRec,-wrap,DrawRectangleLines,-wrap,DrawRectangleLinesEx"
