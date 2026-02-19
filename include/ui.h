@@ -30,6 +30,7 @@ struct UIState {
   bool triggerBorderPopup = false;
   bool triggerScanPopup = false;
   bool triggerBatchPopup = false;
+  bool triggerSequencePopup = false;
   bool triggerLoadConfirmation = false;
   bool triggerLibraryManager = false;
   bool triggerBorderManager = false;

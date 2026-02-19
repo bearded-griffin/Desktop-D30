@@ -42,6 +42,7 @@ namespace UI {
 namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
+void DrawSequencePrintPopup(Project &project, UIState &uiState);
 void DrawIconLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
 void DrawBorderLibraryPopup(Project &project, UIState &uiState, InteractionState &state);
 void DrawLibraryManager(UIState &uiState);
@@ -358,6 +359,37 @@ void DrawBatchPrintPopup(Project &project, UIState &uiState) {
 
     if (ImGui::Button("PRINT BATCH")) {
       Utils::BatchPrint(project, startRow, endRow);
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel"))
+      ImGui::CloseCurrentPopup();
+
+    ImGui::EndPopup();
+  }
+}
+
+void DrawSequencePrintPopup(Project &project, UIState &uiState) {
+  if (uiState.triggerSequencePopup) {
+    ImGui::OpenPopup("SequencePrintPopup");
+    uiState.triggerSequencePopup = false;
+  }
+
+  if (ImGui::BeginPopupModal("SequencePrintPopup", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    static int labelCount = 1;
+
+    ImGui::Text("Print Auto-Increment Sequence");
+    ImGui::Separator();
+    
+    ImGui::InputInt("Number of Labels", &labelCount);
+    if (labelCount < 1) labelCount = 1;
+
+    ImGui::Separator();
+
+    if (ImGui::Button("START PRINTING")) {
+      Utils::SequencePrint(project, labelCount);
       ImGui::CloseCurrentPopup();
     }
 
@@ -1063,6 +1095,10 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
         }
       }
 
+      if (ImGui::MenuItem("Sequence Print (Auto-Inc)")) {
+        uiState.triggerSequencePopup = true;
+      }
+
       ImGui::Separator();
       if (ImGui::MenuItem("Exit", "Alt+F4")) {
         RequestExit(uiState);
@@ -1191,6 +1227,7 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
   // Draw Popups
   DrawDeviceScanPopup(uiState);
   DrawBatchPrintPopup(project, uiState);
+  DrawSequencePrintPopup(project, uiState);
   DrawIconLibraryPopup(project, uiState, state);
   DrawBorderLibraryPopup(project, uiState, state);
   DrawLibraryManager(uiState);
@@ -1516,6 +1553,46 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
           }
         }
         ImGui::EndCombo();
+      }
+
+      ImGui::Spacing();
+      ImGui::Separator();
+      if (ImGui::Checkbox("Auto-Increment", &obj.isAutoIncrement)) {
+        state.PushHistory(project);
+        for (int idx : state.selectedIndices) {
+          if (project.objects[idx].type == ObjectType::Text ||
+              project.objects[idx].type == ObjectType::Field) {
+            project.objects[idx].isAutoIncrement = obj.isAutoIncrement;
+          }
+        }
+        project.isDirty = true;
+      }
+
+      if (obj.isAutoIncrement) {
+        ImGui::Indent();
+        static char preBuf[64], sufBuf[64];
+        strncpy(preBuf, obj.autoPrefix.c_str(), sizeof(preBuf));
+        strncpy(sufBuf, obj.autoSuffix.c_str(), sizeof(sufBuf));
+
+        if (ImGui::InputText("Prefix", preBuf, sizeof(preBuf))) {
+          obj.autoPrefix = preBuf;
+          project.isDirty = true;
+        }
+        if (ImGui::InputText("Suffix", sufBuf, sizeof(sufBuf))) {
+          obj.autoSuffix = sufBuf;
+          project.isDirty = true;
+        }
+
+        if (ImGui::DragInt("Start", &obj.autoStart, 1, 0, 1000000)) project.isDirty = true;
+        if (ImGui::DragInt("Step", &obj.autoStep, 1, -1000, 1000)) project.isDirty = true;
+        if (ImGui::DragInt("Current", &obj.autoCurrent, 1, 0, 1000000)) project.isDirty = true;
+
+        if (ImGui::Button("Reset to Start")) {
+          state.PushHistory(project);
+          obj.autoCurrent = obj.autoStart;
+          project.isDirty = true;
+        }
+        ImGui::Unindent();
       }
     } else if (obj.type == ObjectType::Border ||
                obj.type == ObjectType::ShapeRect) {

@@ -51,7 +51,13 @@ namespace RENDERING {
 void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected) {
   Font displayFont = AssetManager::Get().GetFont(obj.fontName);
-  DrawTextBox(nullptr, displayFont, obj.data.c_str(), obj.x, obj.y,
+  
+  std::string displayText = obj.data;
+  if (obj.isAutoIncrement) {
+    displayText = obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
+  }
+
+  DrawTextBox(nullptr, displayFont, displayText.c_str(), obj.x, obj.y,
               obj.fontSize, 2.0f, col, obj.width, obj.rotation);
 
   if (isSelected && obj.width > 0) {
@@ -494,7 +500,13 @@ Image RenderProjectToImage(const Project &project) {
     if (!obj.isVisible) continue;
     if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
       Font printFont = AssetManager::Get().GetFont(obj.fontName);
-      DrawTextBox(&canvas, printFont, obj.data.c_str(), obj.x, obj.y,
+      
+      std::string printText = obj.data;
+      if (obj.isAutoIncrement) {
+        printText = obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
+      }
+
+      DrawTextBox(&canvas, printFont, printText.c_str(), obj.x, obj.y,
                   obj.fontSize, 2.0f, BLACK, obj.width, obj.rotation);
     } else if (obj.type == ObjectType::QRCode) {
       // Manual QR Drawing for Image Buffer

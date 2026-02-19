@@ -98,6 +98,14 @@ struct LabelObject {
   float rotation = 0.0f; // In degrees
   int threshold = 128; // 0-255 for image binarization
 
+  // --- Auto-Increment ---
+  bool isAutoIncrement = false;
+  int autoStart = 1;
+  int autoStep = 1;
+  int autoCurrent = 1;
+  std::string autoPrefix = "";
+  std::string autoSuffix = "";
+
   // --- Runtime Texture Resource ---
   Texture2D texture = {0};
   std::string lastData = "";      // For cache tracking
@@ -218,6 +226,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ObjectType, {{ObjectType::Text, "text"},
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabelObject, type, x, y, width, height, data,
                                    linkedColumn, fontName, fontSize, colorHex,
-                                   cornerRadius, isLocked, isVisible, rotation, threshold)
+                                   cornerRadius, isLocked, isVisible, rotation, threshold,
+                                   isAutoIncrement, autoStart, autoStep, autoCurrent, autoPrefix, autoSuffix)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Project, version, selectedLabelIndex, objects, csvFilePath,
                                    currentCSVRow, projectFilePath, csvHeaders, csvRows)
