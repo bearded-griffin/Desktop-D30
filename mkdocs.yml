@@ -13,6 +13,7 @@ nav:
   - Bluetooth Printing: printing.md
   - Batch Printing: batch-printing.md
   - Shortcuts: shortcuts.md
+  - Development Guide: development.md
 
 markdown_extensions:
   - admonition

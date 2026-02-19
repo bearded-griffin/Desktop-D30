@@ -21,15 +21,6 @@ Desktop-D30 is available for both Linux and Windows.
 1. Extract the archive to a folder of your choice.
 2. Run the `Desktop-D30` executable directly.
 
-### Building from Source
-If you wish to build the application yourself, you will need:
-- CMake (3.14+)
-- A C++17 compiler (GCC or Clang)
-- Bluetooth development headers (`libbluetooth-dev` on Ubuntu)
+## Building from Source
 
-```bash
-git clone https://forgejo.example.com/bearded-griffin/Desktop-D30
-cd Desktop-D30
-make build
-./build/Desktop-D30
-```
+If you wish to compile the application yourself, please refer to the [Development & Build Guide](development.md).
