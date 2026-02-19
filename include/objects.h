@@ -40,6 +40,9 @@ void HandleObjectDrag(Project &project, InteractionState &state,
 void AlignObjects(Project &project, const std::vector<int> &selectedIndices,
                   AlignmentType type, bool relativeToCanvas = false);
 
+void DistributeObjects(Project &project, const std::vector<int> &selectedIndices,
+                       DistributionType type);
+
 // Object creation functions
 LabelObject CreateTextObject(const float &x, const float &y,
                              const std::string &text, const float &fontSize);
