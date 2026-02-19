@@ -42,6 +42,7 @@ void OpenFile(const std::string &filePath);
 // Apply the data from project.currentCSVRow to all linked objects
 void ApplyCSVDataToObjects(Project &project);
 void BatchPrint(const Project &project, int startRow, int endRow);
+void SequencePrint(Project &project, int count);
 
 // --- Local Settings ---
 extern AppSettings appSettings;

@@ -23,6 +23,7 @@
 
 #include "win_fix.h"
 #include "utils.h"
+#include "protocol.h"
 
 #include <chrono>
 #include <fstream>
@@ -331,6 +332,25 @@ void BatchPrint(const Project &project, int startRow, int endRow) {
     Protocol::PrintLabel(tempProject);
 
     // 5. Delay (Prevent buffer overflow)
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  }
+}
+
+void SequencePrint(Project &project, int count) {
+  for (int i = 0; i < count; i++) {
+    std::cout << "[Sequence] Printing Copy " << (i + 1) << "..." << std::endl;
+    
+    // 1. Print current state
+    Protocol::PrintLabel(project);
+
+    // 2. Increment all auto-increment fields
+    for (auto &obj : project.objects) {
+      if (obj.isAutoIncrement) {
+        obj.autoCurrent += obj.autoStep;
+      }
+    }
+
+    // 3. Delay
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 }
