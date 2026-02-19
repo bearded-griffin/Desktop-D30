@@ -212,6 +212,9 @@ add_executable(Desktop-D30
     src/main.cpp
 )
 
+# Hide the console window on Windows for non-debug builds
+set_target_properties(Desktop-D30 PROPERTIES WIN32_EXECUTABLE ON)
+
 target_include_directories(Desktop-D30 PRIVATE 
     include/ 
     ${json_SOURCE_DIR}/include
