@@ -22,6 +22,7 @@
  ****************************************************/
 
 #include "input.h"
+#include "assets.h"
 #include "imgui.h"
 #include "objects.h"
 #include "utils.h"
@@ -70,24 +71,36 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
           state.activeHandle = HANDLE_BOTTOM_RIGHT;
         }
       } else {
-        Rectangle bounds = OBJECTS::GetObjectBounds(obj);
+        // Rotated handle detection
+        Vector2 p = {mouseWorld.x - obj.x, mouseWorld.y - obj.y};
+        p = Vector2Rotate(p, -obj.rotation * DEG2RAD);
+
+        Rectangle localBounds = {0, 0, obj.width, obj.height};
+        if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+            if (localBounds.height <= 0) localBounds.height = obj.fontSize * 1.5f;
+            if (localBounds.width <= 0) {
+                Font f = AssetManager::Get().GetFont(obj.fontName);
+                localBounds.width = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f).x;
+            }
+        }
+
         float handleRadius = HANDLE_RADIUS / camera.zoom;
-        Vector2 handlePositions[] = {
-            {bounds.x, bounds.y},                               // Top-Left
-            {bounds.x + bounds.width, bounds.y},                // Top-Right
-            {bounds.x, bounds.y + bounds.height},               // Bottom-Left
-            {bounds.x + bounds.width, bounds.y + bounds.height} // Bottom-Right
+        Vector2 localHandles[] = {
+            {0, 0},                                     // Top-Left
+            {localBounds.width, 0},                     // Top-Right
+            {0, localBounds.height},                    // Bottom-Left
+            {localBounds.width, localBounds.height}     // Bottom-Right
         };
 
         for (int i = 0; i < 4; i++) {
-          if (CheckCollisionPointCircle(mouseWorld, handlePositions[i], handleRadius)) {
+          if (CheckCollisionPointCircle(p, localHandles[i], handleRadius)) {
             if (i == 0) { // Top-Left: Delete
+              state.PushHistory(project);
               auto &objToDelete = project.objects[primaryIdx];
               if (objToDelete.texture.id != 0) UnloadTexture(objToDelete.texture);
               project.objects.erase(project.objects.begin() + primaryIdx);
               project.isDirty = true;
               
-              // Remove from selection and fix other indices
               state.selectedIndices.clear();
               state.isDraggingObject = false;
               return; 
