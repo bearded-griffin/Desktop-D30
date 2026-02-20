@@ -48,235 +48,7 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState,
                             InteractionState &state);
 void DrawLibraryManager(UIState &uiState);
 void DrawBorderManager(UIState &uiState);
-} // namespace
 
-/*!***************************************************
- * @brief    Initializes the UI system
- * @details
- * @return   void
- * @note
- * @date     2026.02.01
- ****************************************************/
-void InitializeUI() {
-  SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Desktop-D30");
-
-  rlImGuiSetup(true);
-}
-
-/*!***************************************************
- * @brief    Updates the window title
- * @details
- * @param    project const Project&
- * @return   void
- * @note
- * @date     2026.02.01
- ****************************************************/
-void UpdateWindowTitle(const Project &project) {
-  std::string title = "Desktop-D30";
-  if (!project.projectFilePath.empty()) {
-    title += project.isDirty ? ": *" : ": ";
-    size_t lastSlash = project.projectFilePath.find_last_of("/\\");
-    title += (lastSlash != std::string::npos)
-                 ? project.projectFilePath.substr(lastSlash + 1)
-                 : project.projectFilePath;
-  }
-  SetWindowTitle(title.c_str());
-}
-
-/*!***************************************************
- * @brief    Requests application exit
- * @details
- * @return   void
- * @note
- * @date     2026.02.03
- ****************************************************/
-void RequestExit(UIState &uiState) { uiState.exitRequested = true; }
-
-/*!***************************************************
- * @brief    Checks if application should close
- * @details
- * @return   bool
- * @note
- * @date     2026.02.03
- ****************************************************/
-bool ShouldClose(const UIState &uiState) { return uiState.forceQuit; }
-
-/*!***************************************************
- * @brief    Clears the exit request flag
- * @details
- * @return   void
- * @note
- * @date     2026.02.03
- ****************************************************/
-void ClearExitRequest(UIState &uiState) { uiState.exitRequested = false; }
-
-/*!***************************************************
- * @brief    Draws the exit confirmation dialog
- * @details
- * @param    project Project&
- * @return   void
- * @note
- * @date     2026.02.03
- ****************************************************/
-void DrawExitConfirmation(Project &project, UIState &uiState) {
-  if (uiState.exitRequested) {
-    if (!project.isDirty) {
-      uiState.forceQuit = true;
-    } else {
-      ImGui::OpenPopup("ConfirmExit");
-    }
-  }
-
-  if (ImGui::BeginPopupModal("ConfirmExit", NULL,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::Text("You have unsaved changes!\n\n");
-    ImGui::Separator();
-
-    if (ImGui::Button("Save and Exit", ImVec2(120, 0))) {
-      bool saveSuccess = false;
-      if (project.projectFilePath.empty()) {
-        saveSuccess = Utils::SaveProject(project);
-      } else {
-        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
-      }
-
-      if (saveSuccess) {
-        project.isDirty = false;
-        uiState.forceQuit = true;
-      }
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::SetItemDefaultFocus();
-    ImGui::SameLine();
-    if (ImGui::Button("Exit Without Saving", ImVec2(150, 0))) {
-      uiState.forceQuit = true;
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-      ClearExitRequest(uiState);
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::EndPopup();
-  }
-}
-
-/*!***************************************************
- * @brief    Draws the load confirmation dialog
- * @details
- * @param    project Project&
- * @return   void
- * @note
- * @date     2026.01.19
- ****************************************************/
-void DrawLoadConfirmation(Project &project, UIState &uiState) {
-  if (uiState.triggerLoadConfirmation) {
-    if (!project.isDirty) {
-      if (Utils::LoadProject("project.d30", project)) {
-        project.isDirty = false;
-      }
-      uiState.triggerLoadConfirmation = false;
-    } else {
-      ImGui::OpenPopup("ConfirmLoad");
-    }
-  }
-
-  if (ImGui::BeginPopupModal("ConfirmLoad", NULL,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::Text("You have unsaved changes! Do you want to save before "
-                "loading a new project?\n\n");
-    ImGui::Separator();
-
-    if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
-      bool saveSuccess = false;
-      if (project.projectFilePath.empty()) {
-        saveSuccess = Utils::SaveProject(project);
-      } else {
-        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
-      }
-
-      if (saveSuccess) {
-        if (Utils::LoadProject("project.d30", project)) {
-          project.isDirty = false;
-        }
-      }
-      uiState.triggerLoadConfirmation = false;
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Discard and Load", ImVec2(150, 0))) {
-      if (Utils::LoadProject("project.d30", project)) {
-        project.isDirty = false;
-      }
-      uiState.triggerLoadConfirmation = false;
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-      uiState.triggerLoadConfirmation = false;
-      ImGui::CloseCurrentPopup();
-    }
-    ImGui::EndPopup();
-  }
-}
-
-/*!***************************************************
- * @brief    Draws the loading splash screen
- * @details  Renders a logo and loading progress bar.
- * @return   void
- * @date     2026.02.19
- ****************************************************/
-void DrawSplashScreen() {
-  ClearBackground(RAYWHITE);
-
-  int screenW = GetScreenWidth();
-  int screenH = GetScreenHeight();
-  Font f = AssetManager::Get().GetDefaultFont();
-
-  // Draw Logo/Title
-  const char *title = "Desktop-D30";
-  float fontSize = 60.0f;
-  Vector2 titleSize = MeasureTextEx(f, title, fontSize, 2.0f);
-  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, (float)screenH / 2 - 100},
-             fontSize, 2.0f, DARKGRAY);
-
-  // Draw Progress Bar
-  float progress = AssetManager::Get().GetLoadProgress();
-  int barW = 600;
-  int barH = 30;
-  int barX = (screenW - barW) / 2;
-  int barY = screenH / 2 + 50;
-
-  DrawRectangleLines(barX, barY, barW, barH, LIGHTGRAY);
-  DrawRectangle(barX + 2, barY + 2, (int)((barW - 4) * progress), barH - 4,
-                SKYBLUE);
-
-  // Fun Status Messages
-  const char *statusMsg = "Loading Icons...";
-  if (progress > 0.3f)
-    statusMsg = "Wrangling the Angry Pixels...";
-  if (progress > 0.6f)
-    statusMsg = "Polishing the Pixels...";
-  if (progress > 0.9f)
-    statusMsg = "Finalizing Graphics...";
-
-  float statusFontSize = 24.0f;
-  Vector2 statusSize = MeasureTextEx(f, statusMsg, statusFontSize, 2.0f);
-  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, (float)barY - 35},
-             statusFontSize, 2.0f, DARKGRAY);
-
-  // Percentage Text
-  std::string percentStr = std::to_string((int)(progress * 100)) + "%";
-  float percentFontSize = 20.0f;
-  Vector2 percentSize =
-      MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
-  DrawTextEx(f, percentStr.c_str(),
-             {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
-             percentFontSize, 2.0f, GRAY);
-}
-
-namespace {
 /*!***************************************************
  * @brief    Draws the Bluetooth device scan popup
  * @param    uiState UIState&
@@ -1076,231 +848,18 @@ void DrawBorderManager(UIState &uiState) {
     ImGui::EndPopup();
   }
 }
-} // namespace
 
 /*!***************************************************
- * @brief    Draw the main menu
- * @details  Draws the drop down main menu that
- * contains all the options for the program.
- * @param    project Project&
- * @return   void
- * @note
- * @date     2026.01.19
- ****************************************************/
-void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
-
-  if (ImGui::BeginMainMenuBar()) {
-
-    // --- FILE MENU ---
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save", "Ctrl+S")) {
-        // If no file path is set, open a save dialog
-        if (project.projectFilePath.empty()) {
-          if (Utils::SaveProject(project)) {
-            project.isDirty = false;
-          }
-        } else {
-          // Otherwise, save to the existing path
-          if (Utils::SaveProject(project, project.projectFilePath)) {
-            project.isDirty = false;
-          }
-        }
-      }
-      if (ImGui::MenuItem("Save As...")) {
-        if (Utils::SaveProject(project)) {
-          project.isDirty = false;
-        }
-      }
-      if (ImGui::MenuItem("Load Project", "Ctrl+L")) {
-        uiState.triggerLoadConfirmation = true;
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
-        Utils::ExportProjectToPNG("test_label.png", project);
-        Utils::OpenFile("test_label.png");
-      }
-
-      ImGui::Separator();
-
-      // --- CSV / BATCH PRINTING ---
-      if (ImGui::MenuItem("Load CSV Data...")) {
-        auto selection =
-            pfd::open_file("Select CSV", ".", {"CSV Files", "*.csv"}).result();
-        if (!selection.empty()) {
-          Utils::LoadCSV(selection[0], project);
-
-          project.currentCSVRow = 0;
-          Utils::ApplyCSVDataToObjects(project);
-        }
-      }
-
-      if (ImGui::MenuItem("Batch Print (CSV)", "Ctrl+Shift+B")) {
-        if (project.csvRows.empty()) {
-          // Could add a toast/error here, but for now we just don't open
-          std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
-        } else {
-          uiState.triggerBatchPopup = true;
-        }
-      }
-
-      if (ImGui::MenuItem("Sequence Print (Auto-Inc)", "Ctrl+Shift+P")) {
-        uiState.triggerSequencePopup = true;
-      }
-
-      ImGui::Separator();
-      if (ImGui::MenuItem("Exit", "Alt+F4")) {
-        RequestExit(uiState);
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- EDIT MENU ---
-    if (ImGui::BeginMenu("Edit")) {
-      if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !state.undoStack.empty())) {
-        state.Undo(project);
-        state.selectedIndices.clear();
-      }
-      if (ImGui::MenuItem("Redo", "Ctrl+Y", false, !state.redoStack.empty())) {
-        state.Redo(project);
-        state.selectedIndices.clear();
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Cut", "Ctrl+X", false,
-                          !state.selectedIndices.empty())) {
-        state.PushHistory(project);
-        state.clipboard.clear();
-        std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(),
-                  std::greater<int>());
-        for (int idx : sortedIndices) {
-          state.clipboard.push_back(project.objects[idx]);
-          project.objects.erase(project.objects.begin() + idx);
-        }
-        state.selectedIndices.clear();
-        project.isDirty = true;
-      }
-      if (ImGui::MenuItem("Copy", "Ctrl+C", false,
-                          !state.selectedIndices.empty())) {
-        state.clipboard.clear();
-        for (int idx : state.selectedIndices) {
-          state.clipboard.push_back(project.objects[idx]);
-        }
-      }
-      if (ImGui::MenuItem("Paste", "Ctrl+V", false, !state.clipboard.empty())) {
-        state.PushHistory(project);
-        state.selectedIndices.clear();
-        for (const auto &obj : state.clipboard) {
-          LabelObject newObj = obj;
-          newObj.x += 10;
-          newObj.y += 10;
-          project.objects.push_back(newObj);
-          state.selectedIndices.push_back((int)project.objects.size() - 1);
-        }
-        project.isDirty = true;
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Delete", "Del", false,
-                          !state.selectedIndices.empty())) {
-        state.PushHistory(project);
-        std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(),
-                  std::greater<int>());
-        for (int idx : sortedIndices) {
-          auto &objToDelete = project.objects[idx];
-          if (objToDelete.texture.id != 0)
-            UnloadTexture(objToDelete.texture);
-          project.objects.erase(project.objects.begin() + idx);
-        }
-        state.selectedIndices.clear();
-        project.isDirty = true;
-      }
-
-      ImGui::EndMenu();
-    }
-
-    // --- ASSETS MENU ---
-    if (ImGui::BeginMenu("Assets")) {
-      if (ImGui::MenuItem("Manage Icon Library")) {
-        uiState.triggerLibraryManager = true;
-      }
-      if (ImGui::MenuItem("Manage Deco Borders")) {
-        uiState.triggerBorderManager = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- PRINTER MENU ---
-    if (ImGui::BeginMenu("Printer")) {
-      // Status Indicator
-      if (Printer::Get().IsConnected()) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
-                           Printer::Get().GetConnectedName().c_str());
-        if (ImGui::MenuItem("Disconnect")) {
-          Printer::Get().Disconnect();
-        }
-
-        ImGui::Separator();
-
-        // Direct Print Action
-        if (ImGui::MenuItem("Print Single Label", "Ctrl+P")) {
-          Protocol::PrintLabel(project);
-        }
-      } else {
-        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Scan for Devices")) {
-        Printer::Get().StartScan();
-        uiState.triggerScanPopup = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- HELP MENU ---
-    if (ImGui::BeginMenu("Help")) {
-      if (ImGui::MenuItem("User Guide")) {
-        Utils::OpenFile("https://bearded-griffin.github.io/Desktop-D30/");
-      }
-      ImGui::Separator();
-      if (ImGui::MenuItem("About")) {
-        uiState.showAboutDialog = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    ImGui::EndMainMenuBar();
-  }
-
-  // Draw Popups
-  DrawDeviceScanPopup(uiState);
-  DrawBatchPrintPopup(project, uiState);
-  DrawSequencePrintPopup(project, uiState);
-  DrawIconLibraryPopup(project, uiState, state);
-  DrawBorderLibraryPopup(project, uiState, state);
-  DrawLibraryManager(uiState);
-  DrawBorderManager(uiState);
-}
-
-/*!***************************************************
- * @brief    Draws the side bar
+ * @brief    Draws the properties panel
  * @details  It draws the side "Inspector" bar on the left side.
  * @param    project Project&
- * @param    selectedIndex int&
+ * @param    state InteractionState&
+ * @param    uiState UIState&
  * @return   void
- * @note
+ * @note     Add a forward declaration for DrawpropertiesPanel since it's used
+ * in this file but defined in another file.
  * @date     2026.01.19
  ****************************************************/
-namespace {
-// Add a forward declaration for DrawPropertiesPanel since it's used in this
-// file.
 void DrawPropertiesPanel(Project &project, InteractionState &state,
                          UIState &uiState);
 
@@ -1948,7 +1507,445 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
     }
   }
 }
-} // namespace
+
+} // Anonymous namespace
+
+/*!***************************************************
+ * @brief    Initializes the UI system
+ * @details
+ * @return   void
+ * @note
+ * @date     2026.02.01
+ ****************************************************/
+void InitializeUI() {
+  SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Desktop-D30");
+
+  rlImGuiSetup(true);
+}
+
+/*!***************************************************
+ * @brief    Updates the window title
+ * @details
+ * @param    project const Project&
+ * @return   void
+ * @note
+ * @date     2026.02.01
+ ****************************************************/
+void UpdateWindowTitle(const Project &project) {
+  std::string title = "Desktop-D30";
+  if (!project.projectFilePath.empty()) {
+    title += project.isDirty ? ": *" : ": ";
+    size_t lastSlash = project.projectFilePath.find_last_of("/\\");
+    title += (lastSlash != std::string::npos)
+                 ? project.projectFilePath.substr(lastSlash + 1)
+                 : project.projectFilePath;
+  }
+  SetWindowTitle(title.c_str());
+}
+
+/*!***************************************************
+ * @brief    Requests application exit
+ * @details
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+void RequestExit(UIState &uiState) { uiState.exitRequested = true; }
+
+/*!***************************************************
+ * @brief    Checks if application should close
+ * @details
+ * @return   bool
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+bool ShouldClose(const UIState &uiState) { return uiState.forceQuit; }
+
+/*!***************************************************
+ * @brief    Clears the exit request flag
+ * @details
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+void ClearExitRequest(UIState &uiState) { uiState.exitRequested = false; }
+
+/*!***************************************************
+ * @brief    Draws the exit confirmation dialog
+ * @details
+ * @param    project Project&
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+void DrawExitConfirmation(Project &project, UIState &uiState) {
+  if (uiState.exitRequested) {
+    if (!project.isDirty) {
+      uiState.forceQuit = true;
+    } else {
+      ImGui::OpenPopup("ConfirmExit");
+    }
+  }
+
+  if (ImGui::BeginPopupModal("ConfirmExit", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("You have unsaved changes!\n\n");
+    ImGui::Separator();
+
+    if (ImGui::Button("Save and Exit", ImVec2(120, 0))) {
+      bool saveSuccess = false;
+      if (project.projectFilePath.empty()) {
+        saveSuccess = Utils::SaveProject(project);
+      } else {
+        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
+      }
+
+      if (saveSuccess) {
+        project.isDirty = false;
+        uiState.forceQuit = true;
+      }
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SetItemDefaultFocus();
+    ImGui::SameLine();
+    if (ImGui::Button("Exit Without Saving", ImVec2(150, 0))) {
+      uiState.forceQuit = true;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+      ClearExitRequest(uiState);
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the load confirmation dialog
+ * @details
+ * @param    project Project&
+ * @return   void
+ * @note
+ * @date     2026.01.19
+ ****************************************************/
+void DrawLoadConfirmation(Project &project, UIState &uiState) {
+  if (uiState.triggerLoadConfirmation) {
+    if (!project.isDirty) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      uiState.triggerLoadConfirmation = false;
+    } else {
+      ImGui::OpenPopup("ConfirmLoad");
+    }
+  }
+
+  if (ImGui::BeginPopupModal("ConfirmLoad", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::Text("You have unsaved changes! Do you want to save before "
+                "loading a new project?\n\n");
+    ImGui::Separator();
+
+    if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
+      bool saveSuccess = false;
+      if (project.projectFilePath.empty()) {
+        saveSuccess = Utils::SaveProject(project);
+      } else {
+        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
+      }
+
+      if (saveSuccess) {
+        if (Utils::LoadProject("project.d30", project)) {
+          project.isDirty = false;
+        }
+      }
+      uiState.triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Discard and Load", ImVec2(150, 0))) {
+      if (Utils::LoadProject("project.d30", project)) {
+        project.isDirty = false;
+      }
+      uiState.triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+      uiState.triggerLoadConfirmation = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the loading splash screen
+ * @details  Renders a logo and loading progress bar.
+ * @return   void
+ * @date     2026.02.19
+ ****************************************************/
+void DrawSplashScreen() {
+  ClearBackground(RAYWHITE);
+
+  int screenW = GetScreenWidth();
+  int screenH = GetScreenHeight();
+  Font f = AssetManager::Get().GetDefaultFont();
+
+  // Draw Logo/Title
+  const char *title = "Desktop-D30";
+  float fontSize = 60.0f;
+  Vector2 titleSize = MeasureTextEx(f, title, fontSize, 2.0f);
+  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, (float)screenH / 2 - 100},
+             fontSize, 2.0f, DARKGRAY);
+
+  // Draw Progress Bar
+  float progress = AssetManager::Get().GetLoadProgress();
+  int barW = 600;
+  int barH = 30;
+  int barX = (screenW - barW) / 2;
+  int barY = screenH / 2 + 50;
+
+  DrawRectangleLines(barX, barY, barW, barH, LIGHTGRAY);
+  DrawRectangle(barX + 2, barY + 2, (int)((barW - 4) * progress), barH - 4,
+                SKYBLUE);
+
+  // Fun Status Messages
+  const char *statusMsg = "Loading Icons...";
+  if (progress > 0.3f)
+    statusMsg = "Wrangling the Angry Pixels...";
+  if (progress > 0.6f)
+    statusMsg = "Polishing the Pixels...";
+  if (progress > 0.9f)
+    statusMsg = "Finalizing Graphics...";
+
+  float statusFontSize = 24.0f;
+  Vector2 statusSize = MeasureTextEx(f, statusMsg, statusFontSize, 2.0f);
+  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, (float)barY - 35},
+             statusFontSize, 2.0f, DARKGRAY);
+
+  // Percentage Text
+  std::string percentStr = std::to_string((int)(progress * 100)) + "%";
+  float percentFontSize = 20.0f;
+  Vector2 percentSize =
+      MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
+  DrawTextEx(f, percentStr.c_str(),
+             {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
+             percentFontSize, 2.0f, GRAY);
+}
+
+/*!***************************************************
+ * @brief    Draw the main menu
+ * @details  Draws the drop down main menu that
+ * contains all the options for the program.
+ * @param    project Project&
+ * @return   void
+ * @note
+ * @date     2026.01.19
+ ****************************************************/
+void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
+
+  if (ImGui::BeginMainMenuBar()) {
+
+    // --- FILE MENU ---
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("Save", "Ctrl+S")) {
+        // If no file path is set, open a save dialog
+        if (project.projectFilePath.empty()) {
+          if (Utils::SaveProject(project)) {
+            project.isDirty = false;
+          }
+        } else {
+          // Otherwise, save to the existing path
+          if (Utils::SaveProject(project, project.projectFilePath)) {
+            project.isDirty = false;
+          }
+        }
+      }
+      if (ImGui::MenuItem("Save As...")) {
+        if (Utils::SaveProject(project)) {
+          project.isDirty = false;
+        }
+      }
+      if (ImGui::MenuItem("Load Project", "Ctrl+L")) {
+        uiState.triggerLoadConfirmation = true;
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
+        Utils::ExportProjectToPNG("test_label.png", project);
+        Utils::OpenFile("test_label.png");
+      }
+
+      ImGui::Separator();
+
+      // --- CSV / BATCH PRINTING ---
+      if (ImGui::MenuItem("Load CSV Data...")) {
+        auto selection =
+            pfd::open_file("Select CSV", ".", {"CSV Files", "*.csv"}).result();
+        if (!selection.empty()) {
+          Utils::LoadCSV(selection[0], project);
+
+          project.currentCSVRow = 0;
+          Utils::ApplyCSVDataToObjects(project);
+        }
+      }
+
+      if (ImGui::MenuItem("Batch Print (CSV)", "Ctrl+Shift+B")) {
+        if (project.csvRows.empty()) {
+          // Could add a toast/error here, but for now we just don't open
+          std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
+        } else {
+          uiState.triggerBatchPopup = true;
+        }
+      }
+
+      if (ImGui::MenuItem("Sequence Print (Auto-Inc)", "Ctrl+Shift+P")) {
+        uiState.triggerSequencePopup = true;
+      }
+
+      ImGui::Separator();
+      if (ImGui::MenuItem("Exit", "Alt+F4")) {
+        RequestExit(uiState);
+      }
+      ImGui::EndMenu();
+    }
+
+    // --- EDIT MENU ---
+    if (ImGui::BeginMenu("Edit")) {
+      if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !state.undoStack.empty())) {
+        state.Undo(project);
+        state.selectedIndices.clear();
+      }
+      if (ImGui::MenuItem("Redo", "Ctrl+Y", false, !state.redoStack.empty())) {
+        state.Redo(project);
+        state.selectedIndices.clear();
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Cut", "Ctrl+X", false,
+                          !state.selectedIndices.empty())) {
+        state.PushHistory(project);
+        state.clipboard.clear();
+        std::vector<int> sortedIndices = state.selectedIndices;
+        std::sort(sortedIndices.begin(), sortedIndices.end(),
+                  std::greater<int>());
+        for (int idx : sortedIndices) {
+          state.clipboard.push_back(project.objects[idx]);
+          project.objects.erase(project.objects.begin() + idx);
+        }
+        state.selectedIndices.clear();
+        project.isDirty = true;
+      }
+      if (ImGui::MenuItem("Copy", "Ctrl+C", false,
+                          !state.selectedIndices.empty())) {
+        state.clipboard.clear();
+        for (int idx : state.selectedIndices) {
+          state.clipboard.push_back(project.objects[idx]);
+        }
+      }
+      if (ImGui::MenuItem("Paste", "Ctrl+V", false, !state.clipboard.empty())) {
+        state.PushHistory(project);
+        state.selectedIndices.clear();
+        for (const auto &obj : state.clipboard) {
+          LabelObject newObj = obj;
+          newObj.x += 10;
+          newObj.y += 10;
+          project.objects.push_back(newObj);
+          state.selectedIndices.push_back((int)project.objects.size() - 1);
+        }
+        project.isDirty = true;
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Delete", "Del", false,
+                          !state.selectedIndices.empty())) {
+        state.PushHistory(project);
+        std::vector<int> sortedIndices = state.selectedIndices;
+        std::sort(sortedIndices.begin(), sortedIndices.end(),
+                  std::greater<int>());
+        for (int idx : sortedIndices) {
+          auto &objToDelete = project.objects[idx];
+          if (objToDelete.texture.id != 0)
+            UnloadTexture(objToDelete.texture);
+          project.objects.erase(project.objects.begin() + idx);
+        }
+        state.selectedIndices.clear();
+        project.isDirty = true;
+      }
+
+      ImGui::EndMenu();
+    }
+
+    // --- ASSETS MENU ---
+    if (ImGui::BeginMenu("Assets")) {
+      if (ImGui::MenuItem("Manage Icon Library")) {
+        uiState.triggerLibraryManager = true;
+      }
+      if (ImGui::MenuItem("Manage Deco Borders")) {
+        uiState.triggerBorderManager = true;
+      }
+      ImGui::EndMenu();
+    }
+
+    // --- PRINTER MENU ---
+    if (ImGui::BeginMenu("Printer")) {
+      // Status Indicator
+      if (Printer::Get().IsConnected()) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
+                           Printer::Get().GetConnectedName().c_str());
+        if (ImGui::MenuItem("Disconnect")) {
+          Printer::Get().Disconnect();
+        }
+
+        ImGui::Separator();
+
+        // Direct Print Action
+        if (ImGui::MenuItem("Print Single Label", "Ctrl+P")) {
+          Protocol::PrintLabel(project);
+        }
+      } else {
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
+      }
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem("Scan for Devices")) {
+        Printer::Get().StartScan();
+        uiState.triggerScanPopup = true;
+      }
+      ImGui::EndMenu();
+    }
+
+    // --- HELP MENU ---
+    if (ImGui::BeginMenu("Help")) {
+      if (ImGui::MenuItem("User Guide")) {
+        Utils::OpenFile("https://bearded-griffin.github.io/Desktop-D30/");
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("About")) {
+        uiState.showAboutDialog = true;
+      }
+      ImGui::EndMenu();
+    }
+
+    ImGui::EndMainMenuBar();
+  }
+
+  // Draw Popups
+  DrawDeviceScanPopup(uiState);
+  DrawBatchPrintPopup(project, uiState);
+  DrawSequencePrintPopup(project, uiState);
+  DrawIconLibraryPopup(project, uiState, state);
+  DrawBorderLibraryPopup(project, uiState, state);
+  DrawLibraryManager(uiState);
+  DrawBorderManager(uiState);
+}
 
 /*!***************************************************
  * @brief    Draws the side bar
