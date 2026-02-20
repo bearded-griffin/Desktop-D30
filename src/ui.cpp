@@ -1923,52 +1923,64 @@ void DrawExitConfirmation(Project &project, UIState &uiState) {
  * @date     2026.01.19
  ****************************************************/
 void DrawLoadConfirmation(Project &project, UIState &uiState) {
+  // Constants for consistent UI sizing
+  constexpr ImVec2 BUTTON_SIZE(120, 0);
+  constexpr const char *DEFAULT_PROJECT_FILE = "project.d30";
+
+  // Helper lambda for loading project
+  auto LoadProject = [&]() -> bool {
+    if (Utils::LoadProject(DEFAULT_PROJECT_FILE, project)) {
+      project.isDirty = false;
+      return true;
+    }
+    return false;
+  };
+
+  // Helper lambda for saving project
+  auto SaveProject = [&]() -> bool {
+    return project.projectFilePath.empty()
+               ? Utils::SaveProject(project)
+               : Utils::SaveProject(project, project.projectFilePath);
+  };
+
+  // Handle load confirmation trigger
   if (uiState.triggerLoadConfirmation) {
     if (!project.isDirty) {
-      if (Utils::LoadProject("project.d30", project)) {
-        project.isDirty = false;
-      }
-      uiState.triggerLoadConfirmation = false;
+      LoadProject();
     } else {
       ImGui::OpenPopup("ConfirmLoad");
     }
+    uiState.triggerLoadConfirmation = false;
   }
 
-  if (ImGui::BeginPopupModal("ConfirmLoad", NULL,
+  // Draw confirmation modal
+  if (ImGui::BeginPopupModal("ConfirmLoad", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::Text("You have unsaved changes! Do you want to save before "
                 "loading a new project?\n\n");
     ImGui::Separator();
 
-    if (ImGui::Button("Save and Load", ImVec2(120, 0))) {
-      bool saveSuccess = false;
-      if (project.projectFilePath.empty()) {
-        saveSuccess = Utils::SaveProject(project);
-      } else {
-        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
+    // Save and Load button
+    if (ImGui::Button("Save and Load", BUTTON_SIZE)) {
+      if (SaveProject() && LoadProject()) {
+        ImGui::CloseCurrentPopup();
       }
+    }
+    ImGui::SameLine();
 
-      if (saveSuccess) {
-        if (Utils::LoadProject("project.d30", project)) {
-          project.isDirty = false;
-        }
+    // Discard and Load button
+    if (ImGui::Button("Discard and Load", BUTTON_SIZE)) {
+      if (LoadProject()) {
+        ImGui::CloseCurrentPopup();
       }
-      uiState.triggerLoadConfirmation = false;
-      ImGui::CloseCurrentPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Discard and Load", ImVec2(150, 0))) {
-      if (Utils::LoadProject("project.d30", project)) {
-        project.isDirty = false;
-      }
-      uiState.triggerLoadConfirmation = false;
+
+    // Cancel button
+    if (ImGui::Button("Cancel", BUTTON_SIZE)) {
       ImGui::CloseCurrentPopup();
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-      uiState.triggerLoadConfirmation = false;
-      ImGui::CloseCurrentPopup();
-    }
+
     ImGui::EndPopup();
   }
 }
