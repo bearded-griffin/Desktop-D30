@@ -2088,67 +2088,73 @@ void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
  * @date     2026.01.19
  ****************************************************/
 void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
+  // Constants for consistent UI sizing
+  constexpr ImVec2 ALIGN_BTN_SIZE(40, 0);
+  constexpr ImVec2 DIST_BTN_SIZE(60, 0);
+  constexpr ImVec2 TOOL_BTN_SIZE(110, 0);
+  constexpr int MAX_IMPORT_SIZE = 512;
+  constexpr int MIN_DISTRIBUTE_COUNT = 3;
+
+  // Helper lambda for creating buttons with tooltips
+  auto CreateButtonWithTooltip = [](const char *label, const ImVec2 &size,
+                                    const char *tooltip) {
+    bool clicked = ImGui::Button(label, size);
+    if (ImGui::IsItemHovered() && tooltip) {
+      ImGui::SetTooltip(tooltip);
+    }
+    return clicked;
+  };
+
+  // Helper lambda for alignment operations
+  auto CreateAlignmentButton = [&](const char *label, AlignmentType type) {
+    if (ImGui::Button(label, ALIGN_BTN_SIZE)) {
+      state.PushHistory(project);
+      OBJECTS::AlignObjects(project, state.selectedIndices, type,
+                            uiState.alignToCanvas);
+    }
+  };
+
   ImGui::Begin("Inspector", nullptr,
                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
   ImGui::SetWindowPos({0, 20}, ImGuiCond_FirstUseEver);
   ImGui::SetWindowSize({300, 600}, ImGuiCond_FirstUseEver);
 
+  // Main UI sections
   DrawProjectSettings(project);
   DrawDataSource(project);
   DrawObjectTree(project, state);
   DrawPropertiesPanel(project, state, uiState);
 
-  // --- Alignment Tools ---
+  // Alignment Tools Section
   if (!state.selectedIndices.empty()) {
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Text("Alignment");
     ImGui::Checkbox("Align to Canvas", &uiState.alignToCanvas);
 
-    if (ImGui::Button("L", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_LEFT,
-                            uiState.alignToCanvas);
-    }
+    // Horizontal alignment buttons
+    CreateAlignmentButton("L", ALIGN_LEFT);
     ImGui::SameLine();
-    if (ImGui::Button("CH", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_H,
-                            uiState.alignToCanvas);
-    }
+    CreateAlignmentButton("CH", ALIGN_CENTER_H);
     ImGui::SameLine();
-    if (ImGui::Button("R", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_RIGHT,
-                            uiState.alignToCanvas);
-    }
+    CreateAlignmentButton("R", ALIGN_RIGHT);
 
-    if (ImGui::Button("T", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_TOP,
-                            uiState.alignToCanvas);
-    }
+    // Vertical alignment buttons
+    CreateAlignmentButton("T", ALIGN_TOP);
     ImGui::SameLine();
-    if (ImGui::Button("CV", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_CENTER_V,
-                            uiState.alignToCanvas);
-    }
+    CreateAlignmentButton("CV", ALIGN_CENTER_V);
     ImGui::SameLine();
-    if (ImGui::Button("B", ImVec2(40, 0))) {
-      state.PushHistory(project);
-      OBJECTS::AlignObjects(project, state.selectedIndices, ALIGN_BOTTOM,
-                            uiState.alignToCanvas);
-    }
+    CreateAlignmentButton("B", ALIGN_BOTTOM);
 
-    if (state.selectedIndices.size() >= 3) {
-      if (ImGui::Button("Dist H", ImVec2(60, 0))) {
+    // Distribution buttons (only when enough objects selected)
+    if (state.selectedIndices.size() >= MIN_DISTRIBUTE_COUNT) {
+      if (ImGui::Button("Dist H", DIST_BTN_SIZE)) {
         state.PushHistory(project);
         OBJECTS::DistributeObjects(project, state.selectedIndices,
                                    DISTRIBUTE_HORIZONTALLY);
       }
       ImGui::SameLine();
-      if (ImGui::Button("Dist V", ImVec2(60, 0))) {
+      if (ImGui::Button("Dist V", DIST_BTN_SIZE)) {
         state.PushHistory(project);
         OBJECTS::DistributeObjects(project, state.selectedIndices,
                                    DISTRIBUTE_VERTICALLY);
@@ -2156,42 +2162,31 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
     }
   }
 
-  // --- 4. Add Buttons (Grid Layout) ---
+  // Tools Section
   ImGui::Spacing();
   ImGui::Separator();
   ImGui::Text("Tools");
 
-  // We use a specific width (e.g. 110) to make buttons consistent
-  ImVec2 btnSize(110, 0);
-
-  // --- Row 1: Basics ---
-  if (ImGui::Button("Add Text", btnSize)) {
+  // Basic tools
+  if (CreateButtonWithTooltip("Add Text", TOOL_BTN_SIZE, "Alt+T")) {
     OBJECTS::AddTextObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+T");
   ImGui::SameLine();
-  if (ImGui::Button("Add Field", btnSize)) {
+  if (CreateButtonWithTooltip("Add Field", TOOL_BTN_SIZE, "Alt+F")) {
     OBJECTS::AddFieldObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+F");
 
-  // --- Row 2: Media ---
-  if (ImGui::Button("Add QR", btnSize)) {
+  // Media tools
+  if (CreateButtonWithTooltip("Add QR", TOOL_BTN_SIZE, "Alt+Q")) {
     OBJECTS::AddQRCodeObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+Q");
   ImGui::SameLine();
-  if (ImGui::Button("Add Barcode", btnSize)) {
+  if (CreateButtonWithTooltip("Add Barcode", TOOL_BTN_SIZE, "Alt+B")) {
     OBJECTS::AddBarcodeObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+B");
 
-  // --- Row 3: Graphics ---
-  if (ImGui::Button("Add Image", btnSize)) {
+  // Graphics tools
+  if (CreateButtonWithTooltip("Add Image", TOOL_BTN_SIZE, nullptr)) {
     auto selection = pfd::open_file("Select Image", ".",
                                     {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
                          .result();
@@ -2199,31 +2194,36 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
       state.PushHistory(project);
       LabelObject obj = OBJECTS::CreateImageObject(0, 0, 60, 60, selection[0]);
 
-      // Immediately load and constrain image for display
+      // Load and process image
       Image img = LoadImage(obj.data.c_str());
-      if (img.data != NULL) {
-        const int MAX_IMPORT_SIZE = 512;
+      if (img.data != nullptr) {
+        // Calculate new dimensions maintaining aspect ratio
+        float aspect = static_cast<float>(img.width) / img.height;
+        int newWidth = img.width;
+        int newHeight = img.height;
+
         if (img.width > MAX_IMPORT_SIZE || img.height > MAX_IMPORT_SIZE) {
-          float aspect = (float)img.width / (float)img.height;
-          int newW, newH;
           if (img.width > img.height) {
-            newW = MAX_IMPORT_SIZE;
-            newH = (int)(MAX_IMPORT_SIZE / aspect);
+            newWidth = MAX_IMPORT_SIZE;
+            newHeight = static_cast<int>(MAX_IMPORT_SIZE / aspect);
           } else {
-            newH = MAX_IMPORT_SIZE;
-            newW = (int)(MAX_IMPORT_SIZE * aspect);
+            newHeight = MAX_IMPORT_SIZE;
+            newWidth = static_cast<int>(MAX_IMPORT_SIZE * aspect);
           }
-          ImageResize(&img, newW, newH);
+          ImageResize(&img, newWidth, newHeight);
         }
 
-        obj.width = (float)img.width;
-        obj.height = (float)img.height;
+        obj.width = static_cast<float>(newWidth);
+        obj.height = static_cast<float>(newHeight);
 
+        // Add object to project
         project.objects.push_back(obj);
         project.isDirty = true;
         state.selectedIndices.clear();
-        state.selectedIndices.push_back((int)project.objects.size() - 1);
+        state.selectedIndices.push_back(
+            static_cast<int>(project.objects.size() - 1));
 
+        // Load texture and cleanup
         project.objects[state.selectedIndices.back()].texture =
             LoadTextureFromImage(img);
         UnloadImage(img);
@@ -2231,38 +2231,30 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
     }
   }
   ImGui::SameLine();
-  if (ImGui::Button("Add Icon", btnSize)) {
+  if (ImGui::Button("Add Icon", TOOL_BTN_SIZE)) {
     uiState.triggerIconPopup = true;
   }
 
-  // --- Row 4: Shapes ---
-  if (ImGui::Button("Add Line", btnSize)) {
+  // Shape tools
+  if (CreateButtonWithTooltip("Add Line", TOOL_BTN_SIZE, "Alt+L")) {
     OBJECTS::AddLineObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+L");
   ImGui::SameLine();
-  if (ImGui::Button("Add Rect", btnSize)) {
+  if (CreateButtonWithTooltip("Add Rect", TOOL_BTN_SIZE, "Alt+R")) {
     OBJECTS::AddRectangleObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+R");
 
-  if (ImGui::Button("Add Circle", btnSize)) {
+  if (CreateButtonWithTooltip("Add Circle", TOOL_BTN_SIZE, "Alt+C")) {
     OBJECTS::AddCircleObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+C");
 
-  // --- Row 5: Decor ---
+  // Decor tools
   ImGui::SameLine();
-  if (ImGui::Button("Add Border", btnSize)) {
+  if (CreateButtonWithTooltip("Add Border", TOOL_BTN_SIZE, "Alt+D")) {
     OBJECTS::AddBorderObject(project, state);
   }
-  if (ImGui::IsItemHovered())
-    ImGui::SetTooltip("Alt+D");
 
-  if (ImGui::Button("Deco Border", btnSize)) {
+  if (ImGui::Button("Deco Border", TOOL_BTN_SIZE)) {
     uiState.triggerBorderPopup = true;
   }
 
