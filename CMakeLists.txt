@@ -260,22 +260,23 @@ elseif (UNIX AND NOT APPLE)
 endif()
 
 # --- TESTS ---
-add_subdirectory(tests)
+option(BUILD_TESTING "Build the tests" ON)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 # --- INSTALLATION INSTRUCTIONS ---
-# 1. Install the Executable to /opt/Desktop-D30
-install(TARGETS Desktop-D30 DESTINATION .)
+# 1. Install the Executable to bin
+install(TARGETS Desktop-D30 DESTINATION bin)
 
-# 2. Install the Assets folder to /opt/Desktop-D30/assets
-install(DIRECTORY assets DESTINATION .)
+# 2. Install the Assets folder to bin/assets (relative to exe)
+install(DIRECTORY assets DESTINATION bin)
 
-# 3. Install the Desktop File (for the Start Menu)
-#install(FILES Desktop-D30.desktop DESTINATION /usr/share/applications)
-install(FILES Desktop-D30.desktop DESTINATION .)
+# 3. Install the Desktop File
+install(FILES Desktop-D30.desktop DESTINATION share/applications)
 
-# 4. Install the Icon (for the Start Menu)
-#install(FILES assets/app_icon.png DESTINATION /usr/share/pixmaps RENAME Desktop-D30.png)
-install(FILES assets/app_icon.png DESTINATION .)
+# 4. Install the Icon
+install(FILES assets/app_icon.png DESTINATION share/icons/hicolor/512x512/apps RENAME Desktop-D30.png)
 
 
 

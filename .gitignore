@@ -44,3 +44,6 @@ imgui.ini
 *.gcda
 *.gcov
 coverage_report/*
+
+# ---> Ignore AppImage File
+*.AppImage
