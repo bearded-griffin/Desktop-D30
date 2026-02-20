@@ -48,6 +48,10 @@ void DrawBorderLibraryPopup(Project &project, UIState &uiState,
                             InteractionState &state);
 void DrawLibraryManager(UIState &uiState);
 void DrawBorderManager(UIState &uiState);
+void PerformCopyOperation(Project &project, InteractionState &state);
+void PerformPasteOperation(Project &project, InteractionState &state);
+void PerformCutOperation(Project &project, InteractionState &state);
+void PerformDeleteOperation(Project &project, InteractionState &state);
 
 /*!***************************************************
  * @brief    Draws the Bluetooth device scan popup
@@ -1508,6 +1512,294 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
   }
 }
 
+/*************************************
+ * Helper functions for menu sections
+ *************************************/
+
+/*!***************************************************
+ * @brief    Draws the main menu bar and its submenus
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawFileMenu(Project &project, UIState &uiState) {
+  const auto saveProject = [&project]() {
+    if (project.projectFilePath.empty()) {
+      return Utils::SaveProject(project);
+    }
+    return Utils::SaveProject(project, project.projectFilePath);
+  };
+
+  if (ImGui::MenuItem("Save", "Ctrl+S")) {
+    if (saveProject()) {
+      project.isDirty = false;
+    }
+  }
+
+  if (ImGui::MenuItem("Save As...")) {
+    if (Utils::SaveProject(project)) {
+      project.isDirty = false;
+    }
+  }
+
+  if (ImGui::MenuItem("Load Project", "Ctrl+L")) {
+    uiState.triggerLoadConfirmation = true;
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Export to PNG (Test Print)")) {
+    const std::string exportPath = "test_label.png";
+    Utils::ExportProjectToPNG(exportPath, project);
+    Utils::OpenFile(exportPath);
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Load CSV Data...")) {
+    auto selection =
+        pfd::open_file("Select CSV", ".", {"CSV Files", "*.csv"}).result();
+    if (!selection.empty()) {
+      Utils::LoadCSV(selection[0], project);
+      project.currentCSVRow = 0;
+      Utils::ApplyCSVDataToObjects(project);
+    }
+  }
+
+  if (ImGui::MenuItem("Batch Print (CSV)", "Ctrl+Shift+B")) {
+    if (project.csvRows.empty()) {
+      std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
+    } else {
+      uiState.triggerBatchPopup = true;
+    }
+  }
+
+  if (ImGui::MenuItem("Sequence Print (Auto-Inc)", "Ctrl+Shift+P")) {
+    uiState.triggerSequencePopup = true;
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Exit", "Alt+F4")) {
+    RequestExit(uiState);
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the Edit menu with undo/redo and clipboard operations
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawEditMenu(Project &project, UIState &uiState, InteractionState &state) {
+  const bool hasSelection = !state.selectedIndices.empty();
+  const bool hasClipboard = !state.clipboard.empty();
+  const bool canUndo = !state.undoStack.empty();
+  const bool canRedo = !state.redoStack.empty();
+
+  if (ImGui::MenuItem("Undo", "Ctrl+Z", false, canUndo)) {
+    state.Undo(project);
+    state.selectedIndices.clear();
+  }
+
+  if (ImGui::MenuItem("Redo", "Ctrl+Y", false, canRedo)) {
+    state.Redo(project);
+    state.selectedIndices.clear();
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Cut", "Ctrl+X", false, hasSelection)) {
+    PerformCutOperation(project, state);
+  }
+
+  if (ImGui::MenuItem("Copy", "Ctrl+C", false, hasSelection)) {
+    PerformCopyOperation(project, state);
+  }
+
+  if (ImGui::MenuItem("Paste", "Ctrl+V", false, hasClipboard)) {
+    PerformPasteOperation(project, state);
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Delete", "Del", false, hasSelection)) {
+    PerformDeleteOperation(project, state);
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the Assets menu for managing icons and borders
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawAssetsMenu(UIState &uiState) {
+  if (ImGui::MenuItem("Manage Icon Library")) {
+    uiState.triggerLibraryManager = true;
+  }
+
+  if (ImGui::MenuItem("Manage Deco Borders")) {
+    uiState.triggerBorderManager = true;
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the Printer menu for managing printer connection and printing
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawPrinterMenu(Project &project, UIState &uiState) {
+  auto &printer = Printer::Get();
+
+  if (printer.IsConnected()) {
+    ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
+                       printer.GetConnectedName().c_str());
+
+    if (ImGui::MenuItem("Disconnect")) {
+      printer.Disconnect();
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Print Single Label", "Ctrl+P")) {
+      Protocol::PrintLabel(project);
+    }
+  } else {
+    ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("Scan for Devices")) {
+    printer.StartScan();
+    uiState.triggerScanPopup = true;
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws the Help menu with links to documentation and about dialog
+ * @param    uiState UIState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawHelpMenu(UIState &uiState) {
+  if (ImGui::MenuItem("User Guide")) {
+    Utils::OpenFile("https://bearded-griffin.github.io/Desktop-D30/");
+  }
+
+  ImGui::Separator();
+
+  if (ImGui::MenuItem("About")) {
+    uiState.showAboutDialog = true;
+  }
+}
+
+/*!***************************************************
+ * @brief    Draws all active popups based on UIState flags
+ * @param    project Project&
+ * @param    uiState UIState&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void DrawPopups(Project &project, UIState &uiState, InteractionState &state) {
+  DrawDeviceScanPopup(uiState);
+  DrawBatchPrintPopup(project, uiState);
+  DrawSequencePrintPopup(project, uiState);
+  DrawIconLibraryPopup(project, uiState, state);
+  DrawBorderLibraryPopup(project, uiState, state);
+  DrawLibraryManager(uiState);
+  DrawBorderManager(uiState);
+}
+/***************************************
+ * Helper functions for edit operations
+ ***************************************/
+
+/*!***************************************************
+ * @brief    Performs the cut operation on selected objects
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void PerformCutOperation(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  state.clipboard.clear();
+
+  std::vector<int> sortedIndices = state.selectedIndices;
+  std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+
+  for (int idx : sortedIndices) {
+    state.clipboard.push_back(project.objects[idx]);
+    project.objects.erase(project.objects.begin() + idx);
+  }
+
+  state.selectedIndices.clear();
+  project.isDirty = true;
+}
+
+/*!***************************************************
+ * @brief    Performs the copy operation on selected objects
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void PerformCopyOperation(Project &project, InteractionState &state) {
+  state.clipboard.clear();
+  state.clipboard.reserve(state.selectedIndices.size());
+
+  for (int idx : state.selectedIndices) {
+    state.clipboard.push_back(project.objects[idx]);
+  }
+}
+
+/*!***************************************************
+ * @brief    Performs the paste operation from clipboard
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void PerformPasteOperation(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+  state.selectedIndices.clear();
+  state.selectedIndices.reserve(state.clipboard.size());
+
+  const int offset = 10;
+  for (const auto &obj : state.clipboard) {
+    LabelObject newObj = obj;
+    newObj.x += offset;
+    newObj.y += offset;
+    project.objects.push_back(newObj);
+    state.selectedIndices.push_back(static_cast<int>(project.objects.size()) -
+                                    1);
+  }
+
+  project.isDirty = true;
+}
+
+/*!***************************************************
+ * @brief    Performs the delete operation on selected objects
+ * @param    project Project&
+ * @param    state InteractionState&
+ * @date     2026.02.19
+ ****************************************************/
+void PerformDeleteOperation(Project &project, InteractionState &state) {
+  state.PushHistory(project);
+
+  std::vector<int> sortedIndices = state.selectedIndices;
+  std::sort(sortedIndices.begin(), sortedIndices.end(), std::greater<int>());
+
+  for (int idx : sortedIndices) {
+    auto &objToDelete = project.objects[idx];
+    if (objToDelete.texture.id != 0) {
+      UnloadTexture(objToDelete.texture);
+    }
+    project.objects.erase(project.objects.begin() + idx);
+  }
+
+  state.selectedIndices.clear();
+  project.isDirty = true;
+}
+
 } // Anonymous namespace
 
 /*!***************************************************
@@ -1746,205 +2038,44 @@ void DrawSplashScreen() {
  * @date     2026.01.19
  ****************************************************/
 void DrawMainMenu(Project &project, UIState &uiState, InteractionState &state) {
-
-  if (ImGui::BeginMainMenuBar()) {
-
-    // --- FILE MENU ---
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Save", "Ctrl+S")) {
-        // If no file path is set, open a save dialog
-        if (project.projectFilePath.empty()) {
-          if (Utils::SaveProject(project)) {
-            project.isDirty = false;
-          }
-        } else {
-          // Otherwise, save to the existing path
-          if (Utils::SaveProject(project, project.projectFilePath)) {
-            project.isDirty = false;
-          }
-        }
-      }
-      if (ImGui::MenuItem("Save As...")) {
-        if (Utils::SaveProject(project)) {
-          project.isDirty = false;
-        }
-      }
-      if (ImGui::MenuItem("Load Project", "Ctrl+L")) {
-        uiState.triggerLoadConfirmation = true;
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Export to PNG (Test Print)")) {
-        Utils::ExportProjectToPNG("test_label.png", project);
-        Utils::OpenFile("test_label.png");
-      }
-
-      ImGui::Separator();
-
-      // --- CSV / BATCH PRINTING ---
-      if (ImGui::MenuItem("Load CSV Data...")) {
-        auto selection =
-            pfd::open_file("Select CSV", ".", {"CSV Files", "*.csv"}).result();
-        if (!selection.empty()) {
-          Utils::LoadCSV(selection[0], project);
-
-          project.currentCSVRow = 0;
-          Utils::ApplyCSVDataToObjects(project);
-        }
-      }
-
-      if (ImGui::MenuItem("Batch Print (CSV)", "Ctrl+Shift+B")) {
-        if (project.csvRows.empty()) {
-          // Could add a toast/error here, but for now we just don't open
-          std::cout << "[UI] No CSV loaded. Cannot batch print." << std::endl;
-        } else {
-          uiState.triggerBatchPopup = true;
-        }
-      }
-
-      if (ImGui::MenuItem("Sequence Print (Auto-Inc)", "Ctrl+Shift+P")) {
-        uiState.triggerSequencePopup = true;
-      }
-
-      ImGui::Separator();
-      if (ImGui::MenuItem("Exit", "Alt+F4")) {
-        RequestExit(uiState);
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- EDIT MENU ---
-    if (ImGui::BeginMenu("Edit")) {
-      if (ImGui::MenuItem("Undo", "Ctrl+Z", false, !state.undoStack.empty())) {
-        state.Undo(project);
-        state.selectedIndices.clear();
-      }
-      if (ImGui::MenuItem("Redo", "Ctrl+Y", false, !state.redoStack.empty())) {
-        state.Redo(project);
-        state.selectedIndices.clear();
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Cut", "Ctrl+X", false,
-                          !state.selectedIndices.empty())) {
-        state.PushHistory(project);
-        state.clipboard.clear();
-        std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(),
-                  std::greater<int>());
-        for (int idx : sortedIndices) {
-          state.clipboard.push_back(project.objects[idx]);
-          project.objects.erase(project.objects.begin() + idx);
-        }
-        state.selectedIndices.clear();
-        project.isDirty = true;
-      }
-      if (ImGui::MenuItem("Copy", "Ctrl+C", false,
-                          !state.selectedIndices.empty())) {
-        state.clipboard.clear();
-        for (int idx : state.selectedIndices) {
-          state.clipboard.push_back(project.objects[idx]);
-        }
-      }
-      if (ImGui::MenuItem("Paste", "Ctrl+V", false, !state.clipboard.empty())) {
-        state.PushHistory(project);
-        state.selectedIndices.clear();
-        for (const auto &obj : state.clipboard) {
-          LabelObject newObj = obj;
-          newObj.x += 10;
-          newObj.y += 10;
-          project.objects.push_back(newObj);
-          state.selectedIndices.push_back((int)project.objects.size() - 1);
-        }
-        project.isDirty = true;
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Delete", "Del", false,
-                          !state.selectedIndices.empty())) {
-        state.PushHistory(project);
-        std::vector<int> sortedIndices = state.selectedIndices;
-        std::sort(sortedIndices.begin(), sortedIndices.end(),
-                  std::greater<int>());
-        for (int idx : sortedIndices) {
-          auto &objToDelete = project.objects[idx];
-          if (objToDelete.texture.id != 0)
-            UnloadTexture(objToDelete.texture);
-          project.objects.erase(project.objects.begin() + idx);
-        }
-        state.selectedIndices.clear();
-        project.isDirty = true;
-      }
-
-      ImGui::EndMenu();
-    }
-
-    // --- ASSETS MENU ---
-    if (ImGui::BeginMenu("Assets")) {
-      if (ImGui::MenuItem("Manage Icon Library")) {
-        uiState.triggerLibraryManager = true;
-      }
-      if (ImGui::MenuItem("Manage Deco Borders")) {
-        uiState.triggerBorderManager = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- PRINTER MENU ---
-    if (ImGui::BeginMenu("Printer")) {
-      // Status Indicator
-      if (Printer::Get().IsConnected()) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Connected: %s",
-                           Printer::Get().GetConnectedName().c_str());
-        if (ImGui::MenuItem("Disconnect")) {
-          Printer::Get().Disconnect();
-        }
-
-        ImGui::Separator();
-
-        // Direct Print Action
-        if (ImGui::MenuItem("Print Single Label", "Ctrl+P")) {
-          Protocol::PrintLabel(project);
-        }
-      } else {
-        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Status: Disconnected");
-      }
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem("Scan for Devices")) {
-        Printer::Get().StartScan();
-        uiState.triggerScanPopup = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    // --- HELP MENU ---
-    if (ImGui::BeginMenu("Help")) {
-      if (ImGui::MenuItem("User Guide")) {
-        Utils::OpenFile("https://bearded-griffin.github.io/Desktop-D30/");
-      }
-      ImGui::Separator();
-      if (ImGui::MenuItem("About")) {
-        uiState.showAboutDialog = true;
-      }
-      ImGui::EndMenu();
-    }
-
-    ImGui::EndMainMenuBar();
+  if (!ImGui::BeginMainMenuBar()) {
+    return;
   }
 
+  // File Menu
+  if (ImGui::BeginMenu("File")) {
+    DrawFileMenu(project, uiState);
+    ImGui::EndMenu();
+  }
+
+  // Edit Menu
+  if (ImGui::BeginMenu("Edit")) {
+    DrawEditMenu(project, uiState, state);
+    ImGui::EndMenu();
+  }
+
+  // Assets Menu
+  if (ImGui::BeginMenu("Assets")) {
+    DrawAssetsMenu(uiState);
+    ImGui::EndMenu();
+  }
+
+  // Printer Menu
+  if (ImGui::BeginMenu("Printer")) {
+    DrawPrinterMenu(project, uiState);
+    ImGui::EndMenu();
+  }
+
+  // Help Menu
+  if (ImGui::BeginMenu("Help")) {
+    DrawHelpMenu(uiState);
+    ImGui::EndMenu();
+  }
+
+  ImGui::EndMainMenuBar();
+
   // Draw Popups
-  DrawDeviceScanPopup(uiState);
-  DrawBatchPrintPopup(project, uiState);
-  DrawSequencePrintPopup(project, uiState);
-  DrawIconLibraryPopup(project, uiState, state);
-  DrawBorderLibraryPopup(project, uiState, state);
-  DrawLibraryManager(uiState);
-  DrawBorderManager(uiState);
+  DrawPopups(project, uiState, state);
 }
 
 /*!***************************************************
