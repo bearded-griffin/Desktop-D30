@@ -37,6 +37,11 @@
 #include <vector>
 
 namespace UI {
+namespace TitleConfig {
+constexpr const char *APP_NAME = "Desktop-D30";
+constexpr const char *DIRTY_MARKER = ": *";
+constexpr const char *SEPARATOR = ": ";
+} // namespace TitleConfig
 namespace ExitDialog {
 constexpr const char *TITLE = "ConfirmExit";
 constexpr const char *MESSAGE = "You have unsaved changes!\n\n";
@@ -1875,14 +1880,26 @@ void InitializeUI() {
  * @date     2026.02.01
  ****************************************************/
 void UpdateWindowTitle(const Project &project) {
-  std::string title = "Desktop-D30";
+
+  // Helper lambda for extracting filename from path
+  auto ExtractFilename = [](const std::string &path) -> std::string {
+    if (path.empty())
+      return "";
+
+    size_t lastSlash = path.find_last_of("/\\");
+    return (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
+  };
+
+  // Construct window title
+  std::string title = TitleConfig::APP_NAME;
+
   if (!project.projectFilePath.empty()) {
-    title += project.isDirty ? ": *" : ": ";
-    size_t lastSlash = project.projectFilePath.find_last_of("/\\");
-    title += (lastSlash != std::string::npos)
-                 ? project.projectFilePath.substr(lastSlash + 1)
-                 : project.projectFilePath;
+    title +=
+        project.isDirty ? TitleConfig::DIRTY_MARKER : TitleConfig::SEPARATOR;
+    title += ExtractFilename(project.projectFilePath);
   }
+
+  // Set window title
   SetWindowTitle(title.c_str());
 }
 
