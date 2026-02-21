@@ -60,6 +60,20 @@ constexpr int StatusOffsetY = 35;
 constexpr int PercentOffsetY = 10;
 } // namespace Layout
 
+namespace AboutDialog {
+constexpr const char *TITLE = "About Desktop-D30";
+constexpr const char *APP_NAME = "Desktop-D30 - Label Design Software";
+constexpr const char *VERSION = "Version 1.0.0";
+constexpr const char *AUTHOR = "Created by bearded-griffin";
+constexpr const char *LICENSE = "Licensed under GNU GPL v3.0";
+constexpr const char *SUPPORT_TEXT =
+    "If you enjoy this app, please consider supporting development:";
+constexpr const char *SUPPORT_BUTTON = "Support on Ko-fi";
+constexpr const char *CLOSE_BUTTON = "Close";
+constexpr const char *SUPPORT_URL = "https://ko-fi.com/beardedgriffin";
+constexpr ImVec2 BUTTON_SIZE(120, 0);
+} // namespace AboutDialog
+
 namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
@@ -2311,28 +2325,36 @@ void DrawSidebar(Project &project, InteractionState &state, UIState &uiState) {
  * @date     2026.02.19
  ****************************************************/
 void DrawAboutDialog(UIState &uiState) {
+
+  // Open dialog if triggered
   if (uiState.showAboutDialog) {
-    ImGui::OpenPopup("About Desktop-D30");
+    ImGui::OpenPopup(AboutDialog::TITLE);
   }
 
-  if (ImGui::BeginPopupModal("About Desktop-D30", &uiState.showAboutDialog,
+  // Draw dialog content
+  if (ImGui::BeginPopupModal(AboutDialog::TITLE, &uiState.showAboutDialog,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::Text("Desktop-D30 - Label Design Software");
-    ImGui::Text("Version 1.0.0");
+    // Application information
+    ImGui::Text(AboutDialog::APP_NAME);
+    ImGui::Text(AboutDialog::VERSION);
     ImGui::Separator();
-    ImGui::Text("Created by bearded-griffin");
-    ImGui::Text("Licensed under GNU GPL v3.0");
+    ImGui::Text(AboutDialog::AUTHOR);
+    ImGui::Text(AboutDialog::LICENSE);
+
+    // Support section
     ImGui::Spacing();
-    ImGui::Text(
-        "If you enjoy this app, please consider supporting development:");
-    if (ImGui::Button("Support on Ko-fi")) {
-      Utils::OpenFile("https://ko-fi.com/beardedgriffin");
+    ImGui::Text(AboutDialog::SUPPORT_TEXT);
+    if (ImGui::Button(AboutDialog::SUPPORT_BUTTON)) {
+      Utils::OpenFile(AboutDialog::SUPPORT_URL);
     }
+
+    // Close button
     ImGui::Separator();
-    if (ImGui::Button("Close", ImVec2(120, 0))) {
+    if (ImGui::Button(AboutDialog::CLOSE_BUTTON, AboutDialog::BUTTON_SIZE)) {
       uiState.showAboutDialog = false;
       ImGui::CloseCurrentPopup();
     }
+
     ImGui::EndPopup();
   }
 }
