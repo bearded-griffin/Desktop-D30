@@ -38,6 +38,11 @@
 
 namespace UI {
 
+namespace Cleanup {
+constexpr const char *LOG_PREFIX = "[Cleanup]";
+constexpr bool LOG_OPERATIONS = true;
+} // namespace Cleanup
+
 namespace Colors {
 constexpr Color Background = RAYWHITE;
 constexpr Color Title = DARKGRAY;
@@ -2383,11 +2388,44 @@ void Draw(Project &project, InteractionState &state, UIState &uiState) {
  * @date     2026.02.03
  ****************************************************/
 void CleanupApplication(Project &currentProject) {
-  // Cleanup
-  OBJECTS::UnloadProjectObjects(currentProject);
-  AssetManager::Get().UnloadAssets();
 
-  rlImGuiShutdown();
-  CloseWindow();
+  // Helper lambda for logging cleanup operations
+  auto LogCleanup = [](const char *operation) {
+    if constexpr (Cleanup::LOG_OPERATIONS) {
+      std::cout << Cleanup::LOG_PREFIX << " " << operation << std::endl;
+    }
+  };
+
+  // Cleanup sequence (order matters due to dependencies)
+  try {
+    // 1. Unload project objects first as they depend on assets
+    LogCleanup("Unloading project objects...");
+    OBJECTS::UnloadProjectObjects(currentProject);
+
+    // 2. Unload assets after project objects no longer reference them
+    LogCleanup("Unloading assets...");
+    AssetManager::Get().UnloadAssets();
+
+    // 3. Shutdown ImGui system after all UI elements are gone
+    LogCleanup("Shutting down ImGui...");
+    rlImGuiShutdown();
+
+    // 4. Close window last as other systems might need window context
+    LogCleanup("Closing window...");
+    CloseWindow();
+
+    LogCleanup("Application cleanup completed successfully");
+  } catch (const std::exception &e) {
+    std::cerr << Cleanup::LOG_PREFIX << " Error during cleanup: " << e.what()
+              << std::endl;
+    // Attempt to close window even if other cleanup fails
+    try {
+      CloseWindow();
+    } catch (...) {
+      std::cerr << Cleanup::LOG_PREFIX << " Critical: Failed to close window"
+                << std::endl;
+    }
+  }
 }
+
 } // namespace UI
