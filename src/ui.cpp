@@ -37,6 +37,15 @@
 #include <vector>
 
 namespace UI {
+namespace ExitDialog {
+constexpr const char *TITLE = "ConfirmExit";
+constexpr const char *MESSAGE = "You have unsaved changes!\n\n";
+constexpr const char *SAVE_BUTTON = "Save and Exit";
+constexpr const char *DISCARD_BUTTON = "Exit Without Saving";
+constexpr const char *CANCEL_BUTTON = "Cancel";
+constexpr ImVec2 BUTTON_SIZE(120, 0);
+constexpr ImVec2 WIDE_BUTTON_SIZE(150, 0);
+} // namespace ExitDialog
 
 namespace Cleanup {
 constexpr const char *LOG_PREFIX = "[Cleanup]";
@@ -1913,26 +1922,28 @@ void ClearExitRequest(UIState &uiState) { uiState.exitRequested = false; }
  * @date     2026.02.03
  ****************************************************/
 void DrawExitConfirmation(Project &project, UIState &uiState) {
+
+  // Handle exit request
   if (uiState.exitRequested) {
     if (!project.isDirty) {
       uiState.forceQuit = true;
     } else {
-      ImGui::OpenPopup("ConfirmExit");
+      ImGui::OpenPopup(ExitDialog::TITLE);
     }
   }
 
-  if (ImGui::BeginPopupModal("ConfirmExit", NULL,
+  // Draw confirmation modal
+  if (ImGui::BeginPopupModal(ExitDialog::TITLE, nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::Text("You have unsaved changes!\n\n");
+    ImGui::Text(ExitDialog::MESSAGE);
     ImGui::Separator();
 
-    if (ImGui::Button("Save and Exit", ImVec2(120, 0))) {
-      bool saveSuccess = false;
-      if (project.projectFilePath.empty()) {
-        saveSuccess = Utils::SaveProject(project);
-      } else {
-        saveSuccess = Utils::SaveProject(project, project.projectFilePath);
-      }
+    // Save and Exit button
+    if (ImGui::Button(ExitDialog::SAVE_BUTTON, ExitDialog::BUTTON_SIZE)) {
+      bool saveSuccess =
+          project.projectFilePath.empty()
+              ? Utils::SaveProject(project)
+              : Utils::SaveProject(project, project.projectFilePath);
 
       if (saveSuccess) {
         project.isDirty = false;
@@ -1942,15 +1953,21 @@ void DrawExitConfirmation(Project &project, UIState &uiState) {
     }
     ImGui::SetItemDefaultFocus();
     ImGui::SameLine();
-    if (ImGui::Button("Exit Without Saving", ImVec2(150, 0))) {
+
+    // Exit Without Saving button
+    if (ImGui::Button(ExitDialog::DISCARD_BUTTON,
+                      ExitDialog::WIDE_BUTTON_SIZE)) {
       uiState.forceQuit = true;
       ImGui::CloseCurrentPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+
+    // Cancel button
+    if (ImGui::Button(ExitDialog::CANCEL_BUTTON, ExitDialog::BUTTON_SIZE)) {
       ClearExitRequest(uiState);
       ImGui::CloseCurrentPopup();
     }
+
     ImGui::EndPopup();
   }
 }
