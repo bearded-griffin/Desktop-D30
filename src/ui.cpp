@@ -38,6 +38,28 @@
 
 namespace UI {
 
+namespace Colors {
+constexpr Color Background = RAYWHITE;
+constexpr Color Title = DARKGRAY;
+constexpr Color ProgressBar = SKYBLUE;
+constexpr Color ProgressBarBorder = LIGHTGRAY;
+constexpr Color StatusText = DARKGRAY;
+constexpr Color PercentText = GRAY;
+} // namespace Colors
+
+namespace Layout {
+constexpr float TitleFontSize = 60.0f;
+constexpr float StatusFontSize = 24.0f;
+constexpr float PercentFontSize = 20.0f;
+constexpr float TextSpacing = 2.0f;
+constexpr int ProgressBarWidth = 600;
+constexpr int ProgressBarHeight = 30;
+constexpr int TitleOffsetY = 100;
+constexpr int ProgressBarOffsetY = 50;
+constexpr int StatusOffsetY = 35;
+constexpr int PercentOffsetY = 10;
+} // namespace Layout
+
 namespace {
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
@@ -1992,52 +2014,62 @@ void DrawLoadConfirmation(Project &project, UIState &uiState) {
  * @date     2026.02.19
  ****************************************************/
 void DrawSplashScreen() {
-  ClearBackground(RAYWHITE);
+  // Constants for consistent UI styling
 
-  int screenW = GetScreenWidth();
-  int screenH = GetScreenHeight();
-  Font f = AssetManager::Get().GetDefaultFont();
+  // Get screen dimensions
+  const int screenW = GetScreenWidth();
+  const int screenH = GetScreenHeight();
 
-  // Draw Logo/Title
-  const char *title = "Desktop-D30";
-  float fontSize = 60.0f;
-  Vector2 titleSize = MeasureTextEx(f, title, fontSize, 2.0f);
-  DrawTextEx(f, title, {(screenW - titleSize.x) / 2, (float)screenH / 2 - 100},
-             fontSize, 2.0f, DARKGRAY);
+  // Clear background
+  ClearBackground(Colors::Background);
 
-  // Draw Progress Bar
-  float progress = AssetManager::Get().GetLoadProgress();
-  int barW = 600;
-  int barH = 30;
-  int barX = (screenW - barW) / 2;
-  int barY = screenH / 2 + 50;
+  // Get font (could be cached if called frequently)
+  const Font font = AssetManager::Get().GetDefaultFont();
 
-  DrawRectangleLines(barX, barY, barW, barH, LIGHTGRAY);
-  DrawRectangle(barX + 2, barY + 2, (int)((barW - 4) * progress), barH - 4,
-                SKYBLUE);
+  // Helper lambda for drawing centered text
+  auto DrawCenteredText = [&](const char *text, float fontSize, float y,
+                              Color color) {
+    const Vector2 textSize =
+        MeasureTextEx(font, text, fontSize, Layout::TextSpacing);
+    const float x = (screenW - textSize.x) / 2;
+    DrawTextEx(font, text, {x, y}, fontSize, Layout::TextSpacing, color);
+  };
 
-  // Fun Status Messages
+  // Draw title
+  DrawCenteredText("Desktop-D30", Layout::TitleFontSize,
+                   screenH / 2 - Layout::TitleOffsetY, Colors::Title);
+
+  // Get and draw progress bar
+  const float progress = AssetManager::Get().GetLoadProgress();
+  const int barX = (screenW - Layout::ProgressBarWidth) / 2;
+  const int barY = screenH / 2 + Layout::ProgressBarOffsetY;
+
+  DrawRectangleLines(barX, barY, Layout::ProgressBarWidth,
+                     Layout::ProgressBarHeight, Colors::ProgressBarBorder);
+  DrawRectangle(barX + 2, barY + 2,
+                static_cast<int>((Layout::ProgressBarWidth - 4) * progress),
+                Layout::ProgressBarHeight - 4, Colors::ProgressBar);
+
+  // Determine and draw status message
   const char *statusMsg = "Loading Icons...";
-  if (progress > 0.3f)
-    statusMsg = "Wrangling the Angry Pixels...";
-  if (progress > 0.6f)
-    statusMsg = "Polishing the Pixels...";
   if (progress > 0.9f)
     statusMsg = "Finalizing Graphics...";
+  else if (progress > 0.6f)
+    statusMsg = "Polishing the Pixels...";
+  else if (progress > 0.3f)
+    statusMsg = "Wrangling the Angry Pixels...";
 
-  float statusFontSize = 24.0f;
-  Vector2 statusSize = MeasureTextEx(f, statusMsg, statusFontSize, 2.0f);
-  DrawTextEx(f, statusMsg, {(screenW - statusSize.x) / 2, (float)barY - 35},
-             statusFontSize, 2.0f, DARKGRAY);
+  DrawCenteredText(statusMsg, Layout::StatusFontSize,
+                   barY - Layout::StatusOffsetY, Colors::StatusText);
 
-  // Percentage Text
-  std::string percentStr = std::to_string((int)(progress * 100)) + "%";
-  float percentFontSize = 20.0f;
-  Vector2 percentSize =
-      MeasureTextEx(f, percentStr.c_str(), percentFontSize, 2.0f);
-  DrawTextEx(f, percentStr.c_str(),
-             {(screenW - percentSize.x) / 2, (float)barY + barH + 10},
-             percentFontSize, 2.0f, GRAY);
+  // Draw percentage text
+  const int percent = static_cast<int>(progress * 100);
+  char percentStr[8]; // Enough for "100%" + null terminator
+  snprintf(percentStr, sizeof(percentStr), "%d%%", percent);
+
+  DrawCenteredText(percentStr, Layout::PercentFontSize,
+                   barY + Layout::ProgressBarHeight + Layout::PercentOffsetY,
+                   Colors::PercentText);
 }
 
 /*!***************************************************
