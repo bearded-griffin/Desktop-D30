@@ -48,7 +48,17 @@ namespace RENDERING {
  ****************************************************/
 void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected) {
-  Font displayFont = AssetManager::Get().GetFont(obj.fontName);
+  Font displayFont;
+  if (obj.cachedFont) {
+    FontAsset *fa = static_cast<FontAsset *>(obj.cachedFont);
+    if (!fa->isLoaded) {
+      displayFont = AssetManager::Get().GetFont(obj.fontName);
+    } else {
+      displayFont = fa->font;
+    }
+  } else {
+    displayFont = AssetManager::Get().GetFont(obj.fontName);
+  }
 
   std::string displayText = obj.data;
   if (obj.isAutoIncrement) {
@@ -120,41 +130,60 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
  * @date     2026.02.03
  ****************************************************/
 void RenderImageObject(LabelObject &obj) {
-  if ((obj.texture.id == 0 || obj.lastThreshold != obj.threshold) &&
-      !obj.data.empty() && FileExists(obj.data.c_str())) {
+  bool dataChanged = (obj.data != obj.lastData);
+  bool thresholdChanged = (obj.threshold != obj.lastThreshold);
 
-    if (obj.texture.id != 0)
-      UnloadTexture(obj.texture);
+  if ((obj.texture.id == 0 || dataChanged || thresholdChanged) &&
+      !obj.data.empty()) {
 
-    Image img = LoadImage(obj.data.c_str());
-    ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    // 1. Reload original image if file path changed or not yet loaded
+    if (dataChanged || !obj.hasOriginalImage) {
+      if (FileExists(obj.data.c_str())) {
+        if (obj.hasOriginalImage) {
+          UnloadImage(obj.originalImage);
+          obj.hasOriginalImage = false;
+        }
 
-    Color *pixels = (Color *)img.data;
-    for (int i = 0; i < img.width * img.height; i++) {
-      if (pixels[i].a < 128) {
-        pixels[i] = WHITE; // Transparent becomes white
-      } else {
-        // Grayscale conversion
-        unsigned char gray =
-            (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
-                            0.114f * pixels[i].b);
-        // Apply threshold
-        if (gray < obj.threshold) {
-          pixels[i] = BLACK;
-        } else {
-          pixels[i] = WHITE;
+        Image img = LoadImage(obj.data.c_str());
+        if (img.data != nullptr) {
+          ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+          
+          // Pre-process: Grayscale
+          Color *pixels = (Color *)img.data;
+          for (int i = 0; i < img.width * img.height; i++) {
+            if (pixels[i].a < 128) {
+              pixels[i] = WHITE;
+            } else {
+              unsigned char gray = (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g + 0.114f * pixels[i].b);
+              pixels[i] = { gray, gray, gray, 255 };
+            }
+          }
+          
+          obj.originalImage = img;
+          obj.hasOriginalImage = true;
+          obj.lastData = obj.data;
+
+          if (obj.width == 0) obj.width = (float)img.width;
+          if (obj.height == 0) obj.height = (float)img.height;
         }
       }
     }
 
-    obj.texture = LoadTextureFromImage(img);
-    UnloadImage(img);
-    obj.lastThreshold = obj.threshold;
+    // 2. Apply thresholding to cached original
+    if (obj.hasOriginalImage) {
+      if (obj.texture.id != 0)
+        UnloadTexture(obj.texture);
 
-    if (obj.width == 0)
-      obj.width = (float)obj.texture.width;
-    if (obj.height == 0)
-      obj.height = (float)obj.texture.height;
+      Image processed = ImageCopy(obj.originalImage);
+      Color *pixels = (Color *)processed.data;
+      for (int i = 0; i < processed.width * processed.height; i++) {
+        pixels[i] = (pixels[i].r < obj.threshold) ? BLACK : WHITE;
+      }
+
+      obj.texture = LoadTextureFromImage(processed);
+      UnloadImage(processed);
+      obj.lastThreshold = obj.threshold;
+    }
   }
 
   if (obj.texture.id != 0) {
@@ -473,6 +502,161 @@ void DrawQRCode(const std::string &text, float x, float y, float size,
   }
 }
 
+namespace {
+
+/**
+ * @brief Renders a text-based object onto the provided image canvas.
+ */
+void ImageDrawTextObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+
+  Font printFont = AssetManager::Get().GetFont(obj.fontName);
+  std::string printText = obj.data;
+  if (obj.isAutoIncrement) {
+    printText =
+        obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
+  }
+
+  DrawTextBox(canvas, printFont, printText.c_str(), obj.x, obj.y, obj.fontSize,
+              2.0f, BLACK, obj.width, obj.rotation);
+}
+
+/**
+ * @brief Renders a QR code object onto the provided image canvas.
+ */
+void ImageDrawQRCodeObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+
+  QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
+  int gridSize = qr.getSize();
+  if (gridSize > 0) {
+    float moduleSize = obj.width / (float)gridSize;
+    for (int yModule = 0; yModule < gridSize; yModule++) {
+      for (int xModule = 0; xModule < gridSize; xModule++) {
+        if (qr.getModule(xModule, yModule)) {
+          float fx = obj.x + (xModule * moduleSize);
+          float fy = obj.y + (yModule * moduleSize);
+          int xStart = (int)roundf(fx);
+          int yStart = (int)roundf(fy);
+          int xEnd = (int)roundf(fx + moduleSize);
+          int yEnd = (int)roundf(fy + moduleSize);
+
+          ImageDrawRectangle(canvas, xStart, yStart, xEnd - xStart,
+                             yEnd - yStart, BLACK);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * @brief Renders an image object onto the provided image canvas.
+ */
+void ImageDrawImageObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+
+  if (!obj.data.empty() && FileExists(obj.data.c_str())) {
+    Image srcImg = LoadImage(obj.data.c_str());
+    ImageFormat(&srcImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
+    Color *pixels = (Color *)srcImg.data;
+    if (pixels != nullptr) {
+      for (int i = 0; i < srcImg.width * srcImg.height; i++) {
+        if (pixels[i].a < 128) {
+          pixels[i] = WHITE;
+        } else {
+          unsigned char gray =
+              (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
+                              0.114f * pixels[i].b);
+          pixels[i] = (gray < obj.threshold) ? BLACK : WHITE;
+        }
+      }
+    }
+
+    int targetW = std::clamp((int)obj.width, 1, (int)MAX_OBJECT_SIZE);
+    int targetH = std::clamp((int)obj.height, 1, (int)MAX_OBJECT_SIZE);
+    ImageResize(&srcImg, targetW, targetH);
+
+    Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};
+    Rectangle dstRec = {obj.x, obj.y, (float)srcImg.width, (float)srcImg.height};
+    ImageDraw(canvas, srcImg, srcRec, dstRec, WHITE);
+    UnloadImage(srcImg);
+  } else {
+    ImageDrawRectangleLines(canvas, {obj.x, obj.y, obj.width, obj.height}, 2,
+                            BLACK);
+    ImageDrawText(canvas, "FILE NOT FOUND", (int)obj.x + 5, (int)obj.y + 5, 10,
+                  BLACK);
+  }
+}
+
+/**
+ * @brief Renders a line object onto the provided image canvas.
+ */
+void ImageDrawLineObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+  Vector2 start = {obj.x, obj.y};
+  Vector2 end = {obj.x + obj.width, obj.y + obj.height};
+  ImageDrawLineEx(canvas, start, end, (int)obj.fontSize, BLACK);
+}
+
+/**
+ * @brief Renders a rectangle or border object onto the provided image canvas.
+ */
+void ImageDrawShapeRectObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+  ImageDrawRoundedRectFilled(canvas, obj.x, obj.y, obj.width, obj.height,
+                             obj.cornerRadius, BLACK);
+  float thick = obj.fontSize;
+  if (thick * 2 < obj.width && thick * 2 < obj.height) {
+    ImageDrawRoundedRectFilled(
+        canvas, obj.x + thick, obj.y + thick, obj.width - (thick * 2),
+        obj.height - (thick * 2),
+        obj.cornerRadius > thick ? obj.cornerRadius - thick : 0, WHITE);
+  }
+}
+
+/**
+ * @brief Renders a circle object onto the provided image canvas.
+ */
+void ImageDrawShapeCircleObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+  int radius = (int)(obj.width / 2.0f);
+  int centerX = (int)(obj.x + radius);
+  int centerY = (int)(obj.y + radius);
+  ImageDrawCircle(canvas, centerX, centerY, radius, BLACK);
+  ImageDrawCircle(canvas, centerX, centerY, radius - (int)obj.fontSize, WHITE);
+}
+
+/**
+ * @brief Renders a barcode object onto the provided image canvas.
+ */
+void ImageDrawBarcodeObject(Image *canvas, const LabelObject &obj) {
+  if (canvas == nullptr)
+    return;
+  std::string code = Barcode::Encode128(obj.data);
+  if (code.empty())
+    return;
+
+  float moduleWidth = obj.width / (float)code.length();
+  for (int i = 0; i < (int)code.length(); i++) {
+    if (code[i] == '1') {
+      float fx = obj.x + (i * moduleWidth);
+      int xStart = (int)roundf(fx);
+      int xEnd = (int)roundf(fx + moduleWidth);
+      ImageDrawRectangle(canvas, xStart, (int)obj.y, xEnd - xStart,
+                         (int)obj.height, BLACK);
+    }
+  }
+}
+
+} // namespace
+
 /*!***************************************************
  * @brief    Renders the canvas for printing
  * @details  Takes the entire project and converts it
@@ -496,149 +680,33 @@ Image RenderProjectToImage(const Project &project) {
   for (const auto &obj : project.objects) {
     if (!obj.isVisible)
       continue;
-    if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-      Font printFont = AssetManager::Get().GetFont(obj.fontName);
 
-      std::string printText = obj.data;
-      if (obj.isAutoIncrement) {
-        printText =
-            obj.autoPrefix + std::to_string(obj.autoCurrent) + obj.autoSuffix;
-      }
-
-      DrawTextBox(&canvas, printFont, printText.c_str(), obj.x, obj.y,
-                  obj.fontSize, 2.0f, BLACK, obj.width, obj.rotation);
-    } else if (obj.type == ObjectType::QRCode) {
-      // Manual QR Drawing for Image Buffer
-      QrCode qr = QrCode::encodeText(obj.data.c_str(), QrCode::Ecc::MEDIUM);
-      int gridSize = qr.getSize();
-      if (gridSize > 0) {
-        float moduleSize = obj.width / (float)gridSize;
-
-        for (int yModule = 0; yModule < gridSize; yModule++) {
-          for (int xModule = 0; xModule < gridSize; xModule++) {
-            if (qr.getModule(xModule, yModule)) {
-              // Calculate module bounds in float for precision, then
-              // floor/ceil for integer buffer
-              float fx = obj.x + (xModule * moduleSize);
-              float fy = obj.y + (yModule * moduleSize);
-
-              // We want to avoid gaps, but also avoid over-bleeding.
-              // Rounding to nearest integer for the start/end positions is
-              // safer for a pixel buffer.
-              int xStart = (int)roundf(fx);
-              int yStart = (int)roundf(fy);
-              int xEnd = (int)roundf(fx + moduleSize);
-              int yEnd = (int)roundf(fy + moduleSize);
-
-              ImageDrawRectangle(&canvas, xStart, yStart, xEnd - xStart,
-                                 yEnd - yStart, BLACK);
-            }
-          }
-        }
-      }
-    } else if (obj.type == ObjectType::Image) {
-      if (FileExists(obj.data.c_str())) {
-        Image srcImg = LoadImage(obj.data.c_str());
-        // Ensure we are in a format we can manipulate easily
-        ImageFormat(&srcImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
-
-        // --- CONVERT TO B&W ---
-        // Manual Grayscale and Thresholding with Alpha support
-        Color *pixels = (Color *)srcImg.data;
-        for (int i = 0; i < srcImg.width * srcImg.height; i++) {
-          // If the pixel is transparent, treat it as the white label
-          // background
-          if (pixels[i].a < 128) {
-            pixels[i] = WHITE;
-          } else {
-            // Grayscale conversion (weighted for better perception)
-            unsigned char gray =
-                (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
-                                0.114f * pixels[i].b);
-
-            // Apply thresholding
-            if (gray < obj.threshold) {
-              pixels[i] = BLACK;
-            } else {
-              pixels[i] = WHITE;
-            }
-          }
-        }
-
-        // Resize to target dimensions with safety clamp
-        int targetW = std::clamp((int)obj.width, 1, (int)MAX_OBJECT_SIZE);
-        int targetH = std::clamp((int)obj.height, 1, (int)MAX_OBJECT_SIZE);
-        ImageResize(&srcImg, targetW, targetH);
-
-        // Draw onto canvas
-        Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};
-        Rectangle dstRec = {obj.x, obj.y, (float)srcImg.width,
-                            (float)srcImg.height};
-
-        ImageDraw(&canvas, srcImg, srcRec, dstRec, WHITE);
-
-        UnloadImage(srcImg);
-      } else {
-        // Fallback if file missing
-        ImageDrawRectangleLines(&canvas, {obj.x, obj.y, obj.width, obj.height},
-                                2, BLACK);
-        ImageDrawText(&canvas, "FILE NOT FOUND", (int)obj.x + 5, (int)obj.y + 5,
-                      10, BLACK);
-      }
-      // Render Basic Shapes
-    } else if (obj.type == ObjectType::Line) {
-      // Draw a line from (x,y) to (x+width, y+height)
-      // We use 'fontSize' as the Line Thickness
-      Vector2 start = {obj.x, obj.y};
-      Vector2 end = {obj.x + obj.width, obj.y + obj.height};
-      ImageDrawLineEx(&canvas, start, end, (int)obj.fontSize, BLACK);
-    } else if (obj.type == ObjectType::ShapeRect ||
-               obj.type == ObjectType::Border) {
-      // 1. Draw the Outer Box (Black)
-      ImageDrawRoundedRectFilled(&canvas, obj.x, obj.y, obj.width, obj.height,
-                                 obj.cornerRadius, BLACK);
-
-      // 2. Calculate thickness
-      float thick = obj.fontSize;
-
-      // 3. Draw the Inner Box (White) to create the "Hollow" effect
-      if (thick * 2 < obj.width && thick * 2 < obj.height) {
-        ImageDrawRoundedRectFilled(
-            &canvas, obj.x + thick, obj.y + thick, obj.width - (thick * 2),
-            obj.height - (thick * 2),
-            obj.cornerRadius > thick ? obj.cornerRadius - thick : 0, WHITE);
-      }
-    } else if (obj.type == ObjectType::ShapeCircle) {
-      // Workaround: Draw Circle (filled black) then smaller Circle (filled
-      // white)
-      int radius = (int)(obj.width / 2.0f);
-      int centerX = (int)(obj.x + radius);
-      int centerY = (int)(obj.y + radius);
-      ImageDrawCircle(&canvas, centerX, centerY, radius, BLACK);
-      ImageDrawCircle(&canvas, centerX, centerY, radius - (int)obj.fontSize,
-                      WHITE);
-    } else if (obj.type == ObjectType::Barcode) {
-      std::string code = Barcode::Encode128(obj.data);
-
-      // Calculate bar width based on object width
-      // Total modules = code.length()
-      // We scale the bars to fit the user's box
-      float moduleWidth = obj.width / (float)code.length();
-
-      for (int i = 0; i < code.length(); i++) {
-        if (code[i] == '1') {
-          float fx = obj.x + (i * moduleWidth);
-          int xStart = (int)roundf(fx);
-          int xEnd = (int)roundf(fx + moduleWidth);
-
-          ImageDrawRectangle(&canvas, xStart, (int)obj.y, xEnd - xStart,
-                             (int)obj.height, BLACK);
-        }
-      }
-
-      // TODO: Optional: Draw text below it?
-      // Usually we just draw the bars, user can add a Text object below if
-      // they want.
+    switch (obj.type) {
+    case ObjectType::Text:
+    case ObjectType::Field:
+      ImageDrawTextObject(&canvas, obj);
+      break;
+    case ObjectType::QRCode:
+      ImageDrawQRCodeObject(&canvas, obj);
+      break;
+    case ObjectType::Image:
+      ImageDrawImageObject(&canvas, obj);
+      break;
+    case ObjectType::Line:
+      ImageDrawLineObject(&canvas, obj);
+      break;
+    case ObjectType::ShapeRect:
+    case ObjectType::Border:
+      ImageDrawShapeRectObject(&canvas, obj);
+      break;
+    case ObjectType::ShapeCircle:
+      ImageDrawShapeCircleObject(&canvas, obj);
+      break;
+    case ObjectType::Barcode:
+      ImageDrawBarcodeObject(&canvas, obj);
+      break;
+    default:
+      break;
     }
   }
   return canvas;

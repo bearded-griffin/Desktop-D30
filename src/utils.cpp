@@ -20,9 +20,9 @@
  * @date     2026.01.19
  ****************************************************/
 
-#include "win_fix.h"
 #include "utils.h"
 #include "protocol.h"
+#include "win_fix.h"
 
 #include <chrono>
 #include <fstream>
@@ -51,8 +51,8 @@ AppSettings appSettings; // Global instance definition
  * @details  Saves the file as a .json document that
  * represents the various states of the project like
  * the objects and their properties.
- * @param    defaultName const std::string&
  * @param    project const Project&
+ * @param    filePath const std::string&
  * @return   bool if the save was successful
  * @note
  * @date     2026.01.19
@@ -109,13 +109,13 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
     try {
       nlohmann::json j;
       file >> j;
-      
+
       // Clean up current textures before overwriting the project
       OBJECTS::UnloadProjectObjects(outProject);
 
       outProject = j.get<Project>();
       outProject.projectFilePath = dest[0]; // Update path to actual file loaded
-      outProject.isDirty = false; // A fresh load means no dirty state
+      outProject.isDirty = false;           // A fresh load means no dirty state
       // The csvFilePath should only be set if an actual CSV is loaded, not
       // by loading the project file itself.
 
@@ -137,8 +137,6 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
           outProject.csvFilePath = "";
         }
       }
-
-
 
       return true;
     } catch (...) {
@@ -271,23 +269,31 @@ void ApplyCSVDataToObjects(Project &project) {
         if (project.csvHeaders[colIdx] == obj.linkedColumn) {
           // If we have data for this column, update the object
           if (colIdx < rowData.size()) {
-            obj.data = rowData[colIdx];
+            if (obj.data != rowData[colIdx]) {
+              obj.data = rowData[colIdx];
+              obj.boundsDirty = true;
 
-            // Special Case: If it's an Image, we need to reload the texture!
-            if (obj.type == ObjectType::Image) {
-              if (obj.texture.id != 0)
-                UnloadTexture(obj.texture);
+              // Special Case: If it's an Image, we need to reload the texture and reset cache!
+              if (obj.type == ObjectType::Image) {
+                if (obj.texture.id != 0)
+                  UnloadTexture(obj.texture);
+                if (obj.hasOriginalImage) {
+                  UnloadImage(obj.originalImage);
+                  obj.originalImage = {0};
+                  obj.hasOriginalImage = false;
+                }
 
-              if (FileExists(obj.data.c_str())) {
-                Image img = ::LoadImage(obj.data.c_str());
-                // Auto-size if zero
-                if (obj.width == 0)
-                  obj.width = (float)img.width;
-                if (obj.height == 0)
-                  obj.height = (float)img.height;
+                if (FileExists(obj.data.c_str())) {
+                  Image img = ::LoadImage(obj.data.c_str());
+                  // Auto-size if zero
+                  if (obj.width == 0)
+                    obj.width = (float)img.width;
+                  if (obj.height == 0)
+                    obj.height = (float)img.height;
 
-                obj.texture = LoadTextureFromImage(img);
-                UnloadImage(img);
+                  obj.texture = LoadTextureFromImage(img);
+                  UnloadImage(img);
+                }
               }
             }
           }
@@ -306,7 +312,14 @@ void ApplyCSVDataToObjects(Project &project) {
  * @date     2026.02.19
  ****************************************************/
 void BatchPrint(const Project &project, int startRow, int endRow) {
-  for (int i = startRow - 1; i < endRow; i++) {
+  if (project.csvRows.empty())
+    return;
+
+  // Clamp rows to valid range
+  int actualStart = std::max(1, startRow);
+  int actualEnd = std::min((int)project.csvRows.size(), endRow);
+
+  for (int i = actualStart - 1; i < actualEnd; i++) {
     // 1. Get Data
     const std::vector<std::string> &rowData = project.csvRows[i];
 
@@ -345,7 +358,7 @@ void BatchPrint(const Project &project, int startRow, int endRow) {
 void SequencePrint(Project &project, int count) {
   for (int i = 0; i < count; i++) {
     std::cout << "[Sequence] Printing Copy " << (i + 1) << "..." << std::endl;
-    
+
     // 1. Print current state
     Protocol::PrintLabel(project);
 

@@ -105,11 +105,19 @@ struct LabelObject {
   std::string autoPrefix = "";
   std::string autoSuffix = "";
 
-  // --- Runtime Texture Resource ---
+  // --- Runtime Cache Resources (Not Saved) ---
   Texture2D texture = {0};
   std::string lastData = "";  // For cache tracking
   unsigned int lastColor = 0; // For cache tracking
   int lastThreshold = -1;     // For cache tracking
+
+  Rectangle cachedBounds = {0, 0, 0, 0};
+  bool boundsDirty = true;
+
+  Image originalImage = {0}; // Cached grayscale/original image for thresholding
+  bool hasOriginalImage = false;
+
+  void *cachedFont = nullptr; // Pointer to FontAsset for fast lookups
 };
 
 struct AppSettings {

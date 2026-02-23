@@ -150,10 +150,14 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
 void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera) {
+  if (primaryIndex < 0 || primaryIndex >= static_cast<int>(project.objects.size()))
+    return;
+
   auto &obj = project.objects[primaryIndex];
   if (obj.isLocked)
     return;
   project.isDirty = true;
+  obj.boundsDirty = true;
 
   if (obj.type == ObjectType::Line) {
     SetMouseCursor(MOUSE_CURSOR_RESIZE_ALL);
@@ -240,28 +244,14 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
   }
 }
 
-/*!***************************************************
- * @brief    Handles Object Dragging
- * @details
- * @param    project Project&
- * @param    selectedIndex int
- * @param    mouseWorld const Vector2&
- * @param    dragOffset const Vector2&
- * @param    camera const Camera2D&
- * @return   void
- * @note
- * @date     2026.02.03
- ****************************************************/
-void HandleObjectDrag(Project &project, InteractionState &state,
-                      const Vector2 &mouseWorld, const Camera2D &camera) {
-  if (state.selectedIndices.empty())
-    return;
+namespace {
 
+/**
+ * @brief Applies snapping logic (grid and object-to-object) to the target position.
+ */
+void ApplySnapping(const Project &project, InteractionState &state,
+                   float &targetX, float &targetY, int primaryIdx) {
   state.activeGuides.clear();
-
-  int primaryIdx = state.selectedIndices[0];
-  float targetX = mouseWorld.x - state.dragOffset.x;
-  float targetY = mouseWorld.y - state.dragOffset.y;
 
   // 1. Grid Snapping
   if (Utils::appSettings.snapToGrid) {
@@ -281,7 +271,7 @@ void HandleObjectDrag(Project &project, InteractionState &state,
                            targetY + pb.height};
 
     for (int i = 0; i < (int)project.objects.size(); i++) {
-      if (OBJECTS::IsObjectSelected(state.selectedIndices, i))
+      if (IsObjectSelected(state.selectedIndices, i))
         continue;
       const auto &other = project.objects[i];
       if (!other.isVisible)
@@ -292,31 +282,68 @@ void HandleObjectDrag(Project &project, InteractionState &state,
       float otherPOIY[] = {ob.y, ob.y + ob.height / 2.0f, ob.y + ob.height};
 
       // Check X snapping
+      bool snappedX = false;
       for (int px = 0; px < 3; px++) {
         for (int ox = 0; ox < 3; ox++) {
           if (abs(draggedPOIX[px] - otherPOIX[ox]) < SNAP_THRESHOLD) {
             float snapDelta = otherPOIX[ox] - draggedPOIX[px];
             targetX += snapDelta;
             state.activeGuides.push_back({otherPOIX[ox], true});
-            goto nextY; // Only snap X once per drag update
+            snappedX = true;
+            break;
           }
         }
+        if (snappedX)
+          break;
       }
-    nextY:
+
       // Check Y snapping
+      bool snappedY = false;
       for (int py = 0; py < 3; py++) {
         for (int oy = 0; oy < 3; oy++) {
           if (abs(draggedPOIY[py] - otherPOIY[oy]) < SNAP_THRESHOLD) {
             float snapDelta = otherPOIY[oy] - draggedPOIY[py];
             targetY += snapDelta;
             state.activeGuides.push_back({otherPOIY[oy], false});
-            goto nextObject;
+            snappedY = true;
+            break;
           }
         }
+        if (snappedY)
+          break;
       }
-    nextObject:;
     }
   }
+}
+
+} // namespace
+
+/*!***************************************************
+ * @brief    Handles Object Dragging
+ * @details
+ * @param    project Project&
+ * @param    selectedIndex int
+ * @param    mouseWorld const Vector2&
+ * @param    dragOffset const Vector2&
+ * @param    camera const Camera2D&
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+void HandleObjectDrag(Project &project, InteractionState &state,
+                      const Vector2 &mouseWorld, const Camera2D &camera) {
+  if (state.selectedIndices.empty())
+    return;
+
+  int primaryIdx = state.selectedIndices[0];
+  if (primaryIdx < 0 || primaryIdx >= static_cast<int>(project.objects.size()))
+    return;
+
+  float targetX = mouseWorld.x - state.dragOffset.x;
+  float targetY = mouseWorld.y - state.dragOffset.y;
+
+  // Apply snapping
+  ApplySnapping(project, state, targetX, targetY, primaryIdx);
 
   float deltaX = targetX - project.objects[primaryIdx].x;
   float deltaY = targetY - project.objects[primaryIdx].y;
@@ -326,6 +353,8 @@ void HandleObjectDrag(Project &project, InteractionState &state,
   // Group movement with boundary check
   float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (int idx : state.selectedIndices) {
+    if (idx < 0 || idx >= static_cast<int>(project.objects.size()))
+      continue;
     Rectangle b = GetObjectBounds(project.objects[idx]);
     minX = std::min(minX, b.x);
     minY = std::min(minY, b.y);
@@ -343,10 +372,13 @@ void HandleObjectDrag(Project &project, InteractionState &state,
     deltaY = canvasSz.height - maxY;
 
   for (int idx : state.selectedIndices) {
+    if (idx < 0 || idx >= static_cast<int>(project.objects.size()))
+      continue;
     if (project.objects[idx].isLocked)
       continue;
     project.objects[idx].x += deltaX;
     project.objects[idx].y += deltaY;
+    project.objects[idx].boundsDirty = true;
   }
   project.isDirty = true;
 }
@@ -918,6 +950,11 @@ void UnloadProjectObjects(Project &project) {
       UnloadTexture(obj.texture);
       obj.texture = {0};
     }
+    if (obj.hasOriginalImage) {
+      UnloadImage(obj.originalImage);
+      obj.originalImage = {0};
+      obj.hasOriginalImage = false;
+    }
   }
   project.objects.clear();
 }
@@ -932,47 +969,53 @@ void UnloadProjectObjects(Project &project) {
  * @date     2026.01.19
  ****************************************************/
 Rectangle GetObjectBounds(const LabelObject &obj) {
-  if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-    // We use Default Font here for bounds estimation if exact font isn't
-    // critical for simple selection Or better: Use actual font
-    Font f = AssetManager::Get().GetFont(obj.fontName);
+  LabelObject &mutableObj = const_cast<LabelObject &>(obj);
 
-    if (obj.width > 0) {
-      return {obj.x, obj.y, obj.width,
-              obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+  if (!obj.boundsDirty) {
+    return obj.cachedBounds;
+  }
+
+  Rectangle bounds = {obj.x, obj.y, 50, 50};
+
+  if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+    Font f;
+    if (obj.cachedFont) {
+      FontAsset *fa = static_cast<FontAsset *>(obj.cachedFont);
+      if (!fa->isLoaded) {
+        f = AssetManager::Get().GetFont(obj.fontName);
+      } else {
+        f = fa->font;
+      }
+    } else {
+      f = AssetManager::Get().GetFont(obj.fontName);
     }
 
-    Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
-
-    return {obj.x, obj.y, size.x, size.y};
-
+    if (obj.width > 0) {
+      bounds = {obj.x, obj.y, obj.width,
+                obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+    } else {
+      Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
+      bounds = {obj.x, obj.y, size.x, size.y};
+    }
   } else if (obj.type == ObjectType::QRCode ||
-             obj.type == ObjectType::Barcode) {
-    return {obj.x, obj.y, obj.width, obj.height};
-  } else if (obj.type == ObjectType::Image) {
-    return {obj.x, obj.y, obj.width, obj.height};
-  }
-  // HANDLE SHAPES & LINES ---
-  else if (obj.type == ObjectType::Line) {
-    // For logic, we treat the bounding box as positive width/height
+             obj.type == ObjectType::Barcode || obj.type == ObjectType::Image) {
+    bounds = {obj.x, obj.y, obj.width, obj.height};
+  } else if (obj.type == ObjectType::Line) {
     float w = std::abs(obj.width);
     float h = std::abs(obj.height);
-
-    // If Horizontal Line (h=0), the "Height" is just the thickness
     if (h < obj.fontSize)
       h = obj.fontSize;
-
-    // If Vertical Line (w=0), the "Width" is just the thickness
     if (w < obj.fontSize)
       w = obj.fontSize;
-
-    return {obj.x, obj.y, w, h};
+    bounds = {obj.x, obj.y, w, h};
   } else if (obj.type == ObjectType::ShapeRect ||
              obj.type == ObjectType::ShapeCircle) {
-    return {obj.x, obj.y, std::abs(obj.width), std::abs(obj.height)};
+    bounds = {obj.x, obj.y, std::abs(obj.width), std::abs(obj.height)};
   }
 
-  return {obj.x, obj.y, 50, 50};
+  mutableObj.cachedBounds = bounds;
+  mutableObj.boundsDirty = false;
+  return bounds;
 }
 
 } // namespace OBJECTS

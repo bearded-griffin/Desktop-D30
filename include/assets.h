@@ -84,6 +84,7 @@ public:
   void LoadCategoryTextures(int categoryIndex);
   void LoadBorderTextures(int categoryIndex);
   Font GetFont(const std::string &name);
+  void *GetFontAsset(const std::string &name);
   Font GetDefaultFont() { return defaultFont; }
 
   // Metadata & Library Management
