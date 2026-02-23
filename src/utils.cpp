@@ -20,9 +20,9 @@
  * @date     2026.01.19
  ****************************************************/
 
-#include "win_fix.h"
 #include "utils.h"
 #include "protocol.h"
+#include "win_fix.h"
 
 #include <chrono>
 #include <fstream>
@@ -51,8 +51,8 @@ AppSettings appSettings; // Global instance definition
  * @details  Saves the file as a .json document that
  * represents the various states of the project like
  * the objects and their properties.
- * @param    defaultName const std::string&
  * @param    project const Project&
+ * @param    filePath const std::string&
  * @return   bool if the save was successful
  * @note
  * @date     2026.01.19
@@ -109,13 +109,13 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
     try {
       nlohmann::json j;
       file >> j;
-      
+
       // Clean up current textures before overwriting the project
       OBJECTS::UnloadProjectObjects(outProject);
 
       outProject = j.get<Project>();
       outProject.projectFilePath = dest[0]; // Update path to actual file loaded
-      outProject.isDirty = false; // A fresh load means no dirty state
+      outProject.isDirty = false;           // A fresh load means no dirty state
       // The csvFilePath should only be set if an actual CSV is loaded, not
       // by loading the project file itself.
 
@@ -137,8 +137,6 @@ bool LoadProject(const std::string &defaultName, Project &outProject) {
           outProject.csvFilePath = "";
         }
       }
-
-
 
       return true;
     } catch (...) {
@@ -306,7 +304,14 @@ void ApplyCSVDataToObjects(Project &project) {
  * @date     2026.02.19
  ****************************************************/
 void BatchPrint(const Project &project, int startRow, int endRow) {
-  for (int i = startRow - 1; i < endRow; i++) {
+  if (project.csvRows.empty())
+    return;
+
+  // Clamp rows to valid range
+  int actualStart = std::max(1, startRow);
+  int actualEnd = std::min((int)project.csvRows.size(), endRow);
+
+  for (int i = actualStart - 1; i < actualEnd; i++) {
     // 1. Get Data
     const std::vector<std::string> &rowData = project.csvRows[i];
 
@@ -345,7 +350,7 @@ void BatchPrint(const Project &project, int startRow, int endRow) {
 void SequencePrint(Project &project, int count) {
   for (int i = 0; i < count; i++) {
     std::cout << "[Sequence] Printing Copy " << (i + 1) << "..." << std::endl;
-    
+
     // 1. Print current state
     Protocol::PrintLabel(project);
 

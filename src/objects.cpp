@@ -150,6 +150,9 @@ void HandleObjectSelection(Project &project, std::vector<int> &selectedIndices,
 void HandleObjectResize(Project &project, const int &primaryIndex,
                         ResizeHandle activeHandle, const Vector2 &mouseWorld,
                         const Camera2D &camera) {
+  if (primaryIndex < 0 || primaryIndex >= static_cast<int>(project.objects.size()))
+    return;
+
   auto &obj = project.objects[primaryIndex];
   if (obj.isLocked)
     return;
@@ -240,28 +243,14 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
   }
 }
 
-/*!***************************************************
- * @brief    Handles Object Dragging
- * @details
- * @param    project Project&
- * @param    selectedIndex int
- * @param    mouseWorld const Vector2&
- * @param    dragOffset const Vector2&
- * @param    camera const Camera2D&
- * @return   void
- * @note
- * @date     2026.02.03
- ****************************************************/
-void HandleObjectDrag(Project &project, InteractionState &state,
-                      const Vector2 &mouseWorld, const Camera2D &camera) {
-  if (state.selectedIndices.empty())
-    return;
+namespace {
 
+/**
+ * @brief Applies snapping logic (grid and object-to-object) to the target position.
+ */
+void ApplySnapping(const Project &project, InteractionState &state,
+                   float &targetX, float &targetY, int primaryIdx) {
   state.activeGuides.clear();
-
-  int primaryIdx = state.selectedIndices[0];
-  float targetX = mouseWorld.x - state.dragOffset.x;
-  float targetY = mouseWorld.y - state.dragOffset.y;
 
   // 1. Grid Snapping
   if (Utils::appSettings.snapToGrid) {
@@ -281,7 +270,7 @@ void HandleObjectDrag(Project &project, InteractionState &state,
                            targetY + pb.height};
 
     for (int i = 0; i < (int)project.objects.size(); i++) {
-      if (OBJECTS::IsObjectSelected(state.selectedIndices, i))
+      if (IsObjectSelected(state.selectedIndices, i))
         continue;
       const auto &other = project.objects[i];
       if (!other.isVisible)
@@ -292,31 +281,68 @@ void HandleObjectDrag(Project &project, InteractionState &state,
       float otherPOIY[] = {ob.y, ob.y + ob.height / 2.0f, ob.y + ob.height};
 
       // Check X snapping
+      bool snappedX = false;
       for (int px = 0; px < 3; px++) {
         for (int ox = 0; ox < 3; ox++) {
           if (abs(draggedPOIX[px] - otherPOIX[ox]) < SNAP_THRESHOLD) {
             float snapDelta = otherPOIX[ox] - draggedPOIX[px];
             targetX += snapDelta;
             state.activeGuides.push_back({otherPOIX[ox], true});
-            goto nextY; // Only snap X once per drag update
+            snappedX = true;
+            break;
           }
         }
+        if (snappedX)
+          break;
       }
-    nextY:
+
       // Check Y snapping
+      bool snappedY = false;
       for (int py = 0; py < 3; py++) {
         for (int oy = 0; oy < 3; oy++) {
           if (abs(draggedPOIY[py] - otherPOIY[oy]) < SNAP_THRESHOLD) {
             float snapDelta = otherPOIY[oy] - draggedPOIY[py];
             targetY += snapDelta;
             state.activeGuides.push_back({otherPOIY[oy], false});
-            goto nextObject;
+            snappedY = true;
+            break;
           }
         }
+        if (snappedY)
+          break;
       }
-    nextObject:;
     }
   }
+}
+
+} // namespace
+
+/*!***************************************************
+ * @brief    Handles Object Dragging
+ * @details
+ * @param    project Project&
+ * @param    selectedIndex int
+ * @param    mouseWorld const Vector2&
+ * @param    dragOffset const Vector2&
+ * @param    camera const Camera2D&
+ * @return   void
+ * @note
+ * @date     2026.02.03
+ ****************************************************/
+void HandleObjectDrag(Project &project, InteractionState &state,
+                      const Vector2 &mouseWorld, const Camera2D &camera) {
+  if (state.selectedIndices.empty())
+    return;
+
+  int primaryIdx = state.selectedIndices[0];
+  if (primaryIdx < 0 || primaryIdx >= static_cast<int>(project.objects.size()))
+    return;
+
+  float targetX = mouseWorld.x - state.dragOffset.x;
+  float targetY = mouseWorld.y - state.dragOffset.y;
+
+  // Apply snapping
+  ApplySnapping(project, state, targetX, targetY, primaryIdx);
 
   float deltaX = targetX - project.objects[primaryIdx].x;
   float deltaY = targetY - project.objects[primaryIdx].y;
@@ -326,6 +352,8 @@ void HandleObjectDrag(Project &project, InteractionState &state,
   // Group movement with boundary check
   float minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (int idx : state.selectedIndices) {
+    if (idx < 0 || idx >= static_cast<int>(project.objects.size()))
+      continue;
     Rectangle b = GetObjectBounds(project.objects[idx]);
     minX = std::min(minX, b.x);
     minY = std::min(minY, b.y);
@@ -343,6 +371,8 @@ void HandleObjectDrag(Project &project, InteractionState &state,
     deltaY = canvasSz.height - maxY;
 
   for (int idx : state.selectedIndices) {
+    if (idx < 0 || idx >= static_cast<int>(project.objects.size()))
+      continue;
     if (project.objects[idx].isLocked)
       continue;
     project.objects[idx].x += deltaX;

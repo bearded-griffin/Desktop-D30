@@ -655,6 +655,59 @@ struct SearchState {
   }
 };
 
+/**
+ * @brief Handles the import of an image into the project.
+ */
+void HandleImageImport(Project &project, InteractionState &state) {
+  constexpr int MAX_IMPORT_SIZE = 512;
+  auto selection = pfd::open_file("Select Image", ".",
+                                  {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
+                       .result();
+
+  if (selection.empty())
+    return;
+
+  state.PushHistory(project);
+  LabelObject obj = OBJECTS::CreateImageObject(0, 0, 60, 60, selection[0]);
+
+  // Load and process image
+  Image img = LoadImage(obj.data.c_str());
+  if (img.data != nullptr) {
+    // Calculate new dimensions maintaining aspect ratio
+    float aspect = static_cast<float>(img.width) / img.height;
+    int newWidth = img.width;
+    int newHeight = img.height;
+
+    if (img.width > MAX_IMPORT_SIZE || img.height > MAX_IMPORT_SIZE) {
+      if (img.width > img.height) {
+        newWidth = MAX_IMPORT_SIZE;
+        newHeight = static_cast<int>(MAX_IMPORT_SIZE / aspect);
+      } else {
+        newHeight = MAX_IMPORT_SIZE;
+        newWidth = static_cast<int>(MAX_IMPORT_SIZE * aspect);
+      }
+      ImageResize(&img, newWidth, newHeight);
+    }
+
+    obj.width = static_cast<float>(newWidth);
+    obj.height = static_cast<float>(newHeight);
+
+    // Add object to project
+    project.objects.push_back(obj);
+    project.isDirty = true;
+    state.selectedIndices.clear();
+    state.selectedIndices.push_back(
+        static_cast<int>(project.objects.size() - 1));
+
+    // Load texture and cleanup
+    project.objects[state.selectedIndices.back()].texture =
+        LoadTextureFromImage(img);
+    UnloadImage(img);
+  } else {
+    std::cerr << "[UI] Failed to load image: " << selection[0] << std::endl;
+  }
+}
+
 void DrawDeviceScanPopup(UIState &uiState);
 void DrawBatchPrintPopup(Project &project, UIState &uiState);
 void DrawSequencePrintPopup(Project &project, UIState &uiState);
@@ -2188,48 +2241,7 @@ void DrawCreationTools(Project &project, InteractionState &state,
 
   // Graphics tools
   if (CreateButtonWithTooltip("Add Image", TOOL_BTN_SIZE, nullptr)) {
-    auto selection = pfd::open_file("Select Image", ".",
-                                    {"Image Files", "*.png *.jpg *.jpeg *.bmp"})
-                         .result();
-    if (!selection.empty()) {
-      state.PushHistory(project);
-      LabelObject obj = OBJECTS::CreateImageObject(0, 0, 60, 60, selection[0]);
-
-      // Load and process image
-      Image img = LoadImage(obj.data.c_str());
-      if (img.data != nullptr) {
-        // Calculate new dimensions maintaining aspect ratio
-        float aspect = static_cast<float>(img.width) / img.height;
-        int newWidth = img.width;
-        int newHeight = img.height;
-
-        if (img.width > MAX_IMPORT_SIZE || img.height > MAX_IMPORT_SIZE) {
-          if (img.width > img.height) {
-            newWidth = MAX_IMPORT_SIZE;
-            newHeight = static_cast<int>(MAX_IMPORT_SIZE / aspect);
-          } else {
-            newHeight = MAX_IMPORT_SIZE;
-            newWidth = static_cast<int>(MAX_IMPORT_SIZE * aspect);
-          }
-          ImageResize(&img, newWidth, newHeight);
-        }
-
-        obj.width = static_cast<float>(newWidth);
-        obj.height = static_cast<float>(newHeight);
-
-        // Add object to project
-        project.objects.push_back(obj);
-        project.isDirty = true;
-        state.selectedIndices.clear();
-        state.selectedIndices.push_back(
-            static_cast<int>(project.objects.size() - 1));
-
-        // Load texture and cleanup
-        project.objects[state.selectedIndices.back()].texture =
-            LoadTextureFromImage(img);
-        UnloadImage(img);
-      }
-    }
+    HandleImageImport(project, state);
   }
   ImGui::SameLine();
   if (ImGui::Button("Add Icon", TOOL_BTN_SIZE)) {
