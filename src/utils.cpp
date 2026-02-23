@@ -269,23 +269,31 @@ void ApplyCSVDataToObjects(Project &project) {
         if (project.csvHeaders[colIdx] == obj.linkedColumn) {
           // If we have data for this column, update the object
           if (colIdx < rowData.size()) {
-            obj.data = rowData[colIdx];
+            if (obj.data != rowData[colIdx]) {
+              obj.data = rowData[colIdx];
+              obj.boundsDirty = true;
 
-            // Special Case: If it's an Image, we need to reload the texture!
-            if (obj.type == ObjectType::Image) {
-              if (obj.texture.id != 0)
-                UnloadTexture(obj.texture);
+              // Special Case: If it's an Image, we need to reload the texture and reset cache!
+              if (obj.type == ObjectType::Image) {
+                if (obj.texture.id != 0)
+                  UnloadTexture(obj.texture);
+                if (obj.hasOriginalImage) {
+                  UnloadImage(obj.originalImage);
+                  obj.originalImage = {0};
+                  obj.hasOriginalImage = false;
+                }
 
-              if (FileExists(obj.data.c_str())) {
-                Image img = ::LoadImage(obj.data.c_str());
-                // Auto-size if zero
-                if (obj.width == 0)
-                  obj.width = (float)img.width;
-                if (obj.height == 0)
-                  obj.height = (float)img.height;
+                if (FileExists(obj.data.c_str())) {
+                  Image img = ::LoadImage(obj.data.c_str());
+                  // Auto-size if zero
+                  if (obj.width == 0)
+                    obj.width = (float)img.width;
+                  if (obj.height == 0)
+                    obj.height = (float)img.height;
 
-                obj.texture = LoadTextureFromImage(img);
-                UnloadImage(img);
+                  obj.texture = LoadTextureFromImage(img);
+                  UnloadImage(img);
+                }
               }
             }
           }

@@ -108,6 +108,8 @@ void DrawFontSelection(Project &project, InteractionState &state,
           project, state.selectedIndices, [&](LabelObject &o) {
             if (o.type == ObjectType::Text || o.type == ObjectType::Field) {
               o.fontName = name;
+              o.boundsDirty = true;
+              o.cachedFont = AssetManager::Get().GetFontAsset(name);
             }
           });
       project.isDirty = true;
@@ -155,6 +157,7 @@ void DrawAutoIncrementSettings(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Text || o.type == ObjectType::Field) {
             o.isAutoIncrement = obj.isAutoIncrement;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -169,27 +172,34 @@ void DrawAutoIncrementSettings(Project &project, InteractionState &state,
 
     if (ImGui::InputText("Prefix", preBuf, sizeof(preBuf))) {
       obj.autoPrefix = preBuf;
+      obj.boundsDirty = true;
       project.isDirty = true;
     }
     if (ImGui::InputText("Suffix", sufBuf, sizeof(sufBuf))) {
       obj.autoSuffix = sufBuf;
+      obj.boundsDirty = true;
       project.isDirty = true;
     }
 
     if (ImGui::DragInt("Start", &obj.autoStart, 1, PropertyHelpers::AUTO_MIN_VAL,
-                       PropertyHelpers::AUTO_MAX_VAL))
+                       PropertyHelpers::AUTO_MAX_VAL)) {
       project.isDirty = true;
+    }
     if (ImGui::DragInt("Step", &obj.autoStep, 1, PropertyHelpers::AUTO_MIN_STEP,
-                       PropertyHelpers::AUTO_MAX_STEP))
+                       PropertyHelpers::AUTO_MAX_STEP)) {
       project.isDirty = true;
+    }
     if (ImGui::DragInt("Current", &obj.autoCurrent, 1,
                        PropertyHelpers::AUTO_MIN_VAL,
-                       PropertyHelpers::AUTO_MAX_VAL))
+                       PropertyHelpers::AUTO_MAX_VAL)) {
+      obj.boundsDirty = true;
       project.isDirty = true;
+    }
 
     if (ImGui::Button("Reset to Start")) {
       state.PushHistory(project);
       obj.autoCurrent = obj.autoStart;
+      obj.boundsDirty = true;
       project.isDirty = true;
     }
     ImGui::Unindent();
@@ -222,6 +232,7 @@ void DrawTextProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Text || o.type == ObjectType::Field) {
             o.fontSize = currentSize;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -236,6 +247,7 @@ void DrawTextProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Text || o.type == ObjectType::Field) {
             o.width = currentWidth;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -281,8 +293,10 @@ void DrawCommonProperties(Project &project, InteractionState &state,
   if (ImGui::DragFloat("X", &currentX)) {
     state.PushHistory(project);
     float delta = currentX - obj.x;
-    PropertyHelpers::ApplyToSelected(project, state.selectedIndices,
-                                     [&](LabelObject &o) { o.x += delta; });
+    PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
+      o.x += delta;
+      o.boundsDirty = true;
+    });
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -291,8 +305,10 @@ void DrawCommonProperties(Project &project, InteractionState &state,
   if (ImGui::DragFloat("Y", &currentY)) {
     state.PushHistory(project);
     float delta = currentY - obj.y;
-    PropertyHelpers::ApplyToSelected(project, state.selectedIndices,
-                                     [&](LabelObject &o) { o.y += delta; });
+    PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
+      o.y += delta;
+      o.boundsDirty = true;
+    });
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -301,9 +317,10 @@ void DrawCommonProperties(Project &project, InteractionState &state,
   float currentRot = obj.rotation;
   if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
     state.PushHistory(project);
-    PropertyHelpers::ApplyToSelected(
-        project, state.selectedIndices,
-        [&](LabelObject &o) { o.rotation = currentRot; });
+    PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
+      o.rotation = currentRot;
+      o.boundsDirty = true;
+    });
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -327,6 +344,7 @@ void DrawBorderProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Border || o.type == ObjectType::ShapeRect) {
             o.fontSize = currentThick;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -341,6 +359,7 @@ void DrawBorderProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Border || o.type == ObjectType::ShapeRect) {
             o.cornerRadius = currentRadius;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -354,6 +373,7 @@ void DrawBorderProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Border || o.type == ObjectType::ShapeRect) {
             o.width = currentW;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -367,6 +387,7 @@ void DrawBorderProperties(Project &project, InteractionState &state,
         project, state.selectedIndices, [&](LabelObject &o) {
           if (o.type == ObjectType::Border || o.type == ObjectType::ShapeRect) {
             o.height = currentH;
+            o.boundsDirty = true;
           }
         });
     project.isDirty = true;
@@ -387,18 +408,21 @@ void DrawShapeProperties(Project &project, InteractionState &state,
                          PropertyHelpers::MIN_THICKNESS,
                          PropertyHelpers::MAX_THICKNESS)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
 
   if (ImGui::DragFloat("Width", &obj.width)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
 
   if (ImGui::DragFloat("Height", &obj.height)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -417,6 +441,7 @@ void DrawQRCodeProperties(Project &project, InteractionState &state,
                        PropertyHelpers::MAX_QR_SIZE)) {
     state.PushHistory(project);
     obj.height = obj.width; // Keep Square
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -448,12 +473,14 @@ void DrawImageProperties(Project &project, InteractionState &state,
 
   if (ImGui::DragFloat("Width", &obj.width)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
 
   if (ImGui::DragFloat("Height", &obj.height)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -467,8 +494,14 @@ void DrawImageProperties(Project &project, InteractionState &state,
       state.PushHistory(project);
       obj.data = selection[0];
       project.isDirty = true;
+      obj.boundsDirty = true;
       if (obj.texture.id != 0)
         UnloadTexture(obj.texture);
+      if (obj.hasOriginalImage) {
+        UnloadImage(obj.originalImage);
+        obj.originalImage = {0};
+        obj.hasOriginalImage = false;
+      }
       Image img = LoadImage(obj.data.c_str());
       if (img.data != NULL) {
         if (obj.width == 0 || obj.height == 0) {
@@ -493,12 +526,14 @@ void DrawBarcodeProperties(Project &project, InteractionState &state,
                            LabelObject &obj) {
   if (ImGui::DragFloat("Width", &obj.width)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
 
   if (ImGui::DragFloat("Height", &obj.height)) {
     state.PushHistory(project);
+    obj.boundsDirty = true;
     project.isDirty = true;
   }
   PropertyHelpers::HandleDragFocus();
@@ -524,7 +559,10 @@ void DrawDataBinding(Project &project, InteractionState &state,
       state.PushHistory(project);
       PropertyHelpers::ApplyToSelected(
           project, state.selectedIndices,
-          [&](LabelObject &o) { o.linkedColumn = ""; });
+          [&](LabelObject &o) { 
+            o.linkedColumn = ""; 
+            o.boundsDirty = true;
+          });
       project.isDirty = true;
     }
     for (const auto &header : project.csvHeaders) {
@@ -534,6 +572,7 @@ void DrawDataBinding(Project &project, InteractionState &state,
         PropertyHelpers::ApplyToSelected(
             project, state.selectedIndices, [&](LabelObject &o) {
               o.linkedColumn = header;
+              o.boundsDirty = true;
               if (!project.csvRows.empty()) {
                 for (size_t i = 0; i < project.csvHeaders.size(); i++) {
                   if (project.csvHeaders[i] == header) {
@@ -1523,8 +1562,10 @@ void DrawPropertiesPanel(Project &project, InteractionState &state,
                                                         : "Text";
   if (ImGui::InputText(label, buffer, sizeof(buffer))) {
     state.PushHistory(project);
-    PropertyHelpers::ApplyToSelected(project, state.selectedIndices,
-                                     [&](LabelObject &o) { o.data = buffer; });
+    PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
+      o.data = buffer;
+      o.boundsDirty = true;
+    });
     project.isDirty = true;
   }
 }

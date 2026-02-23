@@ -565,12 +565,9 @@ void AssetManager::AddFontsToList(std::vector<std::string> &ScanPaths,
  * @date     2026.01.26
  ****************************************************/
 Font AssetManager::GetFont(const std::string &name) {
-  if (name.empty())
-    return defaultFont;
-
-  auto it = fontMap.find(name);
-  if (it != fontMap.end()) {
-    FontAsset *f = it->second;
+  void *asset = GetFontAsset(name);
+  if (asset) {
+    FontAsset *f = static_cast<FontAsset *>(asset);
     if (!f->isLoaded) {
       f->font = LoadFontEx(f->path.c_str(), 96, 0, 0); // Load Big for quality
       GenTextureMipmaps(&f->font.texture);
@@ -579,7 +576,23 @@ Font AssetManager::GetFont(const std::string &name) {
     }
     return f->font;
   }
-  return GetFontDefault();
+  return name.empty() ? defaultFont : GetFontDefault();
+}
+
+/*!***************************************************
+ * @brief    Gets the font asset pointer
+ * @param    name const::string&
+ * @return   void*
+ ****************************************************/
+void *AssetManager::GetFontAsset(const std::string &name) {
+  if (name.empty())
+    return nullptr;
+
+  auto it = fontMap.find(name);
+  if (it != fontMap.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 /*!***************************************************

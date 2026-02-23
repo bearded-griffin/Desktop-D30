@@ -48,7 +48,17 @@ namespace RENDERING {
  ****************************************************/
 void RenderTextObject(const LabelObject &obj, const Color &col,
                       const bool isSelected) {
-  Font displayFont = AssetManager::Get().GetFont(obj.fontName);
+  Font displayFont;
+  if (obj.cachedFont) {
+    FontAsset *fa = static_cast<FontAsset *>(obj.cachedFont);
+    if (!fa->isLoaded) {
+      displayFont = AssetManager::Get().GetFont(obj.fontName);
+    } else {
+      displayFont = fa->font;
+    }
+  } else {
+    displayFont = AssetManager::Get().GetFont(obj.fontName);
+  }
 
   std::string displayText = obj.data;
   if (obj.isAutoIncrement) {
@@ -120,41 +130,60 @@ void RenderQRCode(LabelObject &obj, const Color &col) {
  * @date     2026.02.03
  ****************************************************/
 void RenderImageObject(LabelObject &obj) {
-  if ((obj.texture.id == 0 || obj.lastThreshold != obj.threshold) &&
-      !obj.data.empty() && FileExists(obj.data.c_str())) {
+  bool dataChanged = (obj.data != obj.lastData);
+  bool thresholdChanged = (obj.threshold != obj.lastThreshold);
 
-    if (obj.texture.id != 0)
-      UnloadTexture(obj.texture);
+  if ((obj.texture.id == 0 || dataChanged || thresholdChanged) &&
+      !obj.data.empty()) {
 
-    Image img = LoadImage(obj.data.c_str());
-    ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    // 1. Reload original image if file path changed or not yet loaded
+    if (dataChanged || !obj.hasOriginalImage) {
+      if (FileExists(obj.data.c_str())) {
+        if (obj.hasOriginalImage) {
+          UnloadImage(obj.originalImage);
+          obj.hasOriginalImage = false;
+        }
 
-    Color *pixels = (Color *)img.data;
-    for (int i = 0; i < img.width * img.height; i++) {
-      if (pixels[i].a < 128) {
-        pixels[i] = WHITE; // Transparent becomes white
-      } else {
-        // Grayscale conversion
-        unsigned char gray =
-            (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g +
-                            0.114f * pixels[i].b);
-        // Apply threshold
-        if (gray < obj.threshold) {
-          pixels[i] = BLACK;
-        } else {
-          pixels[i] = WHITE;
+        Image img = LoadImage(obj.data.c_str());
+        if (img.data != nullptr) {
+          ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+          
+          // Pre-process: Grayscale
+          Color *pixels = (Color *)img.data;
+          for (int i = 0; i < img.width * img.height; i++) {
+            if (pixels[i].a < 128) {
+              pixels[i] = WHITE;
+            } else {
+              unsigned char gray = (unsigned char)(0.299f * pixels[i].r + 0.587f * pixels[i].g + 0.114f * pixels[i].b);
+              pixels[i] = { gray, gray, gray, 255 };
+            }
+          }
+          
+          obj.originalImage = img;
+          obj.hasOriginalImage = true;
+          obj.lastData = obj.data;
+
+          if (obj.width == 0) obj.width = (float)img.width;
+          if (obj.height == 0) obj.height = (float)img.height;
         }
       }
     }
 
-    obj.texture = LoadTextureFromImage(img);
-    UnloadImage(img);
-    obj.lastThreshold = obj.threshold;
+    // 2. Apply thresholding to cached original
+    if (obj.hasOriginalImage) {
+      if (obj.texture.id != 0)
+        UnloadTexture(obj.texture);
 
-    if (obj.width == 0)
-      obj.width = (float)obj.texture.width;
-    if (obj.height == 0)
-      obj.height = (float)obj.texture.height;
+      Image processed = ImageCopy(obj.originalImage);
+      Color *pixels = (Color *)processed.data;
+      for (int i = 0; i < processed.width * processed.height; i++) {
+        pixels[i] = (pixels[i].r < obj.threshold) ? BLACK : WHITE;
+      }
+
+      obj.texture = LoadTextureFromImage(processed);
+      UnloadImage(processed);
+      obj.lastThreshold = obj.threshold;
+    }
   }
 
   if (obj.texture.id != 0) {

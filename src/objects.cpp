@@ -157,6 +157,7 @@ void HandleObjectResize(Project &project, const int &primaryIndex,
   if (obj.isLocked)
     return;
   project.isDirty = true;
+  obj.boundsDirty = true;
 
   if (obj.type == ObjectType::Line) {
     SetMouseCursor(MOUSE_CURSOR_RESIZE_ALL);
@@ -377,6 +378,7 @@ void HandleObjectDrag(Project &project, InteractionState &state,
       continue;
     project.objects[idx].x += deltaX;
     project.objects[idx].y += deltaY;
+    project.objects[idx].boundsDirty = true;
   }
   project.isDirty = true;
 }
@@ -948,6 +950,11 @@ void UnloadProjectObjects(Project &project) {
       UnloadTexture(obj.texture);
       obj.texture = {0};
     }
+    if (obj.hasOriginalImage) {
+      UnloadImage(obj.originalImage);
+      obj.originalImage = {0};
+      obj.hasOriginalImage = false;
+    }
   }
   project.objects.clear();
 }
@@ -962,47 +969,53 @@ void UnloadProjectObjects(Project &project) {
  * @date     2026.01.19
  ****************************************************/
 Rectangle GetObjectBounds(const LabelObject &obj) {
-  if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
-    // We use Default Font here for bounds estimation if exact font isn't
-    // critical for simple selection Or better: Use actual font
-    Font f = AssetManager::Get().GetFont(obj.fontName);
+  LabelObject &mutableObj = const_cast<LabelObject &>(obj);
 
-    if (obj.width > 0) {
-      return {obj.x, obj.y, obj.width,
-              obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+  if (!obj.boundsDirty) {
+    return obj.cachedBounds;
+  }
+
+  Rectangle bounds = {obj.x, obj.y, 50, 50};
+
+  if (obj.type == ObjectType::Text || obj.type == ObjectType::Field) {
+    Font f;
+    if (obj.cachedFont) {
+      FontAsset *fa = static_cast<FontAsset *>(obj.cachedFont);
+      if (!fa->isLoaded) {
+        f = AssetManager::Get().GetFont(obj.fontName);
+      } else {
+        f = fa->font;
+      }
+    } else {
+      f = AssetManager::Get().GetFont(obj.fontName);
     }
 
-    Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
-
-    return {obj.x, obj.y, size.x, size.y};
-
+    if (obj.width > 0) {
+      bounds = {obj.x, obj.y, obj.width,
+                obj.height > 0 ? obj.height : obj.fontSize * 2}; // Wrapped Box
+    } else {
+      Vector2 size = MeasureTextEx(f, obj.data.c_str(), obj.fontSize, 2.0f);
+      bounds = {obj.x, obj.y, size.x, size.y};
+    }
   } else if (obj.type == ObjectType::QRCode ||
-             obj.type == ObjectType::Barcode) {
-    return {obj.x, obj.y, obj.width, obj.height};
-  } else if (obj.type == ObjectType::Image) {
-    return {obj.x, obj.y, obj.width, obj.height};
-  }
-  // HANDLE SHAPES & LINES ---
-  else if (obj.type == ObjectType::Line) {
-    // For logic, we treat the bounding box as positive width/height
+             obj.type == ObjectType::Barcode || obj.type == ObjectType::Image) {
+    bounds = {obj.x, obj.y, obj.width, obj.height};
+  } else if (obj.type == ObjectType::Line) {
     float w = std::abs(obj.width);
     float h = std::abs(obj.height);
-
-    // If Horizontal Line (h=0), the "Height" is just the thickness
     if (h < obj.fontSize)
       h = obj.fontSize;
-
-    // If Vertical Line (w=0), the "Width" is just the thickness
     if (w < obj.fontSize)
       w = obj.fontSize;
-
-    return {obj.x, obj.y, w, h};
+    bounds = {obj.x, obj.y, w, h};
   } else if (obj.type == ObjectType::ShapeRect ||
              obj.type == ObjectType::ShapeCircle) {
-    return {obj.x, obj.y, std::abs(obj.width), std::abs(obj.height)};
+    bounds = {obj.x, obj.y, std::abs(obj.width), std::abs(obj.height)};
   }
 
-  return {obj.x, obj.y, 50, 50};
+  mutableObj.cachedBounds = bounds;
+  mutableObj.boundsDirty = false;
+  return bounds;
 }
 
 } // namespace OBJECTS
