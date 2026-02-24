@@ -34,14 +34,16 @@ namespace OBJECTS {
  * @date     2026.02.19
  ****************************************************/
 bool CheckCollisionPointRotatedRec(Vector2 point, const LabelObject &obj) {
-  if (obj.rotation == 0) {
+  float rotation = (obj.type == ObjectType::ShapeCircle) ? 0.0f : obj.rotation;
+
+  if (rotation == 0) {
     return CheckCollisionPointRec(point, GetObjectBounds(obj));
   }
 
   // Translate point to origin-relative
   Vector2 p = {point.x - obj.x, point.y - obj.y};
   // Rotate point inversely
-  p = Vector2Rotate(p, -obj.rotation * DEG2RAD);
+  p = Vector2Rotate(p, -rotation * DEG2RAD);
 
   Rectangle localBounds = {0, 0, obj.width, obj.height};
   // Handle text/field special cases where height isn't explicitly stored or is

@@ -314,16 +314,18 @@ void DrawCommonProperties(Project &project, InteractionState &state,
   PropertyHelpers::HandleDragFocus();
 
   // Rotation property
-  float currentRot = obj.rotation;
-  if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
-    state.PushHistory(project);
-    PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
-      o.rotation = currentRot;
-      o.boundsDirty = true;
-    });
-    project.isDirty = true;
+  if (obj.type != ObjectType::ShapeCircle) {
+    float currentRot = obj.rotation;
+    if (ImGui::SliderFloat("Rotation", &currentRot, 0.0f, 360.0f, "%.0f deg")) {
+      state.PushHistory(project);
+      PropertyHelpers::ApplyToSelected(project, state.selectedIndices, [&](LabelObject &o) {
+        o.rotation = currentRot;
+        o.boundsDirty = true;
+      });
+      project.isDirty = true;
+    }
+    PropertyHelpers::HandleDragFocus();
   }
-  PropertyHelpers::HandleDragFocus();
 }
 
 /*!***************************************************

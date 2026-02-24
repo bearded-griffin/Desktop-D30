@@ -389,11 +389,13 @@ void DrawSelectionHandles(const LabelObject &obj, const Camera2D &camera) {
     Vector2 p3 = {localBounds.width, localBounds.height};
     Vector2 p4 = {0, localBounds.height};
 
-    if (obj.rotation != 0) {
-      p1 = Vector2Rotate(p1, obj.rotation * DEG2RAD);
-      p2 = Vector2Rotate(p2, obj.rotation * DEG2RAD);
-      p3 = Vector2Rotate(p3, obj.rotation * DEG2RAD);
-      p4 = Vector2Rotate(p4, obj.rotation * DEG2RAD);
+    float rotation = (obj.type == ObjectType::ShapeCircle) ? 0.0f : obj.rotation;
+
+    if (rotation != 0) {
+      p1 = Vector2Rotate(p1, rotation * DEG2RAD);
+      p2 = Vector2Rotate(p2, rotation * DEG2RAD);
+      p3 = Vector2Rotate(p3, rotation * DEG2RAD);
+      p4 = Vector2Rotate(p4, rotation * DEG2RAD);
     }
 
     p1 = Vector2Add(p1, {obj.x, obj.y});
