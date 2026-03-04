@@ -19,8 +19,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
 
-# Define UNIT_TESTING only in Debug mode
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+# --- TESTS OPTION ---
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    option(BUILD_TESTING "Build the tests" OFF)
+else()
+    option(BUILD_TESTING "Build the tests" ON)
+endif()
+
+# Define UNIT_TESTING if we are building tests
+if(BUILD_TESTING)
     add_compile_definitions(UNIT_TESTING)
 endif()
 
@@ -260,7 +267,6 @@ elseif (UNIX AND NOT APPLE)
 endif()
 
 # --- TESTS ---
-option(BUILD_TESTING "Build the tests" ON)
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
