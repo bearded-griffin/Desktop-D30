@@ -41,33 +41,40 @@ def clean(c):
         print(f"Removing {f}...")
         f.unlink()
 
-@task(help={"type": "Build type (Debug or Release)"})
-def configure(c, type="Debug"):
+@task(help={"build_type": "Build type (Debug or Release)"})
+def configure(c, build_type="Debug"):
     """Configure CMake."""
-    build_dir = BUILD_DIR_DEBUG if type.lower() == "debug" else BUILD_DIR_RELEASE
+    build_dir = BUILD_DIR_DEBUG if build_type.lower() == "debug" else BUILD_DIR_RELEASE
     build_dir.mkdir(parents=True, exist_ok=True)
     
     generator = "Ninja" if platform.system() != "Windows" else "MinGW Makefiles"
     
-    print(f"Configuring {PROJECT_NAME} ({type})...")
-    c.run(f"cmake -S . -B {build_dir} -G {generator} -DCMAKE_BUILD_TYPE={type}")
+    print(f"Configuring {PROJECT_NAME} ({build_type})...")
+    c.run(f"cmake -S . -B {build_dir} -G {generator} -DCMAKE_BUILD_TYPE={build_type}")
 
-@task(configure)
-def build(c, type="Debug"):
+@task(help={"build_type": "Build type (Debug or Release)"})
+def build(c, build_type="Debug"):
     """Compile the project."""
-    build_dir = BUILD_DIR_DEBUG if type.lower() == "debug" else BUILD_DIR_RELEASE
-    print(f"Building {PROJECT_NAME} ({type})...")
+    configure(c, build_type=build_type)
+    build_dir = BUILD_DIR_DEBUG if build_type.lower() == "debug" else BUILD_DIR_RELEASE
+    print(f"Building {PROJECT_NAME} ({build_type})...")
     c.run(f"cmake --build {build_dir} --parallel {get_nproc()}")
 
-@task(pre=[lambda c: build(c, type="Debug")])
+@task
 def test(c):
     """Run all unit tests (Debug mode)."""
+    build(c, build_type="Debug")
     test_exe = BUILD_DIR_DEBUG / "tests" / "run_tests"
     if platform.system() == "Windows":
         test_exe = test_exe.with_suffix(".exe")
     
     print("Running tests...")
     c.run(str(test_exe))
+
+@task(pre=[clean])
+def re(c, build_type="Debug"):
+    """Clean and then build."""
+    build(c, build_type=build_type)
 
 @task(pre=[clean])
 def coverage(c):
@@ -133,7 +140,7 @@ def appimage(c):
     
     with c.cd(str(BUILD_DIR_APPIMAGE)):
         print("Installing to AppDir...")
-        c.run(f"make install DESTDIR=AppDir") # CMake install uses make under the hood if not specified
+        c.run(f"cmake --install . --destdir AppDir")
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
@@ -151,10 +158,21 @@ def appimage(c):
         c.run("./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage", env=env)
         
         # Move back to root
-        appimage_file = list(Path(".").glob("Desktop-D30*.AppImage"))[0]
-        shutil.move(str(appimage_file), "..")
+        appimage_files = list(Path(".").glob("Desktop-D30*.AppImage"))
+        if appimage_files:
+            shutil.move(str(appimage_files[0]), "..")
         
     print(f"AppImage available in root directory.")
+
+@task
+def docs(c, serve=False):
+    """Build or serve documentation."""
+    if serve:
+        print("Serving documentation...")
+        c.run("mkdocs serve")
+    else:
+        print("Building documentation...")
+        c.run("mkdocs build")
 
 @task
 def cross_windows(c):
@@ -174,22 +192,18 @@ def cross_windows(c):
 @task
 def install(c):
     """Build and install to the system (requires sudo)."""
-    # Check for root
     if os.getuid() != 0:
         print("Error: The 'install' task must be run as root (sudo inv install).")
         return
 
     # Build first
-    build(c, type="Release")
+    build(c, build_type="Release")
     
-    print("Installing to /opt/Desktop-D30...")
+    print("Installing via CMake...")
+    c.run(f"cmake --install {BUILD_DIR_RELEASE} --prefix /opt/Desktop-D30")
+    
+    print("Performing Post-Install steps...")
     opt_dir = Path("/opt/Desktop-D30")
-    opt_dir.mkdir(parents=True, exist_ok=True)
-    
-    shutil.copy(BUILD_DIR_RELEASE / "Desktop-D30", opt_dir)
-    if opt_dir / "assets" in [p for p in opt_dir.iterdir() if p.is_dir()]:
-        shutil.rmtree(opt_dir / "assets")
-    shutil.copytree("assets", opt_dir / "assets")
     
     # Permissions
     c.run(f"chmod -R 755 {opt_dir}")
@@ -198,7 +212,7 @@ def install(c):
     launcher = Path("/usr/local/bin/Desktop-D30")
     with open(launcher, "w") as f:
         f.write("#!/bin/bash\n")
-        f.write(f"cd {opt_dir}\n")
+        f.write(f"cd {opt_dir}/bin\n")
         f.write("./Desktop-D30\n")
     c.run(f"chmod +x {launcher}")
     
@@ -206,7 +220,7 @@ def install(c):
     shutil.copy("Desktop-D30.desktop", "/usr/share/applications/")
     
     print("Setting Bluetooth Permissions...")
-    c.run(f"setcap 'cap_net_raw,cap_net_admin+eip' {opt_dir}/Desktop-D30")
+    c.run(f"setcap 'cap_net_raw,cap_net_admin+eip' {opt_dir}/bin/Desktop-D30")
     
     print("Installation complete!")
 
@@ -222,15 +236,33 @@ def metadata(c):
         c.run(f"python3 {script}")
 
 @task
-def run(c, type="Debug"):
+def format(c):
+    """Format source code using clang-format."""
+    print("Formatting code...")
+    c.run("find src include tests -name '*.cpp' -o -name '*.h' | xargs clang-format -i")
+
+@task
+def lint(c):
+    """Lint source code using clang-tidy."""
+    # Ensure compile_commands.json exists
+    if not (BUILD_DIR_DEBUG / "compile_commands.json").exists():
+        configure(c, build_type="Debug")
+    
+    print("Linting code...")
+    # Copy compile_commands.json to root for clang-tidy if needed, 
+    # or just point to it. Clang-tidy likes it in the same dir or a parent.
+    c.run("find src -name '*.cpp' | xargs clang-tidy -p build_debug")
+
+@task(help={"build_type": "Build type (Debug or Release)"})
+def run(c, build_type="Debug"):
     """Run the application."""
-    build_dir = BUILD_DIR_DEBUG if type.lower() == "debug" else BUILD_DIR_RELEASE
+    build_dir = BUILD_DIR_DEBUG if build_type.lower() == "debug" else BUILD_DIR_RELEASE
     exe = build_dir / "Desktop-D30"
     if platform.system() == "Windows":
         exe = exe.with_suffix(".exe")
     
     if not exe.exists():
-        build(c, type=type)
+        build(c, build_type=build_type)
         
     print(f"Launching {exe}...")
     c.run(str(exe))

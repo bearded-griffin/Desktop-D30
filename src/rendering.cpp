@@ -587,8 +587,8 @@ void ImageDrawImageObject(Image *canvas, const LabelObject &obj) {
     ImageDraw(canvas, srcImg, srcRec, dstRec, WHITE);
     UnloadImage(srcImg);
   } else {
-    ImageDrawRectangleLines(canvas, {obj.x, obj.y, obj.width, obj.height}, 2,
-                            BLACK);
+    ImageDrawRectangleLines(canvas, (int)obj.x, (int)obj.y, (int)obj.width,
+                            (int)obj.height, BLACK);
     ImageDrawText(canvas, "FILE NOT FOUND", (int)obj.x + 5, (int)obj.y + 5, 10,
                   BLACK);
   }

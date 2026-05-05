@@ -25,8 +25,11 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
-build/*
-build_win_cross/*
+build/
+build_debug/
+build_release/
+build_appimage/
+build_win_cross/
 
 # External projects
 *-prefix/
@@ -47,3 +50,4 @@ coverage_report/*
 
 # ---> Ignore AppImage File
 *.AppImage
+
