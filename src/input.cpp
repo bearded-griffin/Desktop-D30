@@ -25,6 +25,7 @@
 #include "imgui.h"
 #include "objects.h"
 #include "protocol.h"
+#include "ui.h"
 #include "utils.h"
 #include <algorithm>
 
@@ -153,7 +154,8 @@ void HandleMouseInteractions(Project &project, InteractionState &state,
  * @note
  * @date     2026.01.19
  ****************************************************/
-void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
+void HandleInput(Project &project, InteractionState &state, Camera2D &camera,
+                 UI::UIState &uiState) {
   Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
   bool mouseHandledByUI = ImGui::GetIO().WantCaptureMouse;
 
@@ -356,13 +358,10 @@ void HandleInput(Project &project, InteractionState &state, Camera2D &camera) {
     project.isDirty = true;
   }
 
-  // TODO: look into possible way to trigger sequence printing.
   // Printing (Ctrl + P for Single, Ctrl + Shift + P for Sequence)
   if (ctrl && IsKeyPressed(KEY_P)) {
     if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
-      // Trigger Sequence Print - we can't easily trigger the popup from here
-      // without changing signatures, but we can do a default single increment
-      // print or just let the user use the menu for the specific count.
+      uiState.triggerSequencePopup = true;
     } else {
       Protocol::PrintLabel(project);
     }

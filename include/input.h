@@ -25,10 +25,15 @@
 #include "types.h"
 #include "win_fix.h"
 
+namespace UI {
+struct UIState;
+}
+
 namespace INPUT_HANDLER {
 void HandleMouseInteractions(Project &project, InteractionState &state,
                              const Vector2 &mouseWorld, const Camera2D &camera);
-void HandleInput(Project &project, InteractionState &state, Camera2D &camera);
+void HandleInput(Project &project, InteractionState &state, Camera2D &camera,
+                 UI::UIState &uiState);
 Vector2 GetMouseDeltaWorld(Camera2D camera);
 
 } // namespace INPUT_HANDLER

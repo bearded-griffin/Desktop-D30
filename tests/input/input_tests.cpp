@@ -1,6 +1,7 @@
 #include "input.h"
 #include "objects.h"
 #include "types.h"
+#include "ui.h"
 #include "raylib.h"
 #include <gtest/gtest.h>
 
@@ -10,6 +11,8 @@ void SetMockMousePosition(Vector2 pos);
 void SetMockMouseButtonPressed(int button, bool pressed);
 void SetMockMouseButtonReleased(int button, bool released);
 void SetMockKeyPressed(int key, bool pressed);
+void SetMockKeyDown(int key, bool down);
+void SetMockShiftDown(bool down);
 void SetMockMouseWheel(float wheel);
 
 class InputTest : public ::testing::Test {
@@ -22,11 +25,13 @@ protected:
         state = InteractionState();
         camera = {0};
         camera.zoom = 1.0f;
+        uiState = UI::UIState();
     }
 
     Project project;
     InteractionState state;
     Camera2D camera;
+    UI::UIState uiState;
 };
 
 TEST_F(InputTest, HandleInput_Selection) {
@@ -36,7 +41,7 @@ TEST_F(InputTest, HandleInput_Selection) {
     SetMockMousePosition({30, 30});
     SetMockMouseButtonPressed(MOUSE_LEFT_BUTTON, true);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_EQ(OBJECTS::GetPrimarySelection(state.selectedIndices), 0);
     EXPECT_TRUE(state.isDraggingObject);
@@ -49,7 +54,7 @@ TEST_F(InputTest, HandleInput_Deletion) {
     // Press Delete
     SetMockKeyPressed(KEY_DELETE, true);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_TRUE(project.objects.empty());
     EXPECT_TRUE(state.selectedIndices.empty());
@@ -59,7 +64,7 @@ TEST_F(InputTest, HandleInput_Deletion) {
 TEST_F(InputTest, HandleInput_Zooming) {
     SetMockMouseWheel(1.0f);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_GT(camera.zoom, 1.0f);
 }
@@ -73,7 +78,7 @@ TEST_F(InputTest, HandleMouseInteractions_StartsResizing) {
     SetMockMousePosition({60, 60});
     SetMockMouseButtonPressed(MOUSE_LEFT_BUTTON, true);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_TRUE(state.isResizing);
     EXPECT_EQ(state.activeHandle, HANDLE_BOTTOM_RIGHT);
@@ -87,7 +92,7 @@ TEST_F(InputTest, HandleMouseInteractions_DeleteViaHandle) {
     SetMockMousePosition({10, 10});
     SetMockMouseButtonPressed(MOUSE_LEFT_BUTTON, true);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_TRUE(project.objects.empty());
     EXPECT_TRUE(state.selectedIndices.empty());
@@ -100,7 +105,17 @@ TEST_F(InputTest, HandleMouseInteractions_StopDraggingOnRelease) {
     
     SetMockMouseButtonReleased(MOUSE_LEFT_BUTTON, true);
     
-    INPUT_HANDLER::HandleInput(project, state, camera);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
     
     EXPECT_FALSE(state.isDraggingObject);
+}
+
+TEST_F(InputTest, HandleInput_SequencePrintingShortcut) {
+    SetMockKeyDown(KEY_LEFT_CONTROL, true);
+    SetMockShiftDown(true);
+    SetMockKeyPressed(KEY_P, true);
+    
+    EXPECT_FALSE(uiState.triggerSequencePopup);
+    INPUT_HANDLER::HandleInput(project, state, camera, uiState);
+    EXPECT_TRUE(uiState.triggerSequencePopup);
 }

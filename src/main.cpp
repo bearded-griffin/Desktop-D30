@@ -66,7 +66,7 @@ int main() {
                                                  : RAYWHITE);
 
     rlImGuiBegin();
-    INPUT_HANDLER::HandleInput(currentProject, state, camera);
+    INPUT_HANDLER::HandleInput(currentProject, state, camera, uiState);
     RENDERING::RenderScene(currentProject, state, camera,
                            state.selectedIndices);
     UI::Draw(currentProject, state, uiState);
