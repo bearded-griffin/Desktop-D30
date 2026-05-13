@@ -51,3 +51,5 @@ coverage_report/*
 # ---> Ignore AppImage File
 *.AppImage
 
+# ---> Ignore scripts
+scripts/*
