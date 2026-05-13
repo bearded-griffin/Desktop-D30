@@ -141,6 +141,9 @@ def appimage(c):
     print("Compiling...")
     c.run(f"cmake --build {BUILD_DIR_APPIMAGE} --parallel {get_nproc()}")
     
+    # Get the absolute path to Desktop-D30.desktop before changing directories
+    desktop_file = Path(".").absolute() / "Desktop-D30.desktop"
+    
     with c.cd(str(BUILD_DIR_APPIMAGE)):
         print("Installing to AppDir...")
         c.run(f"cmake --install . --prefix AppDir")
@@ -149,7 +152,7 @@ def appimage(c):
         print("Copying .desktop file to AppDir...")
         appdir_share = Path("AppDir/share/applications")
         appdir_share.mkdir(parents=True, exist_ok=True)
-        shutil.copy("../Desktop-D30.desktop", str(appdir_share / "Desktop-D30.desktop"))
+        shutil.copy(str(desktop_file), str(appdir_share / "Desktop-D30.desktop"))
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
