@@ -143,7 +143,7 @@ def appimage(c):
     
     with c.cd(str(BUILD_DIR_APPIMAGE)):
         print("Installing to AppDir...")
-        c.run(f"cmake --install . --destdir AppDir")
+        c.run(f"cmake --install . --prefix AppDir")
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
