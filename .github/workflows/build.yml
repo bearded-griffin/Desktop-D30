@@ -45,7 +45,9 @@ jobs:
           pip install invoke
 
       - name: Run Unit Tests
-        run: inv test
+        run: xvfb-run -a inv test
+        env:
+          DISPLAY: :99
 
       - name: Build Linux AppImage
         run: inv appimage
