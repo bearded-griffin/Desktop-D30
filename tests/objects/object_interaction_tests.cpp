@@ -5,12 +5,14 @@
 #include <gtest/gtest.h>
 
 // External helpers from mocks.cpp
+void ResetMockState();
 void SetMockMouseDelta(Vector2 delta);
 void SetMockShiftDown(bool down);
 
 class ObjectInteractionTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        ResetMockState();
         project = Project();
         project.selectedLabelIndex = 0; // "12mm x 30mm" (240x96)
         

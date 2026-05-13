@@ -13,6 +13,7 @@ static float g_mockMouseWheel = 0;
 static bool g_mockShiftDown = false;
 static bool g_mockSpaceDown = false;
 static std::map<int, bool> g_mockKeysPressed;
+static std::map<int, bool> g_mockKeysDown;
 static std::map<int, bool> g_mockMouseButtonsPressed;
 static std::map<int, bool> g_mockMouseButtonsDown;
 static std::map<int, bool> g_mockMouseButtonsReleased;
@@ -53,6 +54,7 @@ void ResetMockState() {
     g_mockShiftDown = false;
     g_mockSpaceDown = false;
     g_mockKeysPressed.clear();
+    g_mockKeysDown.clear();
     g_mockMouseButtonsPressed.clear();
     g_mockMouseButtonsDown.clear();
     g_mockMouseButtonsReleased.clear();
@@ -91,6 +93,7 @@ void SetMockMouseWheel(float wheel) { g_mockMouseWheel = wheel; }
 void SetMockShiftDown(bool down) { g_mockShiftDown = down; }
 void SetMockSpaceDown(bool down) { g_mockSpaceDown = down; }
 void SetMockKeyPressed(int key, bool pressed) { g_mockKeysPressed[key] = pressed; }
+void SetMockKeyDown(int key, bool down) { g_mockKeysDown[key] = down; }
 void SetMockMouseButtonPressed(int button, bool pressed) { g_mockMouseButtonsPressed[button] = pressed; }
 void SetMockMouseButtonDown(int button, bool down) { g_mockMouseButtonsDown[button] = down; }
 void SetMockMouseButtonReleased(int button, bool released) { g_mockMouseButtonsReleased[button] = released; }
@@ -130,6 +133,10 @@ extern "C" {
     float __wrap_GetMouseWheelMove(void) { return g_mockMouseWheel; }
 
     bool __wrap_IsKeyDown(int key) {
+        if (key == KEY_LEFT_CONTROL || key == KEY_RIGHT_CONTROL) {
+            if (g_mockKeysDown.count(key)) return g_mockKeysDown[key];
+            return false;
+        }
         if (key == KEY_LEFT_SHIFT || key == KEY_RIGHT_SHIFT) return g_mockShiftDown;
         if (key == KEY_SPACE) return g_mockSpaceDown;
         return false;
