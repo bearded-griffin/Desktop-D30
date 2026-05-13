@@ -41,7 +41,7 @@ def clean(c):
         print(f"Removing {f}...")
         f.unlink()
 
-@task(help={"build_type": "Build type (Debug or Release)"})
+@task
 def configure(c, build_type="Debug"):
     """Configure CMake."""
     build_dir = BUILD_DIR_DEBUG if build_type.lower() == "debug" else BUILD_DIR_RELEASE
@@ -132,6 +132,9 @@ def appimage(c):
         shutil.rmtree(BUILD_DIR_APPIMAGE)
     BUILD_DIR_APPIMAGE.mkdir(parents=True, exist_ok=True)
     
+    print("Installing linuxdeploy dependencies...")
+    c.run("sudo apt-get update && sudo apt-get install -y libfuse2 libxcb1 libxkbcommon0 libdbus-1-3", warn=True)
+    
     print("Configuring for AppImage...")
     c.run(f"cmake -S . -B {BUILD_DIR_APPIMAGE} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=OFF")
     
@@ -147,20 +150,27 @@ def appimage(c):
         ld_plugin_url = "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage"
         
         if not Path("linuxdeploy-x86_64.AppImage").exists():
+            print("Downloading linuxdeploy...")
             c.run(f"wget -N {ld_url}")
         if not Path("linuxdeploy-plugin-appimage-x86_64.AppImage").exists():
+            print("Downloading linuxdeploy-plugin-appimage...")
             c.run(f"wget -N {ld_plugin_url}")
             
         c.run("chmod +x linuxdeploy*.AppImage")
         
         print("Generating AppImage...")
-        env = {"ARCH": "x86_64", "OUTPUT": "Desktop-D30-x86_64.AppImage"}
+        env = os.environ.copy()
+        env.update({"ARCH": "x86_64", "OUTPUT": "Desktop-D30-x86_64.AppImage"})
         c.run("./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage", env=env)
         
         # Move back to root
+        print("Checking for generated AppImage...")
         appimage_files = list(Path(".").glob("Desktop-D30*.AppImage"))
         if appimage_files:
+            print(f"Found: {appimage_files[0]}, moving to root...")
             shutil.move(str(appimage_files[0]), "..")
+        else:
+            print("ERROR: No AppImage file was generated!")
         
     print(f"AppImage available in root directory.")
 
