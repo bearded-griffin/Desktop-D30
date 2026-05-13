@@ -148,12 +148,11 @@ def appimage(c):
         print("Installing to AppDir...")
         c.run(f"cmake --install . --prefix AppDir")
         
-        # Copy the .desktop file to AppDir root AND to share/applications
+        # Copy the .desktop file to AppDir BEFORE running linuxdeploy
         print("Copying .desktop file to AppDir...")
         appdir_share = Path("AppDir/share/applications")
         appdir_share.mkdir(parents=True, exist_ok=True)
-        shutil.copy(str(desktop_file), str(Path("AppDir") / "Desktop-D30.desktop"))  # Copy to AppDir root
-        shutil.copy(str(desktop_file), str(appdir_share / "Desktop-D30.desktop"))    # Also to share/applications
+        shutil.copy(str(desktop_file), str(appdir_share / "Desktop-D30.desktop"))
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
