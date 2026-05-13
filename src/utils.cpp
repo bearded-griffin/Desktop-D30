@@ -187,10 +187,10 @@ void OpenFile(const std::string &filePath) {
   ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, 1);
 #elif defined(__APPLE__)
   std::string command = "open " + filePath;
-  system(command.c_str());
+  (void)system(command.c_str());
 #else
   std::string command = "xdg-open " + filePath;
-  system(command.c_str());
+  (void)system(command.c_str());
 #endif
 }
 
