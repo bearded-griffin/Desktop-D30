@@ -30,6 +30,7 @@ jobs:
             libxcursor-dev \
             libxinerama-dev \
             libxkbcommon-dev \
+            libgl1-mesa-dev \
             wget \
             file
 
@@ -44,7 +45,9 @@ jobs:
           pip install invoke
 
       - name: Run Unit Tests
-        run: inv test
+        run: xvfb-run -a inv test
+        env:
+          DISPLAY: :99
 
   # 2. Build Linux AppImage (Only on main or manual trigger)
   build-linux:
