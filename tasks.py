@@ -150,7 +150,9 @@ def appimage(c):
         
         # Copy the .desktop file to AppDir BEFORE running linuxdeploy
         print("Copying .desktop file to AppDir...")
-        shutil.copy(str(desktop_file), "AppDir/Desktop-D30.desktop")
+        appdir_share = Path("AppDir/share/applications")
+        appdir_share.mkdir(parents=True, exist_ok=True)
+        shutil.copy(str(desktop_file), str(appdir_share / "Desktop-D30.desktop"))
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
