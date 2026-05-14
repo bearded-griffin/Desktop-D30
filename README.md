@@ -20,3 +20,7 @@ Tired of building labels on your phone? Desktop-D30 is a native Linux and Window
    * Dark Mode & Grid: A professional interface that stays out of your way, complete with alignment tools and a beautiful
      dark theme.
    * Project Saving: Save your designs as .d30 files to edit or reuse them later.
+
+Don't feel like building from scratch? I offer already built Windows exe and Linux AppImage files to get you going immediately!
+- [Windows x86_64 .exe](https://ko-fi.com/s/66ed1ead56) 
+- [Linux Appimage](https://ko-fi.com/s/62cb766c36)
