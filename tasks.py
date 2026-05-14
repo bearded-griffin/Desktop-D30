@@ -209,7 +209,14 @@ def cross_windows(c):
     print("Compiling for Windows...")
     c.run(f"cmake --build {BUILD_DIR_WIN_CROSS} --parallel {get_nproc()}")
     
-    print(f"Windows build available in {BUILD_DIR_WIN_CROSS}")
+    # Copy assets to the Windows build folder
+    print("Bundling assets for Windows...")
+    dest_assets = BUILD_DIR_WIN_CROSS / "assets"
+    if dest_assets.exists():
+        shutil.rmtree(dest_assets)
+    shutil.copytree("assets", dest_assets)
+    
+    print(f"Windows build (including assets) available in {BUILD_DIR_WIN_CROSS}")
 
 @task
 def install(c):
