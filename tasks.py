@@ -148,28 +148,25 @@ def appimage(c):
         print("Installing to AppDir...")
         c.run(f"cmake --install . --prefix AppDir")
         
-        # Verify the desktop file exists
+        # Verify the desktop file exists in the source
         if not desktop_file.exists():
             raise FileNotFoundError(f"Desktop file not found at {desktop_file}. "
                                     f"Please ensure Desktop-D30.desktop exists in the project root.")
         
-        # Copy the .desktop file to AppDir BEFORE running linuxdeploy
-        print("Copying .desktop file to AppDir...")
-        
-        # Create the XDG standard directory structure
-        appdir_share = Path("AppDir/share/applications")
+        # Copy the .desktop file to AppDir/usr/share/applications
+        # This matches the CMAKE_INSTALL_PREFIX=/usr so linuxdeploy can find it
+        print("Copying .desktop file to AppDir/usr/share/applications...")
+        appdir_share = Path("AppDir/usr/share/applications")
         appdir_share.mkdir(parents=True, exist_ok=True)
         
-        # Copy to standard XDG location
-        dest_xdg = appdir_share / "Desktop-D30.desktop"
-        shutil.copy(str(desktop_file), str(dest_xdg))
-        print(f"  ✓ Copied to {dest_xdg}")
+        dest_file = appdir_share / "Desktop-D30.desktop"
+        shutil.copy(str(desktop_file), str(dest_file))
+        print(f"  ✓ Copied to {dest_file}")
         
         # Verify copy was successful
-        if not dest_xdg.exists():
-            raise RuntimeError(f"Failed to copy .desktop file to {dest_xdg}")
-        
-        print(f"  ✓ File exists and is readable: {dest_xdg.exists() and dest_xdg.is_file()}")
+        if not dest_file.exists():
+            raise RuntimeError(f"Failed to copy .desktop file to {dest_file}")
+        print(f"  ✓ Verified: file exists")
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
@@ -183,10 +180,6 @@ def appimage(c):
             c.run(f"wget -N {ld_plugin_url}")
             
         c.run("chmod +x linuxdeploy*.AppImage")
-        
-        # Debug: list the contents of AppDir to verify structure
-        print("AppDir structure before linuxdeploy:")
-        c.run("find AppDir -type f -name '*.desktop' 2>/dev/null || echo 'No .desktop files found'")
         
         print("Generating AppImage...")
         env = os.environ.copy()
