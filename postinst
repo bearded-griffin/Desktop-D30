@@ -15,7 +15,7 @@ fi
 # 3. Link Desktop Icon & File (This makes it show in the Start Menu)
 # We link from our /opt folder to the system folders
 ln -sf /opt/Desktop-D30/Desktop-D30.desktop /usr/share/applications/Desktop-D30.desktop
-ln -sf /opt/Desktop-D30/app_icon.png /usr/share/pixmaps/Desktop-D30.png
+ln -sf /opt/Desktop-D30/Desktop-D30.png /usr/share/pixmaps/Desktop-D30.png
 
 # 4. Refresh the desktop database so the icon appears immediately
 if command -v update-desktop-database > /dev/null; then

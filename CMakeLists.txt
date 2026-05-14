@@ -282,7 +282,7 @@ install(DIRECTORY assets DESTINATION bin)
 install(FILES Desktop-D30.desktop DESTINATION share/applications)
 
 # 4. Install the Icon
-install(FILES assets/app_icon.png DESTINATION share/icons/hicolor/512x512/apps RENAME Desktop-D30.png)
+install(FILES assets/Desktop-D30.png DESTINATION share/icons/hicolor/512x512/apps RENAME Desktop-D30.png)
 
 
 

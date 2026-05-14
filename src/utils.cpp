@@ -187,10 +187,12 @@ void OpenFile(const std::string &filePath) {
   ShellExecuteA(NULL, "open", filePath.c_str(), NULL, NULL, 1);
 #elif defined(__APPLE__)
   std::string command = "open " + filePath;
-  (void)system(command.c_str());
+  auto ret = (void)system(command.c_str());
+  (void)ret;
 #else
   std::string command = "xdg-open " + filePath;
-  (void)system(command.c_str());
+  auto ret = system(command.c_str());
+  (void)ret;
 #endif
 }
 
@@ -273,7 +275,8 @@ void ApplyCSVDataToObjects(Project &project) {
               obj.data = rowData[colIdx];
               obj.boundsDirty = true;
 
-              // Special Case: If it's an Image, we need to reload the texture and reset cache!
+              // Special Case: If it's an Image, we need to reload the texture
+              // and reset cache!
               if (obj.type == ObjectType::Image) {
                 if (obj.texture.id != 0)
                   UnloadTexture(obj.texture);

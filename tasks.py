@@ -143,30 +143,18 @@ def appimage(c):
     
     # Get the absolute path to Desktop-D30.desktop before changing directories
     desktop_file = Path(".").absolute() / "Desktop-D30.desktop"
+    icon_file = Path(".").absolute() / "assets/Desktop-D30.png"
+    appdir_path = BUILD_DIR_APPIMAGE.absolute() / "AppDir"
     
     with c.cd(str(BUILD_DIR_APPIMAGE)):
         print("Installing to AppDir...")
-        c.run(f"cmake --install . --prefix AppDir")
+        # Install to AppDir/usr to follow standard FHS expected by linuxdeploy
+        c.run(f"cmake --install . --prefix AppDir/usr")
         
-        # Verify the desktop file exists in the source
-        if not desktop_file.exists():
-            raise FileNotFoundError(f"Desktop file not found at {desktop_file}. "
-                                    f"Please ensure Desktop-D30.desktop exists in the project root.")
-        
-        # Copy the .desktop file to AppDir/usr/share/applications
-        # This matches the CMAKE_INSTALL_PREFIX=/usr so linuxdeploy can find it
-        print("Copying .desktop file to AppDir/usr/share/applications...")
-        appdir_share = Path("AppDir/usr/share/applications")
-        appdir_share.mkdir(parents=True, exist_ok=True)
-        
-        dest_file = appdir_share / "Desktop-D30.desktop"
-        shutil.copy(str(desktop_file), str(dest_file))
-        print(f"  ✓ Copied to {dest_file}")
-        
-        # Verify copy was successful
-        if not dest_file.exists():
-            raise RuntimeError(f"Failed to copy .desktop file to {dest_file}")
-        print(f"  ✓ Verified: file exists")
+        # Copy the .desktop file and icon to the AppDir root for linuxdeploy
+        print("Copying .desktop and icon to AppDir root...")
+        shutil.copy(str(desktop_file), str(appdir_path / "Desktop-D30.desktop"))
+        shutil.copy(str(icon_file), str(appdir_path / "Desktop-D30.png"))
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
@@ -184,14 +172,15 @@ def appimage(c):
         print("Generating AppImage...")
         env = os.environ.copy()
         env.update({"ARCH": "x86_64", "OUTPUT": "Desktop-D30-x86_64.AppImage"})
-        c.run("./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage", env=env)
+        # Explicitly pass desktop file and icon to linuxdeploy, and point to AppDir
+        c.run(f"./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file {desktop_file} --icon-file {icon_file} --output appimage", env=env)
         
         # Move back to root
         print("Checking for generated AppImage...")
-        appimage_files = list(Path(".").glob("Desktop-D30*.AppImage"))
+        appimage_files = list(BUILD_DIR_APPIMAGE.glob("Desktop-D30*.AppImage"))
         if appimage_files:
             print(f"Found: {appimage_files[0]}, moving to root...")
-            shutil.move(str(appimage_files[0]), "..")
+            shutil.move(str(appimage_files[0]), ".")
         else:
             print("ERROR: No AppImage file was generated!")
         
