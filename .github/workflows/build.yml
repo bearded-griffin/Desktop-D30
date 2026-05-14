@@ -73,6 +73,7 @@ jobs:
             libxcursor-dev \
             libxinerama-dev \
             libxkbcommon-dev \
+            libgl1-mesa-dev \
             wget \
             file
 
