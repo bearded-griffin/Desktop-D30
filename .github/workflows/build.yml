@@ -1,20 +1,21 @@
-name: Build and Test
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [master]
+    branches: ["**"]
   pull_request:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  test-and-build:
+  # 1. Run Unit Tests on every push
+  test:
+    name: Unit Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Linux Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -29,8 +30,6 @@ jobs:
             libxcursor-dev \
             libxinerama-dev \
             libxkbcommon-dev \
-            libgl1-mesa-dev \
-            mingw-w64 \
             wget \
             file
 
@@ -45,26 +44,102 @@ jobs:
           pip install invoke
 
       - name: Run Unit Tests
-        run: xvfb-run -a inv test
-        env:
-          DISPLAY: :99
+        run: inv test
+
+  # 2. Build Linux AppImage (Only on main or manual trigger)
+  build-linux:
+    name: Package Linux
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            libbluetooth-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            wget \
+            file
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Python Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install invoke
 
       - name: Build Linux AppImage
         run: inv appimage
 
-      - name: Cross-Compile Windows Binary
-        run: inv cross-windows
+      - name: Create Linux Release Zip
+        run: |
+          sudo apt-get install -y zip
+          zip Desktop-D30-Linux.zip Desktop-D30-x86_64.AppImage
 
       - name: Upload Linux AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Desktop-D30-Linux
-          path: Desktop-D30-x86_64.AppImage
+          path: Desktop-D30-Linux.zip
           if-no-files-found: error
+
+  # 3. Cross-Compile Windows (Only on main or manual trigger)
+  build-windows:
+    name: Package Windows
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Windows Cross-Compile Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            mingw-w64 \
+            wget \
+            file
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Python Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install invoke
+
+      - name: Cross-Compile Windows Binary
+        run: inv cross-windows
+
+      - name: Create Windows Release Zip
+        run: |
+          sudo apt-get install -y zip
+          cd build_win_cross
+          zip -r ../Desktop-D30-Windows.zip Desktop-D30.exe assets/
 
       - name: Upload Windows Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Desktop-D30-Windows
-          path: build_win_cross/Desktop-D30.exe
+          path: Desktop-D30-Windows.zip
           if-no-files-found: error
