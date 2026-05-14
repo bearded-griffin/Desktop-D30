@@ -150,7 +150,24 @@ def appimage(c):
         
         # Copy the .desktop file to AppDir BEFORE running linuxdeploy
         print("Copying .desktop file to AppDir...")
+        
+        # Verify the desktop file exists
+        if not desktop_file.exists():
+            raise FileNotFoundError(f"Desktop file not found at {desktop_file}. "
+                                    f"Please ensure Desktop-D30.desktop exists in the project root.")
+        
+        # Create the XDG standard directory structure
+        appdir_share = Path("AppDir/share/applications")
+        appdir_share.mkdir(parents=True, exist_ok=True)
+        
+        # Copy to both locations:
+        # 1. Standard XDG location for linuxdeploy to discover
+        shutil.copy(str(desktop_file), str(appdir_share / "Desktop-D30.desktop"))
+        print(f"  ✓ Copied to AppDir/share/applications/Desktop-D30.desktop")
+        
+        # 2. AppDir root for linuxdeploy-plugin-appimage compatibility
         shutil.copy(str(desktop_file), "AppDir/Desktop-D30.desktop")
+        print(f"  ✓ Copied to AppDir/Desktop-D30.desktop")
         
         # Download linuxdeploy
         ld_url = "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
