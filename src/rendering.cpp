@@ -582,9 +582,7 @@ void ImageDrawImageObject(Image *canvas, const LabelObject &obj) {
     int targetH = std::clamp((int)obj.height, 1, (int)MAX_OBJECT_SIZE);
     ImageResize(&srcImg, targetW, targetH);
 
-    Rectangle srcRec = {0, 0, (float)srcImg.width, (float)srcImg.height};
-    Rectangle dstRec = {obj.x, obj.y, (float)srcImg.width, (float)srcImg.height};
-    ImageDraw(canvas, srcImg, srcRec, dstRec, WHITE);
+    ImageDrawImage(canvas, srcImg, (int)obj.x, (int)obj.y, WHITE);
     UnloadImage(srcImg);
   } else {
     ImageDrawRectangleLines(canvas, (int)obj.x, (int)obj.y, (int)obj.width,
