@@ -132,8 +132,9 @@ def appimage(c):
         shutil.rmtree(BUILD_DIR_APPIMAGE)
     BUILD_DIR_APPIMAGE.mkdir(parents=True, exist_ok=True)
     
-    print("Installing linuxdeploy dependencies...")
-    c.run("sudo apt-get update && sudo apt-get install -y libfuse2 libxcb1 libxkbcommon0 libdbus-1-3", warn=True)
+    # Dependencies should be installed at system level by the user or in CI/CD workflow
+    # print("Installing linuxdeploy dependencies...")
+    # c.run("sudo apt-get update && sudo apt-get install -y libfuse2 libxcb1 libxkbcommon0 libdbus-1-3", warn=True)
     
     print("Configuring for AppImage...")
     c.run(f"cmake -S . -B {BUILD_DIR_APPIMAGE} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=OFF")
